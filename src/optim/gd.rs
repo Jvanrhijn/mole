@@ -1,7 +1,4 @@
-use std::vec::{Vec};
-mod traits {
-    pub mod optimizer;
-}
+use traits::optimizer::*;
 
 pub struct GradientDescent {
     step_size: f64
