@@ -1,4 +1,7 @@
+mod optim {
+    pub mod gd;
+}
+
 fn main() {
-    let s = format!("{}", "Hello, world!");
-    println!("{}", s);
+    let g = optim::gd::GradientDescent::new(0.1);
 }

@@ -1,5 +1,5 @@
 [package]
-name = "Mole"
+name = "mole"
 version = "0.1.0"
 authors = ["Jesse van Rhijn <jesse.v.rhijn@gmail.com>"]
 
