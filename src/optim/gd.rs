@@ -1,4 +1,6 @@
 use traits::optimizer::*;
+use ndarray::{Array, Array1, Axis, Dimension};
+use ndarray::prelude::*;
 
 pub struct GradientDescent {
     step_size: f64
@@ -13,10 +15,8 @@ impl GradientDescent {
 }
 
 impl Optimizer for GradientDescent {
-    fn step(&self, parms: &mut [f64], grads: &[f64]) {
-        for (parm, grad) in parms.iter_mut().zip(grads.iter()) {
-            *parm -= self.step_size*(*grad);
-        }
+    fn step(&self, parms: &mut Array1<f64>, grads: &Array1<f64>) {
+        *parms -= &(grads*self.step_size)
     }
 }
 
@@ -28,10 +28,10 @@ mod tests {
     fn step_gd() {
         let step_size = 0.1;
         let gd = GradientDescent::new(step_size);
-        let mut parms = vec![1., 2., 3.];
-        let grads = vec![0.1, 0.2, 0.3];
-        gd.step(parms.as_mut_slice(), grads.as_slice());
-        assert_eq!(parms, vec![0.99, 1.98, 2.97]);
+        let mut parms = array![1., 2., 3.];
+        let grads = array![0.1, 0.2, 0.3];
+        gd.step(&mut parms, &grads);
+        assert_eq!(parms, array![0.99, 1.98, 2.97]);
     }
 
 }
