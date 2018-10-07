@@ -1,6 +1,5 @@
 use traits::optimizer::*;
-use ndarray::{Array, Array1, Axis, Dimension};
-use ndarray::prelude::*;
+use ndarray::{Array1};
 
 pub struct GradientDescent {
     step_size: f64

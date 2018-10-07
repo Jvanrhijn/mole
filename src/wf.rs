@@ -1,9 +1,8 @@
 // Defines various wave function representations, e.g. Jastrow-Slater
-// standard imports
-use std::vec::{Vec};
 // third party imports
-use ndarray::{Array, Array1};
+use ndarray::{Array1};
 // first party imports
+#[allow(unused_imports)]
 use traits::wavefunction::*;
 
 #[derive(Debug)]
