@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate ndarray;
+extern crate ndarray_rand;
+extern crate rand;
 
 mod optim {
     pub mod gd;
@@ -10,6 +12,7 @@ mod traits {
     pub mod wavefunction;
 }
 
+mod metropolis;
 mod wf;
 
 fn main() {
