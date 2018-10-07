@@ -14,9 +14,11 @@ mod traits {
 
 mod metropolis;
 mod wf;
+mod jastrow;
 
 fn main() {
-    let wf = wf::JastrowSlater::new(array![1., 2., 3.], array![1., 2., 3.], array![1., 2., 3.]);
+    let jas = jastrow::JastrowFactor::new(array![1.], array![1.], array![1.]);
+    let wf = wf::JastrowSlater::new(array![1., 2., 3.], array![1., 2., 3.], jas);
     let _g = optim::gd::GradientDescent::new(0.1);
     println!("{:?}", wf);
 }
