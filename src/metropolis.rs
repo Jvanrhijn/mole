@@ -10,8 +10,8 @@ pub fn metropolis_single_move_box<T: WaveFunction>(wf: &T, cfg: &Array1<f64>) ->
     mov[[3*electron_to_move..3*electron_to_move+3]] += Array1::random((1, 3), Range::new(-1., 1.));
     let cfg_proposed = cfg + mov;
     let threshold = random::<f64>();
-    let acceptance_prob = cmp::min(1., (wf.value(cfg_proposed)/wf.value(cfg)).abs());
-    if acceptance_prob > threshold {
+    let acceptance= cmp::min(1., wf.value(cfg_proposed).abs().pow(2)/wf.value(cfg).abs().pow(2));
+    if acceptance > threshold {
         Some(cfg_proposed)
     } else {
         None
