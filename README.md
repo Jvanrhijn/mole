@@ -29,3 +29,7 @@ Planned features for Mole:
 ### Dependencies
 * ndarray 0.12.0
 * rand 0.5.5
+* ndarray-rand 0.8.0
+* ndarray-linalg 0.10.0
+* assert 0.7.4
+* libopenblas

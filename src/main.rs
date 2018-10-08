@@ -3,6 +3,7 @@ extern crate ndarray;
 extern crate ndarray_rand;
 extern crate ndarray_linalg;
 extern crate rand;
+extern crate assert;
 
 mod optim {
     pub mod gd;
