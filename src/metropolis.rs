@@ -15,7 +15,7 @@ pub fn metropolis_single_move_box<T: WaveFunction>(wf: &T, cfg: &Array1<f64>) ->
     }
     let cfg_proposed = cfg + &mov;
     let threshold = random::<f64>();
-    let acceptance = (wf.value(&cfg_proposed).abs().powi(2)/wf.value(cfg).abs().powi(2)).min(1.);
+    let acceptance = (wf.value(&cfg_proposed).powi(2)/wf.value(cfg).powi(2)).min(1.);
     if acceptance > threshold {
         Some(cfg_proposed)
     } else {

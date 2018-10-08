@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate ndarray;
 extern crate ndarray_rand;
+extern crate ndarray_linalg;
 extern crate rand;
 
 mod optim {
@@ -10,11 +11,17 @@ mod optim {
 mod traits {
     pub mod optimizer;
     pub mod wavefunction;
+    pub mod orbital;
+}
+
+mod math {
+    pub mod mat_ops;
 }
 
 mod metropolis;
 mod wf;
 mod jastrow;
+mod orbitals;
 
 fn main() {
     let jas = jastrow::JastrowFactor::new(array![1.], array![1.], array![1.]);
