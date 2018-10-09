@@ -12,7 +12,7 @@ pub struct OrbitalExact<T: Function<f64>> {
 }
 
 impl<T: Function<f64>> OrbitalExact<T> {
-   fn new(parms: Array1<f64>, basis_set: Vec<T>) -> Self {
+   pub fn new(parms: Array1<f64>, basis_set: Vec<T>) -> Self {
        Self{parms, basis_set}
    }
 }

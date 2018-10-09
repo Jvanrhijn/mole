@@ -1,6 +1,7 @@
 // Defines various wave function representations, e.g. Jastrow-Slater
 // third party imports
 use ndarray::{Array1, Ix2, Ix1, Array2};
+use ndarray_linalg::error::LinalgError;
 // first party imports
 #[allow(unused_imports)]
 use traits::wavefunction::*;
@@ -22,7 +23,7 @@ impl JastrowSlater {
     }
 }
 
-struct SingleDeterminant<T: Function<f64, D=Ix1>> {
+pub struct SingleDeterminant<T: Function<f64, D=Ix1>> {
     det: Determinant<OrbitalExact<T>>,
 }
 
@@ -34,10 +35,10 @@ impl<T: Function<f64, D=Ix1>> SingleDeterminant<T> {
 
 impl<T: Function<f64, D=Ix1>> Function<f64> for SingleDeterminant<T> {
 
-    type E = ();
+    type E = LinalgError;
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Self::E> {
-        Ok(1.0)
+        self.det.value(cfg)
     }
 }
