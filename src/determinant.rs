@@ -1,5 +1,7 @@
 // Standard imports
 use std::vec::{Vec};
+// Third party imports
+use ndarray::{Ix2, Array};
 // First party imports
 use traits::orbital::*;
 
@@ -11,10 +13,15 @@ impl<T> Determinant<T> {
     pub fn new(orbs: Vec<T>) -> Self {
        Determinant{orbs}
     }
-
-    pub fn value(&self, cfg: Array1<f64>) -> f64 {
-        // stub TODO write value method for Determinant
-        1.0
-    }
 }
 
+impl Function<T> for Determinant<T> {
+
+    type D = Ix2;
+
+    fn value(&self, cfg: &Array<T, &Self::D>) -> f64 {
+        // stub
+        1.0
+    }
+
+}
