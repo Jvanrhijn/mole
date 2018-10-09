@@ -21,9 +21,10 @@ impl JastrowFactor {
 impl Function<f64> for JastrowFactor {
 
     type D = Ix2;
+    type E = ();
 
-    fn value(&self, cfg: &Array<f64, Self::D>) -> f64 {
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, ()> {
         // Stub, TODO implement actual Jastrow factor
-        1.0
+        Ok(1.0)
     }
 }

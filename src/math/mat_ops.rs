@@ -1,11 +1,7 @@
 // Standard imports
-use std::result::Result::{Ok, Err};
 // Third pary imports
-use assert;
-use ndarray::{Array2, Array};
+use ndarray::{Array2};
 use ndarray_linalg::{qr, error::LinalgError};
-use ndarray_rand::RandomExt;
-use rand::distributions::Range;
 
 pub fn det_abs<M>(mat: &M) -> Result<f64, LinalgError> 
 where
@@ -19,7 +15,10 @@ where
 mod tests {
     use super::*;
     use std::ops::Neg;
-    use rand::{random, distributions::uniform::SampleUniform};
+    use assert;
+    use rand::{random, distributions::uniform::SampleUniform, distributions::Range};
+    use ndarray_rand::RandomExt;
+    use ndarray::Array;
 
     struct TestData {
         num_tests: usize,
