@@ -22,12 +22,13 @@ mod tests {
     use rand::{random, distributions::uniform::SampleUniform};
 
     struct TestData {
-        num_tests: usize
+        num_tests: usize,
+        tol: f64
     }
 
     impl TestData {
-        pub fn new(num_tests: usize) -> Self {
-            TestData{num_tests}
+        pub fn new(num_tests: usize, tol: f64) -> Self {
+            TestData{num_tests, tol}
         }
 
         pub fn random_square_matrix<T>(size: usize, range: T) -> Array2<T>
@@ -49,7 +50,7 @@ mod tests {
     }
 
     fn setup() -> TestData {
-        TestData::new(10)
+        TestData::new(10, 1e-5)
     }
 
     #[test]
@@ -66,8 +67,21 @@ mod tests {
         for _i in 0..setup().num_tests {
             let mat: Array2<f64> = TestData::random_sized_square_matrix(1.);
             let det = det_abs(&mat).unwrap();
-            let tol = det*1e-5;
+            let tol = det*setup().tol;
             assert::close(det, det_abs(&mat.t()).unwrap(), tol);
+        }
+    }
+
+    #[test]
+    fn test_product() {
+        for _i in 0..setup().num_tests {
+            let mat_1: Array2<f64> = TestData::random_square_matrix(5, 1.);
+            let mat_2: Array2<f64> = TestData::random_square_matrix(5 , 1.);
+            let prod = mat_1.dot(&mat_2);
+            let det_1 = det_abs(&mat_1).unwrap();
+            let det_2 = det_abs(&mat_2).unwrap();
+            let tol = det_1*det_2*setup().tol;
+            assert::close(det_1*det_2, det_abs(&prod).unwrap(), tol);
         }
     }
 
