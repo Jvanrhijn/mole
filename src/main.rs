@@ -18,6 +18,7 @@ mod traits {
 
 mod math {
     pub mod mat_ops;
+    pub mod basis;
 }
 
 mod metropolis;
