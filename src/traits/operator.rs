@@ -1,5 +1,5 @@
-use wavefunction;
+use traits::function::Function;
 
 pub trait Operator {
-   fn act_on<T: WaveFunction>(wf: &mut T) -> &T;
+    fn act_on<T: Function<T>>(wf: &T) -> T;
 }

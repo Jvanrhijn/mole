@@ -15,13 +15,12 @@ impl JastrowFactor {
                parms_three_body: Array1<f64>) -> Self {
         JastrowFactor{parms_one_body, parms_two_body, parms_three_body}
     }
-
 }
 
 impl Function<f64> for JastrowFactor {
 
-    type D = Ix2;
     type E = ();
+    type D = Ix2;
 
     fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, ()> {
         // Stub, TODO implement actual Jastrow factor

@@ -12,12 +12,13 @@ mod optim {
 mod traits {
     pub mod optimizer;
     pub mod wavefunction;
-    pub mod orbital;
     pub mod function;
+    pub mod operator;
 }
 
 mod math {
     pub mod mat_ops;
+    pub mod basis;
 }
 
 mod metropolis;
@@ -25,6 +26,7 @@ mod wf;
 mod jastrow;
 mod orbitals;
 mod determinant;
+mod basis_sets;
 
 fn main() {
     let jas = jastrow::JastrowFactor::new(array![1.], array![1.], array![1.]);

@@ -4,7 +4,9 @@ use std::fmt::Debug;
 use ndarray::{Array};
 
 pub trait Function<T> {
+
     type E: Debug;
     type D;
+
     fn value(&self, cfg: &Array<T, Self::D>) -> Result<T, Self::E>;
 }
