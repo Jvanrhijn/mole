@@ -13,6 +13,7 @@ mod traits {
     pub mod optimizer;
     pub mod wavefunction;
     pub mod orbital;
+    pub mod function;
 }
 
 mod math {

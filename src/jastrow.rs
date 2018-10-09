@@ -1,4 +1,5 @@
-use ndarray::{Array1};
+use ndarray::{Array1, Array, Ix2};
+use traits::function::*;
 
 #[derive(Debug)]
 pub struct JastrowFactor {
@@ -15,8 +16,13 @@ impl JastrowFactor {
         JastrowFactor{parms_one_body, parms_two_body, parms_three_body}
     }
 
-    #[allow(dead_code, unused_variables)]
-    pub fn value(&self, cfg: &Array1<f64>) -> f64 {
+}
+
+impl Function<f64> for JastrowFactor {
+
+    type D = Ix2;
+
+    fn value(&self, cfg: &Array<f64, Self::D>) -> f64 {
         // Stub, TODO implement actual Jastrow factor
         1.0
     }
