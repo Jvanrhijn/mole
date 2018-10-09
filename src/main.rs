@@ -24,6 +24,7 @@ mod metropolis;
 mod wf;
 mod jastrow;
 mod orbitals;
+mod determinant;
 
 fn main() {
     let jas = jastrow::JastrowFactor::new(array![1.], array![1.], array![1.]);

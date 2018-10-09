@@ -1,7 +1,7 @@
 // Third party imports
 use rand::{random};
 use rand::distributions::Range;
-use ndarray::{Array2, Array, Ix2, Axis};
+use ndarray::{Array2, Ix2, Axis};
 use ndarray_rand::RandomExt;
 // First party imports
 use traits::function::Function;
@@ -13,7 +13,7 @@ where
 {
     let num_elecs = cfg.len_of(Axis(1));
     let electron_to_move = random::<usize>() % num_elecs;
-    let mut mov = Array::<f64, Ix2>::zeros((cfg.len(), 3));
+    let mut mov = Array2::<f64>::zeros((cfg.len(), 3));
     {
         let mut mov_slice = mov.slice_mut(s![electron_to_move, ..]);
         mov_slice += &Array2::random((num_elecs, 3), Range::new(-1., 1.));
