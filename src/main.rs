@@ -31,9 +31,11 @@ mod determinant;
 mod basis_sets;
 
 fn main() {
-    let basis_set = vec![basis_sets::HydrogenGroundState{}];
+    let basis_set = vec![basis_sets::Hydrogen1s{}];
+    let basis_set2 = vec![basis_sets::Hydrogen2s{}];
     let orbital = orbitals::OrbitalExact::new(ndarray::Array1::from_vec(vec![1.]), basis_set);
-    let wf = wf::SingleDeterminant::new(vec![orbital]);
-    let cfg = ndarray::Array2::<f64>::ones((1, 3));
+    let orbital2 = orbitals::OrbitalExact::new(ndarray::Array1::from_vec(vec![1.]), basis_set2);
+    let wf = wf::SingleDeterminant::new(vec![orbital, orbital2]);
+    let cfg = ndarray::Array2::<f64>::ones((2, 3));
     println!("{}", wf.value(&cfg).unwrap())
 }

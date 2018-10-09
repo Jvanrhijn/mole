@@ -23,7 +23,7 @@ impl<T> Function<f64> for Determinant<T> where T: Function<f64, D=Ix1> {
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Self::E> {
-        let mat_dim = (self.orbs.len() as f64).sqrt().round() as usize;
+        let mat_dim = self.orbs.len();
         // build the Slater determinantal matrix
         let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
         for i in 0..mat_dim {

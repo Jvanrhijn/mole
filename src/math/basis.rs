@@ -2,7 +2,13 @@
 use ndarray::{Array1};
 
 pub fn hydrogen_1s(pos: &Array1<f64>) -> f64 {
-    (pos*pos).scalar_sum().sqrt().exp()
+    let r = (pos*pos).scalar_sum().sqrt();
+    (-r).exp()
+}
+
+pub fn hydrogen_2s(pos: &Array1<f64>) -> f64 {
+    let r = (pos*pos).scalar_sum().sqrt();
+    (1. - r)*(-r).exp()
 }
 
 #[cfg(test)]
