@@ -10,7 +10,6 @@ use jastrow::JastrowFactor;
 use determinant::Determinant;
 use orbitals::*;
 
-#[derive(Debug)]
 pub struct JastrowSlater {
     ci_coeffs: Array1<f64>,
     orb_coeffs: Array1<f64>,
@@ -23,17 +22,23 @@ impl JastrowSlater {
     }
 }
 
-pub struct SingleDeterminant<T: Function<f64, D=Ix1>> {
-    det: Determinant<OrbitalExact<T>>,
+pub struct SingleDeterminant<'a, T>
+where T: 'a + ?Sized + Fn(&Array1<f64>) -> f64
+{
+    det: Determinant<OrbitalExact<'a, T>>,
 }
 
-impl<T: Function<f64, D=Ix1>> SingleDeterminant<T> {
-    pub fn new(orbs: Vec<OrbitalExact<T>>) -> Self {
+impl<'a, T> SingleDeterminant<'a, T>
+where T: ?Sized + Fn(&Array1<f64>) -> f64
+{
+    pub fn new(orbs: Vec<OrbitalExact<'a, T>>) -> Self {
         Self{det: Determinant::new(orbs)}
     }
 }
 
-impl<T: Function<f64, D=Ix1>> Function<f64> for SingleDeterminant<T> {
+impl<'a, T> Function<f64> for SingleDeterminant<'a, T>
+where T: ?Sized + Fn(&Array1<f64>) -> f64
+{
 
     type E = LinalgError;
     type D = Ix2;

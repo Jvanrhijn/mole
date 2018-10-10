@@ -1,5 +1,5 @@
 // Standard imports
-use std::vec::{Vec};
+use std::vec::Vec;
 // Third party imports
 use ndarray::{Ix2, Ix1, Array, Array1, Array2};
 use ndarray_linalg::error::LinalgError;
@@ -7,11 +7,11 @@ use ndarray_linalg::error::LinalgError;
 use traits::function::*;
 use math::mat_ops;
 
-pub struct Determinant<T: Function<f64>> {
+pub struct Determinant<T: Function<f64, D=Ix1>> {
     orbs: Vec<T>
 }
 
-impl<T: Function<f64>> Determinant<T> {
+impl<T: Function<f64, D=Ix1>> Determinant<T> {
     pub fn new(orbs: Vec<T>) -> Self {
        Determinant{orbs}
     }
