@@ -35,10 +35,16 @@ mod orbitals;
 mod determinant;
 
 fn main() {
-    let basis_set: Vec<&Fn(&Array1<f64>) -> f64> = vec![&hydrogen_1s, &hydrogen_2s];
+    let offset_1s = |x: &Array1<f64>| hydrogen_1s(&(x - &array![-0.5, 0., 0.]));
+    let offset_2s = |x: &Array1<f64>| hydrogen_2s(&(x - &array![0.5, 0., 0.]));
 
-    let orbital1 = OrbitalExact::new(array![2f64.sqrt(), 2f64.sqrt()], &basis_set);
-    let orbital2 = OrbitalExact::new(array![2f64.sqrt(), -2f64.sqrt()], &basis_set);
+    let basis_set: Vec<&Fn(&Array1<f64>) -> f64> = vec![
+        &offset_1s,
+        &offset_2s,
+    ];
+
+    let orbital1 = OrbitalExact::new(array![1., 1.], &basis_set);
+    let orbital2 = OrbitalExact::new(array![1., -1.], &basis_set);
 
     let wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
     let mut cfg = arr2(&[[1., -1., 0.], [-1., 1., 1.]]);
