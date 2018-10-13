@@ -41,7 +41,9 @@ fn main() {
     let orbital2 = OrbitalExact::new(array![2f64.sqrt(), -2f64.sqrt()], &basis_set);
 
     let wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
-    let mut cfg = arr2(&[[1., 1., 0.], [1., 1., 0.]]);
+    let mut cfg = arr2(&[[1., -1., 0.], [-1., 1., 1.]]);
+
+    println!("{}", wf.value(&cfg).unwrap());
 
     match metropolis::metropolis_single_move_box(&wf, &cfg) {
         Some(config) => { println!("Move accepted"); cfg = config }
