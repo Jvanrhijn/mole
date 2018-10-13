@@ -34,13 +34,14 @@ mod jastrow;
 mod orbitals;
 mod determinant;
 
-fn main() {
-    let offset_1s = |x: &Array1<f64>| hydrogen_1s(&(x - &array![-0.5, 0., 0.]));
-    let offset_2s = |x: &Array1<f64>| hydrogen_2s(&(x - &array![0.5, 0., 0.]));
 
-    let basis_set: Vec<&Fn(&Array1<f64>) -> f64> = vec![
-        &offset_1s,
-        &offset_2s,
+fn main() {
+    let wf_1s_left = |x: &Array1<f64>| hydrogen_1s(&(x - &array![-0.5, 0., 0.]));
+    let wf_1s_right = |x: &Array1<f64>| hydrogen_2s(&(x - &array![0.5, 0., 0.]));
+
+    let basis_set: Vec<Box<Fn(&Array1<f64>) -> f64>> = vec![
+        Box::new(wf_1s_left),
+        Box::new(wf_1s_right),
     ];
 
     let orbital1 = OrbitalExact::new(array![1., 1.], &basis_set);

@@ -10,13 +10,13 @@ pub struct OrbitalExact<'a, T: 'a>
 where T: ?Sized + Fn(&Array1<f64>) -> f64
 {
     parms: Array1<f64>,
-    basis_set: &'a Vec<&'a T>
+    basis_set: &'a Vec<Box<T>>
 }
 
 impl<'a, T> OrbitalExact<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> f64
 {
-   pub fn new(parms: Array1<f64>, basis_set: &'a Vec<&'a T>) -> Self {
+   pub fn new(parms: Array1<f64>, basis_set: &'a Vec<Box<T>>) -> Self {
        Self{parms, basis_set}
    }
 }
