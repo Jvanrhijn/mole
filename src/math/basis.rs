@@ -8,7 +8,7 @@ pub fn hydrogen_1s(pos: &Array1<f64>) -> f64 {
 
 pub fn hydrogen_2s(pos: &Array1<f64>) -> f64 {
     let r = (pos*pos).scalar_sum().sqrt();
-    (1. - r)*(-r).exp()
+    (1. - r)*((-r).exp())
 }
 
 #[cfg(test)]

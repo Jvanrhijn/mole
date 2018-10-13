@@ -29,7 +29,7 @@ impl<T> Function<f64> for Determinant<T> where T: Function<f64, D=Ix1> {
         for i in 0..mat_dim {
             for j in 0..mat_dim {
                 let slice = cfg.slice(s![j, ..]);
-                let pos = Array1::<f64>::from_vec(vec![slice[0], slice[1], slice[2]]);
+                let pos = array![slice[0], slice[1], slice[2]];
                 matrix[[i, j]] = self.orbs[i].value(&pos).unwrap();
             }
         }

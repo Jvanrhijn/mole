@@ -33,7 +33,6 @@ mod wf;
 mod jastrow;
 mod orbitals;
 mod determinant;
-mod basis_sets;
 
 fn main() {
     let basis_set: Vec<&Fn(&Array1<f64>) -> f64> = vec![&hydrogen_1s, &hydrogen_2s];
@@ -42,12 +41,12 @@ fn main() {
     let orbital2 = OrbitalExact::new(array![2f64.sqrt(), -2f64.sqrt()], &basis_set);
 
     let wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
-    let mut cfg = arr2(&[[1., -1., 0.], [-1., 1., 1.]]);
+    let mut cfg = arr2(&[[1., 1., 0.], [1., 1., 0.]]);
 
     match metropolis::metropolis_single_move_box(&wf, &cfg) {
         Some(config) => { println!("Move accepted"); cfg = config }
         None         => { println!("Move rejected") }
     }
 
-    println!("{}", wf.value(&cfg).unwrap())
+    println!("{}", wf.value(&cfg).unwrap());
 }
