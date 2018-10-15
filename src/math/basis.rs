@@ -12,7 +12,7 @@ pub fn hydrogen_2s(pos: &Array1<f64>) -> (f64, f64) {
     // Return value and laplacian of the 2s hydrogen orbital
     let r = (pos*pos).scalar_sum().sqrt();
     let exp = (-r).exp();
-    ((1. - r)*exp, exp*(5.*r.powi(2) - r.powi(3) - 4.*r))
+    ((1. - r)*exp, exp*(5. - r - 4./r))
 }
 
 #[cfg(test)]
