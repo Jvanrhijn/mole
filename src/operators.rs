@@ -49,6 +49,42 @@ where T: Function<f64, D=Ix2> + ?Sized
     }
 }
 
+pub struct ElectronicPotential {}
+
+impl ElectronicPotential {
+    pub fn new() -> Self {
+        ElectronicPotential{}
+    }
+}
+
+impl Function<f64> for ElectronicPotential {
+
+    type E = ();
+    type D = Ix2;
+
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Self::E> {
+        let num_elec = cfg.len_of(Axis(0));
+        let mut pot = 0.;
+        for i in 0..num_elec {
+            for j in 0..i {
+                let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..]);
+                pot += 1./separation.dot(&separation).sqrt();
+            }
+        }
+        Ok(pot)
+    }
+}
+
+impl<T> Operator<T> for ElectronicPotential
+where T: Function<f64, D=Ix2> + ?Sized
+{
+    type V = f64;
+
+    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Self::V {
+        self.value(cfg).unwrap()*wf.value(cfg).unwrap()
+    }
+}
+
 // Kinetic energy operator
 
 pub struct KineticEnergy {}
@@ -89,5 +125,27 @@ where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
 
     fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Self::V {
         self.t.act_on(wf, cfg) + self.v.act_on(wf, cfg)
+    }
+}
+
+pub struct ElectronicHamiltonian {
+    t: KineticEnergy,
+    vion: IonicPotential,
+    velec: ElectronicPotential
+}
+
+impl ElectronicHamiltonian {
+    pub fn new(t: KineticEnergy, vion: IonicPotential, velec: ElectronicPotential) -> Self {
+        ElectronicHamiltonian{t, vion, velec}
+    }
+}
+
+impl<T> Operator<T> for ElectronicHamiltonian
+where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
+{
+    type V = f64;
+
+    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Self::V {
+        self.t.act_on(wf, cfg) + self.vion.act_on(wf, cfg) + self.velec.act_on(wf, cfg)
     }
 }
