@@ -23,13 +23,13 @@ impl JastrowSlater {
 }
 
 pub struct SingleDeterminant<'a, T>
-where T: 'a + ?Sized + Fn(&Array1<f64>) -> f64
+where T: 'a + ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     det: Determinant<OrbitalExact<'a, T>>,
 }
 
 impl<'a, T> SingleDeterminant<'a, T>
-where T: ?Sized + Fn(&Array1<f64>) -> f64
+where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     pub fn new(orbs: Vec<OrbitalExact<'a, T>>) -> Self {
         Self{det: Determinant::new(orbs)}
@@ -37,7 +37,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> f64
 }
 
 impl<'a, T> Function<f64> for SingleDeterminant<'a, T>
-where T: ?Sized + Fn(&Array1<f64>) -> f64
+where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
 
     type E = LinalgError;
@@ -45,5 +45,23 @@ where T: ?Sized + Fn(&Array1<f64>) -> f64
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Self::E> {
         self.det.value(cfg)
+    }
+}
+
+impl<'a, T> WaveFunction for SingleDeterminant<'a, T>
+where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+{
+
+    type D = Ix2;
+
+    fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
+        let shape = cfg.shape();
+        Array2::<f64>::ones((shape[0], shape[1]))
+    }
+
+    fn laplacian(&self, cfg: &Array2<f64>) -> f64 {
+        // TODO implement
+        // fake implementation:
+        self.det.laplacian(cfg)
     }
 }

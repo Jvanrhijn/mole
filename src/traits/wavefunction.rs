@@ -1,6 +1,11 @@
-use ndarray::{Array2};
+use ndarray::{Array2, Array};
 
 pub trait WaveFunction {
-    fn gradient(&self, configuration: &Array2<f64>) -> f64;
+
+    type D;
+
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Array<f64, Self::D>;
+
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> f64;
 }
 

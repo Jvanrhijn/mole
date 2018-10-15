@@ -1,10 +1,11 @@
 // Standard imports
 use std::vec::Vec;
 // Third party imports
-use ndarray::{Ix2, Ix1, Array, Array1, Array2};
+use ndarray::{Ix2, Ix1, Array, Array1, Array2, Axis};
 use ndarray_linalg::error::LinalgError;
 // First party imports
 use traits::function::*;
+use traits::wavefunction::WaveFunction;
 use math::mat_ops;
 
 pub struct Determinant<T: Function<f64, D=Ix1>> {
@@ -36,4 +37,23 @@ impl<T> Function<f64> for Determinant<T> where T: Function<f64, D=Ix1> {
         mat_ops::det_abs(&matrix)
     }
 
+}
+
+impl<T> WaveFunction for Determinant<T>
+where T: Function<f64, D=Ix1> + WaveFunction<D=Ix1>
+{
+
+    type D = Ix2;
+
+    fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
+        // TODO implement
+        let shape = cfg.shape();
+        Array2::<f64>::ones((shape[0], shape[1]))
+    }
+
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> f64 {
+        // TODO implement
+        // fake implementation:
+        self.orbs.iter().zip(cfg.axis_iter(Axis(0))).map(|(x, y)| x.laplacian(&array![y[0], y[1], y[2]])).sum()
+    }
 }

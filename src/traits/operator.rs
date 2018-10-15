@@ -3,7 +3,7 @@ use ndarray::{Array, Array2};
 use traits::function::Function;
 
 pub trait Operator<T>
-where T: Function<Self::V>
+where T: Function<Self::V> + ?Sized
 {
 
     type V;
