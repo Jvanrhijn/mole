@@ -34,6 +34,10 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
     pub fn new(orbs: Vec<OrbitalExact<'a, T>>) -> Self {
         Self{det: Determinant::new(orbs)}
     }
+
+    pub fn update(&mut self, cfg: &Array2<f64>) {
+        self.det.build_matrix(cfg);
+    }
 }
 
 impl<'a, T> Function<f64> for SingleDeterminant<'a, T>

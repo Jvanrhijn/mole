@@ -44,28 +44,30 @@ mod operators;
 fn main() {
 
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-        Box::new(|x| gaussian(&(x + &array![1., 0., 0.]), 0.1)),
+        Box::new(|x| hydrogen_1s(&(x + &array![1., 0., 0.]))),
         Box::new(|x| hydrogen_1s(&(x - &array![1., 0., 0.])))
     ];
 
     let orbital = OrbitalExact::new(array![1.0, 0.0], &basis_set);
-    let wf = wf::SingleDeterminant::new(vec![orbital]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital]);
 
     let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 0]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
     let h = ElectronicHamiltonian::new(t, v, ve);
 
-    let iters = 10000usize;
+    let iters = 100usize;
 
     let mut cfg = Array2::<f64>::random((1, 3), Range::new(-1., 1.));
     let mut local_energy = Vec::<f64>::new();
     let mut acceptance = 0usize;
+    wf.update(&cfg);
 
     for i in 0..iters {
         match metropolis::metropolis_single_move_box(&wf, &cfg, 0) {
             Some(config) => {
                 cfg = config;
+                wf.update(&cfg);
                 acceptance += 1usize;
             }
             None => ()
