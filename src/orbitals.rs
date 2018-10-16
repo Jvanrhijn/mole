@@ -7,14 +7,14 @@ use ndarray::{Array, Array1, Ix1, Ix2, Array2};
 use traits::function::*;
 use traits::wavefunction::WaveFunction;
 
-pub struct OrbitalExact<'a, T: 'a>
+pub struct Orbital<'a, T: 'a>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     parms: Array1<f64>,
     basis_set: &'a Vec<Box<T>>
 }
 
-impl<'a, T> OrbitalExact<'a, T>
+impl<'a, T> Orbital<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
    pub fn new(parms: Array1<f64>, basis_set: &'a Vec<Box<T>>) -> Self {
@@ -22,7 +22,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
    }
 }
 
-impl<'a, T> Function<f64> for OrbitalExact<'a, T>
+impl<'a, T> Function<f64> for Orbital<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
 
     type E = ();
@@ -34,7 +34,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
     }
 }
 
-impl<'a, T> WaveFunction for OrbitalExact<'a, T>
+impl<'a, T> WaveFunction for Orbital<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
 
     type D = Ix1;

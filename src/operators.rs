@@ -66,7 +66,7 @@ impl Function<f64> for ElectronicPotential {
         let num_elec = cfg.len_of(Axis(0));
         let mut pot = 0.;
         for i in 0..num_elec {
-            for j in 0..i {
+            for j in i+1..num_elec {
                 let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..]);
                 pot += 1./separation.dot(&separation).sqrt();
             }

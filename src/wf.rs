@@ -25,18 +25,18 @@ impl JastrowSlater {
 pub struct SingleDeterminant<'a, T>
 where T: 'a + ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
-    det: Determinant<OrbitalExact<'a, T>>,
+    det: Determinant<Orbital<'a, T>>,
 }
 
 impl<'a, T> SingleDeterminant<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
-    pub fn new(orbs: Vec<OrbitalExact<'a, T>>) -> Self {
+    pub fn new(orbs: Vec<Orbital<'a, T>>) -> Self {
         Self{det: Determinant::new(orbs)}
     }
 
     pub fn update(&mut self, cfg: &Array2<f64>) {
-        self.det.build_matrix(cfg);
+        self.det.update(cfg);
     }
 }
 

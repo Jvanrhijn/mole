@@ -10,7 +10,7 @@ use math::mat_ops;
 
 pub struct Determinant<T: Function<f64, D=Ix1>> {
     orbs: Vec<T>,
-    matrix: Array2<f64>
+    matrix: Array2<f64>,
 }
 
 impl<T: Function<f64, D=Ix1>> Determinant<T> {
@@ -20,16 +20,22 @@ impl<T: Function<f64, D=Ix1>> Determinant<T> {
         Determinant{orbs, matrix: Array::<f64, Ix2>::eye(mat_dim)}
     }
 
-    pub fn build_matrix(&mut self, cfg: &Array2<f64>) {
+    // TODO figure out a better way to update matrix value on a move
+    pub fn update(&mut self, cfg: &Array2<f64>) {
+        self.matrix = self.build_matrix(cfg);
+    }
+
+    fn build_matrix(&self, cfg: &Array2<f64>) -> Array2<f64> {
         let mat_dim = self.orbs.len();
-        // build the Slater determinantal matrix
+        let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
         for i in 0..mat_dim {
             for j in 0..mat_dim {
                 let slice = cfg.slice(s![i, ..]);
                 let pos = array![slice[0], slice[1], slice[2]];
-                self.matrix[[i, j]] = self.orbs[j].value(&pos).unwrap();
+                matrix[[i, j]] = self.orbs[j].value(&pos).unwrap();
             }
         }
+        matrix
     }
 
 }
