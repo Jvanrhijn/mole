@@ -15,6 +15,12 @@ pub fn hydrogen_2s(pos: &Array1<f64>) -> (f64, f64) {
     ((1. - r)*exp, exp*(5. - r - 4./r))
 }
 
+pub fn gaussian(pos: &Array1<f64>, width: f64) -> (f64, f64) {
+    let r = (pos*pos).scalar_sum().sqrt();
+    let exp = (-(r).powi(2)/(2.*width).powi(2)).exp();
+    (exp, exp*(r.powi(2)/(4.*width.powi(2)) - 2./width.powi(2)))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

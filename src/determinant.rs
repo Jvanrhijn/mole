@@ -29,9 +29,9 @@ impl<T> Function<f64> for Determinant<T> where T: Function<f64, D=Ix1> {
         let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
         for i in 0..mat_dim {
             for j in 0..mat_dim {
-                let slice = cfg.slice(s![j, ..]);
+                let slice = cfg.slice(s![i, ..]);
                 let pos = array![slice[0], slice[1], slice[2]];
-                matrix[[i, j]] = self.orbs[i].value(&pos).unwrap();
+                matrix[[i, j]] = self.orbs[j].value(&pos).unwrap();
             }
         }
         mat_ops::det_abs(&matrix)
