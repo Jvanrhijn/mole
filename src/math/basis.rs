@@ -11,8 +11,8 @@ pub fn hydrogen_1s(pos: &Array1<f64>) -> (f64, f64) {
 pub fn hydrogen_2s(pos: &Array1<f64>) -> (f64, f64) {
     // Return value and laplacian of the 2s hydrogen orbital
     let r = (pos*pos).scalar_sum().sqrt();
-    let exp = (-r).exp();
-    ((1. - r)*exp, exp*(5. - r - 4./r))
+    let exp = (-r/2.).exp();
+    ((1. - r/2.)*exp, exp/8.*(10. - r - 16./r))
 }
 
 pub fn gaussian(pos: &Array1<f64>, width: f64) -> (f64, f64) {

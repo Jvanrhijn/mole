@@ -51,11 +51,11 @@ fn main() {
     ];
 
     // create orbitals from basis functions
-    let orbital = Orbital::new(array![1.0, 0.0], &basis_set);
+    let orbital1 = Orbital::new(array![1.0, 0.0], &basis_set);
     let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital, orbital2]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
 
     // setup Hamiltonian components
     let v = IonicPotential::new(array![[0., 0., 0.]], array![2]);
@@ -87,26 +87,20 @@ fn main() {
         for j in 0..nelec {
             // propose a move, if accepted: update the wave function
             // else, keep the same wave function
-            match metropolis::metropolis_single_move_box(&wf, &cfg, j) {
-                Some(config) => {
-                    cfg = config;
-                    wf.update(&cfg);
-                    acceptance += 1;
-                }
-                None => ()
+            if let Some(config) = metropolis::metropolis_single_move_box(&wf, &cfg, j) {
+                cfg = config;
+                wf.update(&cfg);
+                acceptance += 1;
             }
             // calculate local energy: Eloc = H(\psi)/(\psi)
             let local_e = h.act_on(&wf, &cfg)/wf.value(&cfg).unwrap();
+            // print local E
+            println!("Local E = {:.*}", 5, local_e);
             // save local energy, discard if we get NaN,
             // discard non-equilibrated values (1000 is arbitrary)
             if !local_e.is_nan() && i > equib {
                 local_energy.push(local_e);
             }
-        }
-        // print the local energy at this iteration
-        match local_energy.last() {
-            Some(e) => println!("{} Local E = {:.*}", i + 1, 4, e),
-            None => ()
         }
     }
 
@@ -116,7 +110,7 @@ fn main() {
     let mean_local_energy = local_energy.mean_axis(Axis(0)).scalar_sum();
     let std_local_energy = local_energy.var_axis(Axis(0), 0.).scalar_sum().sqrt();
 
-    println!("Local E: {:.*} +/- {:.*}", 5, mean_local_energy, 10, std_local_energy);
+    println!("Final local E: {:.*} +/- {:.*}", 5, mean_local_energy, 10, std_local_energy);
     println!("Acceptance rate: {}", acceptance as f64 / (iters*nelec) as f64);
 
 }
