@@ -3,11 +3,10 @@ use std::vec::Vec;
 // Third party imports
 #[allow(unused_imports)]
 use ndarray::{Array, Array1, Ix1, Ix2, Array2};
-use ndarray_linalg::error::LinalgError;
 // First party imports
 use traits::function::*;
 use traits::wavefunction::WaveFunction;
-use error::{Error, FuncError};
+use error::{Error};
 
 pub struct Orbital<'a, T: 'a>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)

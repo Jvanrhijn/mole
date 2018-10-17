@@ -1,5 +1,5 @@
-use ndarray::{Array2, Array};
-use error::{FuncError, Error};
+use ndarray::Array;
+use error::Error;
 
 pub trait WaveFunction {
 

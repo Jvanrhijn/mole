@@ -15,6 +15,7 @@ pub fn hydrogen_2s(pos: &Array1<f64>) -> (f64, f64) {
     ((1. - r/2.)*exp, exp/8.*(10. - r - 16./r))
 }
 
+#[allow(dead_code)]
 pub fn gaussian(pos: &Array1<f64>, width: f64) -> (f64, f64) {
     let r = (pos*pos).scalar_sum().sqrt();
     let exp = (-(r).powi(2)/(2.*width).powi(2)).exp();
@@ -24,7 +25,7 @@ pub fn gaussian(pos: &Array1<f64>, width: f64) -> (f64, f64) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{random,  distributions::Range};
+    use rand::distributions::Range;
     use ndarray_rand::RandomExt;
 
     #[test]

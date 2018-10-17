@@ -1,3 +1,5 @@
+#![deny(clippy::all, clippy::pedantic)]
+#![allow(dead_code)]
 #[macro_use]
 extern crate ndarray;
 extern crate ndarray_rand;
@@ -6,7 +8,7 @@ extern crate rand;
 extern crate assert;
 
 use std::vec::Vec;
-use ndarray::{Array1, arr2, Axis, Array2};
+use ndarray::{Array1, Axis, Array2};
 use ndarray_rand::RandomExt;
 use rand::distributions::Range;
 
@@ -43,12 +45,12 @@ mod error;
 
 fn main() {
     // number of electrons
-    let nelec = 1;
+    let nelec = 2;
 
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
         Box::new(|x| hydrogen_1s(&x)),
-        Box::new(|x| hydrogen_1s(&x))
+        Box::new(|x| hydrogen_2s(&x))
     ];
 
     // create orbitals from basis functions
@@ -56,7 +58,7 @@ fn main() {
     let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital1]);//, orbital2]);
+    let wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
 
     // setup Hamiltonian components
     let v = IonicPotential::new(array![[0., 0., 0.]], array![1]);
@@ -67,23 +69,20 @@ fn main() {
     let h = ElectronicHamiltonian::new(t, v, ve);
 
     // max number of MC steps and equilibration time
-    let iters = 1000usize;
+    let iters = 10000_usize;
     let equib = iters/10;
 
-    // initial random coanfiguration
-    let mut cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.));
-
-    // initialize wave function
-    wf.update(&cfg);
+    // initial random configuration
+    let mut cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.))*(nelec as f64);
 
     // create metropolis algorithm
-    let mut metrop = metrop::MetropolisBox::new(wf.value(&cfg).unwrap(), 1.0);
+    let mut metrop = metrop::MetropolisBox::new(0.1, wf.value(&cfg).unwrap());
 
     // vector for storing local energy
     let mut local_energy = Vec::<f64>::new();
 
     // acceptance rate
-    let mut acceptance = 0usize;
+    let mut acceptance = 0_usize;
 
     // QMC loop
     for i in 0..iters {
@@ -93,7 +92,6 @@ fn main() {
             // else, keep the same wave function
             if let Some(config) = metrop.move_state(&wf, &cfg, j) {
                 cfg = config;
-                wf.update(&cfg);
                 acceptance += 1;
             }
             // calculate local energy: Eloc = H(\psi)/(\psi)

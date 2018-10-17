@@ -1,6 +1,7 @@
 use traits::optimizer::*;
 use ndarray::{Array1};
 
+#[allow(dead_code)]
 pub struct GradientDescent {
     step_size: f64
 }

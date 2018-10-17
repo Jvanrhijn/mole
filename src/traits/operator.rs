@@ -1,7 +1,7 @@
-use ndarray::{Array, Array2};
+use ndarray::{Array2};
 
 use traits::function::Function;
-use error::{Error, FuncError};
+use error::{Error};
 
 pub trait Operator<T>
 where T: Function<Self::V> + ?Sized

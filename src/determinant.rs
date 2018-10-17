@@ -1,29 +1,25 @@
 // Standard imports
 use std::vec::Vec;
+use std::result::Result;
 // Third party imports
-use ndarray::{Ix2, Ix1, Array, Array1, Array2, Axis, ArrayBase};
-use ndarray_linalg::{solve::Determinant, Inverse, error,
-                     error::{LinalgError, LinalgError::Shape}, qr::QRSquare};
+use ndarray::{Ix2, Ix1, Array, Array2};
+use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
 use traits::function::*;
 use traits::wavefunction::WaveFunction;
-use error::{FuncError, Error};
+use error::{Error};
 
-pub struct SlaterDeterminant<T: Function<f64, D=Ix1>> {
+pub struct Slater<T: Function<f64, D=Ix1>> {
     orbs: Vec<T>,
     matrix: Array2<f64>,
 }
 
-impl<T: Function<f64, D=Ix1>> SlaterDeterminant<T> {
+#[allow(dead_code)]
+impl<T: Function<f64, D=Ix1>> Slater<T> {
 
     pub fn new(orbs: Vec<T>) -> Self {
         let mat_dim = orbs.len();
-        SlaterDeterminant {orbs, matrix: Array::<f64, Ix2>::eye(mat_dim)}
-    }
-
-    // TODO figure out a better way to update matrix value on a move
-    pub fn update(&mut self, cfg: &Array2<f64>) {
-        self.matrix = self.build_matrix(cfg).expect("Failed to build Slater matrix");
+        Self{orbs, matrix: Array::<f64, Ix2>::eye(mat_dim)}
     }
 
     fn build_matrix(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
@@ -41,19 +37,17 @@ impl<T: Function<f64, D=Ix1>> SlaterDeterminant<T> {
 
 }
 
-impl<T> Function<f64> for SlaterDeterminant<T> where T: Function<f64, D=Ix1> {
+impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> {
 
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        match self.matrix.det() {
-            Ok(det) => Ok(det),
-            Err(e) => Err(Error::FuncError)
-        }
+        let matrix = self.build_matrix(cfg)?;
+        Ok(matrix.det()?)
     }
 }
 
-impl<T> WaveFunction for SlaterDeterminant<T>
+impl<T> WaveFunction for Slater<T>
 where T: Function<f64, D=Ix1> + WaveFunction<D=Ix1>
 {
     type D = Ix2;
@@ -67,8 +61,9 @@ where T: Function<f64, D=Ix1> + WaveFunction<D=Ix1>
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         // TODO implement more efficienctly
         let mat_dim = self.orbs.len();
-        let det = &self.matrix.det()?;
-        let mat_inv = self.matrix.inv()?;
+        let matrix = self.build_matrix(cfg)?;
+        let det = matrix.det()?;
+        let mat_inv = matrix.inv()?;
         let mut result = 0.;
         for i in 0..mat_dim {
             let ri = array![cfg[[i, 0]], cfg[[i, 1]], cfg[[i, 2]]];

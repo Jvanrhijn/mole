@@ -1,9 +1,7 @@
-// Standard imports
-use std::fmt::Debug;
 // Third pary imports
 use ndarray::{Array};
 // First party imports
-use error::{FuncError, Error};
+use error::{Error};
 
 pub trait Function<T> {
 

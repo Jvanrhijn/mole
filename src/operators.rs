@@ -1,11 +1,10 @@
-use ndarray::{Array, Array1, Array2, Ix1, Ix2, Axis};
-use ndarray_linalg::error::LinalgError;
-
+// Third party imports
+use ndarray::{Array, Array1, Array2, Ix2, Axis};
+// First party imports
 use traits::operator::Operator;
 use traits::function::Function;
 use traits::wavefunction::WaveFunction;
-use wf::SingleDeterminant;
-use error::{Error, FuncError};
+use error::{Error};
 
 // Ionic potential energy operator
 
@@ -52,6 +51,7 @@ where T: Function<f64, D=Ix2> + ?Sized,
 
 pub struct ElectronicPotential {}
 
+#[allow(dead_code)]
 impl ElectronicPotential {
     pub fn new() -> Self {
         ElectronicPotential{}
@@ -112,6 +112,7 @@ pub struct IonicHamiltonian {
     t: KineticEnergy
 }
 
+#[allow(dead_code)]
 impl IonicHamiltonian {
     pub fn new(t: KineticEnergy, v: IonicPotential) -> Self {
         IonicHamiltonian{v, t}
@@ -134,6 +135,7 @@ pub struct ElectronicHamiltonian {
     velec: ElectronicPotential
 }
 
+#[allow(dead_code)]
 impl ElectronicHamiltonian {
     pub fn new(t: KineticEnergy, vion: IonicPotential, velec: ElectronicPotential) -> Self {
         ElectronicHamiltonian{t, vion, velec}
