@@ -7,7 +7,7 @@ use ndarray_linalg::error::LinalgError;
 use traits::wavefunction::*;
 use traits::function::Function;
 use jastrow::JastrowFactor;
-use determinant::Determinant;
+use determinant::SlaterDeterminant;
 use orbitals::*;
 
 pub struct JastrowSlater {
@@ -25,14 +25,14 @@ impl JastrowSlater {
 pub struct SingleDeterminant<'a, T>
 where T: 'a + ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
-    det: Determinant<Orbital<'a, T>>,
+    det: SlaterDeterminant<Orbital<'a, T>>,
 }
 
 impl<'a, T> SingleDeterminant<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     pub fn new(orbs: Vec<Orbital<'a, T>>) -> Self {
-        Self{det: Determinant::new(orbs)}
+        Self{det: SlaterDeterminant::new(orbs)}
     }
 
     pub fn update(&mut self, cfg: &Array2<f64>) {

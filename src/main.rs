@@ -42,7 +42,7 @@ mod operators;
 
 fn main() {
     // number of electrons
-    let nelec = 2;
+    let nelec = 1;
 
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
@@ -51,14 +51,14 @@ fn main() {
     ];
 
     // create orbitals from basis functions
-    let orbital1 = Orbital::new(array![1.0, 0.0], &basis_set);
+    let orbital1 = Orbital::new(array![0.0, 1.0], &basis_set);
     let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital1]);//, orbital2]);
 
     // setup Hamiltonian components
-    let v = IonicPotential::new(array![[0., 0., 0.]], array![2]);
+    let v = IonicPotential::new(array![[0., 0., 0.]], array![1]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
@@ -66,7 +66,7 @@ fn main() {
     let h = ElectronicHamiltonian::new(t, v, ve);
 
     // max number of MC steps and equilibration time
-    let iters = 10000usize;
+    let iters = 1000usize;
     let equib = iters/10;
 
     // initial random coanfiguration
@@ -94,11 +94,10 @@ fn main() {
             }
             // calculate local energy: Eloc = H(\psi)/(\psi)
             let local_e = h.act_on(&wf, &cfg)/wf.value(&cfg).unwrap();
-            // print local E
-            println!("Local E = {:.*}", 5, local_e);
             // save local energy, discard if we get NaN,
             // discard non-equilibrated values (1000 is arbitrary)
             if !local_e.is_nan() && i > equib {
+                println!("Local E = {:.*}", 5, local_e);
                 local_energy.push(local_e);
             }
         }
