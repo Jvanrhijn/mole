@@ -6,7 +6,6 @@ extern crate rand;
 extern crate assert;
 
 use std::vec::Vec;
-use rand::random;
 use ndarray::{Array1, arr2, Axis, Array2};
 use ndarray_rand::RandomExt;
 use rand::distributions::Range;
@@ -16,6 +15,7 @@ use math::basis::*;
 use orbitals::*;
 use operators::*;
 use traits::operator::*;
+use traits::metropolis::Metropolis;
 
 mod optim {
     pub mod gd;
@@ -26,13 +26,14 @@ mod traits {
     pub mod wavefunction;
     pub mod function;
     pub mod operator;
+    pub mod metropolis;
 }
 
 mod math {
     pub mod basis;
 }
 
-mod metropolis;
+mod metrop;
 mod wf;
 mod jastrow;
 mod orbitals;
@@ -42,12 +43,12 @@ mod error;
 
 fn main() {
     // number of electrons
-    let nelec = 2;
+    let nelec = 1;
 
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
         Box::new(|x| hydrogen_1s(&x)),
-        Box::new(|x| hydrogen_2s(&x))
+        Box::new(|x| hydrogen_1s(&x))
     ];
 
     // create orbitals from basis functions
@@ -55,7 +56,7 @@ fn main() {
     let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital1]);//, orbital2]);
 
     // setup Hamiltonian components
     let v = IonicPotential::new(array![[0., 0., 0.]], array![1]);
@@ -75,6 +76,9 @@ fn main() {
     // initialize wave function
     wf.update(&cfg);
 
+    // create metropolis algorithm
+    let mut metrop = metrop::MetropolisBox::new(wf.value(&cfg).unwrap(), 1.0);
+
     // vector for storing local energy
     let mut local_energy = Vec::<f64>::new();
 
@@ -87,7 +91,7 @@ fn main() {
         for j in 0..nelec {
             // propose a move, if accepted: update the wave function
             // else, keep the same wave function
-            if let Some(config) = metropolis::metropolis_single_move_box(&wf, &cfg, j) {
+            if let Some(config) = metrop.move_state(&wf, &cfg, j) {
                 cfg = config;
                 wf.update(&cfg);
                 acceptance += 1;

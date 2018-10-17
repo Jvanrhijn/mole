@@ -51,7 +51,6 @@ impl<T> Function<f64> for SlaterDeterminant<T> where T: Function<f64, D=Ix1> {
             Err(e) => Err(Error::FuncError)
         }
     }
-
 }
 
 impl<T> WaveFunction for SlaterDeterminant<T>

@@ -18,7 +18,7 @@ pub fn hydrogen_2s(pos: &Array1<f64>) -> (f64, f64) {
 pub fn gaussian(pos: &Array1<f64>, width: f64) -> (f64, f64) {
     let r = (pos*pos).scalar_sum().sqrt();
     let exp = (-(r).powi(2)/(2.*width).powi(2)).exp();
-    (exp, exp*(r.powi(2)/(4.*width.powi(2)) - 2./width.powi(2)))
+    (exp, exp*(r.powi(2)/(4.*width.powi(4)) - 6./(4.*width.powi(2))))
 }
 
 #[cfg(test)]

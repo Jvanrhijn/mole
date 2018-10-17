@@ -19,7 +19,7 @@ pub struct JastrowSlater {
 
 impl JastrowSlater {
     pub fn new(cis: Array1<f64>, orbs: Array1<f64>, jas: JastrowFactor) -> Self {
-        JastrowSlater{ci_coeffs: cis, orb_coeffs: orbs, jastrow: jas}
+        Self{ci_coeffs: cis, orb_coeffs: orbs, jastrow: jas}
     }
 }
 
@@ -54,7 +54,6 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 impl<'a, T> WaveFunction for SingleDeterminant<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
-
     type D = Ix2;
 
     fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
@@ -63,8 +62,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        // TODO implement
-        // fake implementation:
+        // TODO implement efficienctly
         self.det.laplacian(cfg)
     }
 }
