@@ -19,7 +19,11 @@ where
     }
     let cfg_proposed = cfg + &mov;
     let threshold = random::<f64>();
-    let acceptance = (wf.value(&cfg_proposed).unwrap().powi(2)/wf.value(cfg).unwrap().powi(2)).min(1.);
+    let wf_old = wf.value(&cfg)
+        .expect("Failed to evaluate wave function at old configuration");
+    let wf_proposed= wf.value(&cfg_proposed)
+        .expect("Failed to evaluate wave function at proposed configuration");
+    let acceptance = (wf_proposed.powi(2)/wf_old.powi(2)).min(1.);
     if acceptance > threshold {
         Some(cfg_proposed)
     } else {

@@ -1,9 +1,11 @@
 use ndarray::{Array, Array1, Array2, Ix1, Ix2, Axis};
+use ndarray_linalg::error::LinalgError;
 
 use traits::operator::Operator;
 use traits::function::Function;
 use traits::wavefunction::WaveFunction;
 use wf::SingleDeterminant;
+use error::{Error, FuncError};
 
 // Ionic potential energy operator
 
@@ -13,10 +15,9 @@ pub struct IonicPotential {
 }
 
 impl Function<f64> for IonicPotential {
-    type E = ();
     type D = Ix2;
 
-    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Self::E> {
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
         let num_ions = self.ion_positions.len_of(Axis(0));
         let num_elec = cfg.len_of(Axis(0));
         let mut pot = 0.;
@@ -39,13 +40,13 @@ impl IonicPotential {
 }
 
 impl<T> Operator<T> for IonicPotential
-where T: Function<f64, D=Ix2> + ?Sized
+where T: Function<f64, D=Ix2> + ?Sized,
 {
 
     type V = f64;
 
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Self::V {
-        self.value(cfg).unwrap()*wf.value(cfg).unwrap()
+    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+        Ok(self.value(cfg)?*wf.value(cfg)?)
     }
 }
 
@@ -59,10 +60,9 @@ impl ElectronicPotential {
 
 impl Function<f64> for ElectronicPotential {
 
-    type E = ();
     type D = Ix2;
 
-    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Self::E> {
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
         let num_elec = cfg.len_of(Axis(0));
         let mut pot = 0.;
         for i in 0..num_elec {
@@ -76,12 +76,12 @@ impl Function<f64> for ElectronicPotential {
 }
 
 impl<T> Operator<T> for ElectronicPotential
-where T: Function<f64, D=Ix2> + ?Sized
+where T: Function<f64, D=Ix2> + ?Sized,
 {
     type V = f64;
 
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Self::V {
-        self.value(cfg).unwrap()*wf.value(cfg).unwrap()
+    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+        Ok(self.value(cfg)?*wf.value(cfg)?)
     }
 }
 
@@ -96,12 +96,12 @@ impl KineticEnergy {
 }
 
 impl<T> Operator<T> for KineticEnergy
-where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
+where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized,
 {
     type V = f64;
 
-    fn act_on(&self, wf: &T, cfg: &Array<Self::V, Ix2>) -> Self::V {
-        -0.5*wf.laplacian(cfg)
+    fn act_on(&self, wf: &T, cfg: &Array<Self::V, Ix2>) -> Result<Self::V, Error> {
+        Ok(-0.5*wf.laplacian(cfg)?)
     }
 }
 
@@ -119,12 +119,12 @@ impl IonicHamiltonian {
 }
 
 impl<T> Operator<T> for IonicHamiltonian
-where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
+where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized,
 {
     type V = f64;
 
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Self::V {
-        self.t.act_on(wf, cfg) + self.v.act_on(wf, cfg)
+    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+        Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
     }
 }
 
@@ -145,7 +145,7 @@ where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
 {
     type V = f64;
 
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Self::V {
-        self.t.act_on(wf, cfg) + self.vion.act_on(wf, cfg) + self.velec.act_on(wf, cfg)
+    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+        Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
     }
 }

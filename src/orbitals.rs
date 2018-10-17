@@ -3,9 +3,11 @@ use std::vec::Vec;
 // Third party imports
 #[allow(unused_imports)]
 use ndarray::{Array, Array1, Ix1, Ix2, Array2};
+use ndarray_linalg::error::LinalgError;
 // First party imports
 use traits::function::*;
 use traits::wavefunction::WaveFunction;
+use error::{Error, FuncError};
 
 pub struct Orbital<'a, T: 'a>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
@@ -25,10 +27,9 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 impl<'a, T> Function<f64> for Orbital<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
 
-    type E = ();
     type D = Ix1;
 
-    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Self::E> {
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         let basis_vals = self.basis_set.iter().map(|x| x(cfg).0).collect();
         Ok((Array1::from_vec(basis_vals) * &self.parms).scalar_sum())
     }
@@ -43,7 +44,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
         Array1::<f64>::ones(cfg.len())
     }
 
-    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> f64 {
-        self.parms.iter().zip(self.basis_set).map(|(x, y)| x*y(cfg).1).sum()
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+        Ok(self.parms.iter().zip(self.basis_set).map(|(x, y)| x*y(cfg).1).sum())
     }
 }

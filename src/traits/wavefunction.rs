@@ -1,4 +1,5 @@
 use ndarray::{Array2, Array};
+use error::{FuncError, Error};
 
 pub trait WaveFunction {
 
@@ -6,6 +7,6 @@ pub trait WaveFunction {
 
     fn gradient(&self, cfg: &Array<f64, Self::D>) -> Array<f64, Self::D>;
 
-    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> f64;
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error>;
 }
 

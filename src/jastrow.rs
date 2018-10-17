@@ -1,5 +1,6 @@
 use ndarray::{Array1, Array, Ix2};
 use traits::function::*;
+use error::{Error, FuncError};
 
 #[derive(Debug)]
 pub struct JastrowFactor {
@@ -19,10 +20,9 @@ impl JastrowFactor {
 
 impl Function<f64> for JastrowFactor {
 
-    type E = ();
     type D = Ix2;
 
-    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, ()> {
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         // Stub, TODO implement actual Jastrow factor
         Ok(1.0)
     }

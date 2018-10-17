@@ -29,7 +29,6 @@ mod traits {
 }
 
 mod math {
-    pub mod mat_ops;
     pub mod basis;
 }
 
@@ -39,6 +38,7 @@ mod jastrow;
 mod orbitals;
 mod determinant;
 mod operators;
+mod error;
 
 fn main() {
     // number of electrons
@@ -93,7 +93,7 @@ fn main() {
                 acceptance += 1;
             }
             // calculate local energy: Eloc = H(\psi)/(\psi)
-            let local_e = h.act_on(&wf, &cfg)/wf.value(&cfg).unwrap();
+            let local_e = h.act_on(&wf, &cfg).unwrap()/wf.value(&cfg).unwrap();
             // save local energy, discard if we get NaN,
             // discard non-equilibrated values (1000 is arbitrary)
             if !local_e.is_nan() && i > equib {

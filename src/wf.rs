@@ -9,6 +9,7 @@ use traits::function::Function;
 use jastrow::JastrowFactor;
 use determinant::SlaterDeterminant;
 use orbitals::*;
+use error::{FuncError, Error};
 
 pub struct JastrowSlater {
     ci_coeffs: Array1<f64>,
@@ -43,11 +44,9 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 impl<'a, T> Function<f64> for SingleDeterminant<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
-
-    type E = LinalgError;
     type D = Ix2;
 
-    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Self::E> {
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
         self.det.value(cfg)
     }
 }
@@ -63,7 +62,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
         Array2::<f64>::ones((shape[0], shape[1]))
     }
 
-    fn laplacian(&self, cfg: &Array2<f64>) -> f64 {
+    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
         // TODO implement
         // fake implementation:
         self.det.laplacian(cfg)
