@@ -33,22 +33,14 @@ mod error;
 mod montecarlo;
 
 use std::vec::Vec;
-use ndarray::{Array1, Axis, Array2};
-use ndarray_rand::RandomExt;
-use rand::distributions::Range;
+use ndarray::{Array1};
 
-use traits::function::Function;
-use traits::mcsamplers::MonteCarloSampler;
 use math::basis::*;
 use orbitals::*;
 use operators::*;
-use traits::operator::*;
-use traits::metropolis::Metropolis;
 use montecarlo::{Sampler, Runner};
 
 fn main() {
-    // number of electrons
-    let nelec = 2;
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
         Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
@@ -60,10 +52,10 @@ fn main() {
     let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital1]);//, orbital2]);
 
     // setup Hamiltonian components
-    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 1]);
+    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 0]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
@@ -73,11 +65,8 @@ fn main() {
     // max number of MC steps and equilibration time
     let iters = 1000_usize;
 
-    // initial random configuration
-    let mut cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.))*(nelec as f64);
-
     // create metropolis algorithm
-    let mut metrop = metrop::MetropolisBox::new(1.0, wf.value(&cfg).unwrap());
+    let metrop = metrop::MetropolisBox::new(1.0);
 
     // setup monte carlo sampler
     let mut sampler = Sampler::new(&mut wf, metrop);

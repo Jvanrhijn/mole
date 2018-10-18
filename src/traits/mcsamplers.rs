@@ -1,6 +1,5 @@
 use std::vec::Vec;
 use error::Error;
-use traits::wavefunction::WaveFunction;
 
 pub trait MonteCarloSampler {
     fn sample(&self) -> Result<Vec<f64>, Error>;

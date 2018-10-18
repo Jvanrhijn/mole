@@ -9,4 +9,5 @@ pub trait Metropolis<T: WaveFunction + Function<f64, D=Ix2>> {
 
     fn move_state(&mut self, wf: &T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>>;
 
+    fn wf_val_prev_mut(&mut self) -> &mut f64;
 }

@@ -1,7 +1,7 @@
 // Standard imports
 use std::vec::Vec;
 //Third party imports
-use ndarray::{Ix2, Array1, Array2, Axis};
+use ndarray::{Ix2, Array2};
 use ndarray_rand::RandomExt;
 use rand::distributions::Range;
 // First party imports
@@ -29,11 +29,14 @@ where T: Function<<U as Operator<T>>::V, D=Ix2> + WaveFunction,
       V: Metropolis<T>,
       U: Operator<T, V=f64>
 {
-    pub fn new(wave_function: &'a mut T, metrop: V) -> Self {
+    pub fn new(wave_function: &'a mut T, mut metrop: V) -> Self {
         let nelec = wave_function.num_electrons();
+        let cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.));
+        *metrop.wf_val_prev_mut() = wave_function.value(&cfg)
+            .expect("Failed to evaluate wave function");
         Self{
             wave_function,
-            config: Array2::<f64>::random((nelec, 3), Range::new(-1., 1.)),
+            config: cfg,
             metropolis: metrop,
             observables: Vec::<U>::new(),
         }
@@ -87,14 +90,14 @@ where S: MonteCarloSampler
     pub fn run(&mut self, iters: usize) {
         let nelec = self.sampler.num_electrons();
         let mut count = 0_usize;
-        for iter in 0..iters {
+        for _ in 0..iters {
             for e in 0..nelec {
-                count += 1;
                 self.sampler.move_state(e);
                 let samples = self.sampler.sample().expect("Failed to sample observables");
                 self.means.iter_mut().zip(samples.iter()).for_each(|(x, y)| {
                     *x = (count as f64 * *x + y)/(count as f64 + 1.0)
                 });
+                count += 1;
             }
         }
     }
