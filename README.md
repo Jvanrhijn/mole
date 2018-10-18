@@ -1,7 +1,6 @@
 # Mole
 
-Mole is an open-source quantum monte carlo program, written entirely in the Rust
-programming language.
+Mole is an open-source quantum monte carlo program, written entirely in Rust.
 
 ### Goals
 
@@ -23,13 +22,13 @@ Planned features for Mole:
 * Variational QMC capabilities
 * Easy configuration file format (INI most likely)
 * Different wave functions possible, Jastrow-Slater for starters
-* Capable of taking advantege of concurrency
+* Capable of taking advantage of concurrency
 * Various optimization schemes possible (gradient descent and stochastic reconfiguration, for starters)
 
 ### Dependencies
+
 * ndarray 0.12.0
-* rand 0.5.5
+* rand 0.5.0
 * ndarray-rand 0.8.0
 * ndarray-linalg 0.10.0
-* assert 0.7.4
 * libopenblas

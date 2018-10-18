@@ -8,4 +8,5 @@ pub trait Metropolis<T: WaveFunction + Function<f64, D=Ix2>> {
     fn accept_move(&self, wf: &T, cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool;
 
     fn move_state(&mut self, wf: &T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>>;
+
 }

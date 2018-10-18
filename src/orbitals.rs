@@ -46,4 +46,8 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         Ok(self.parms.iter().zip(self.basis_set).map(|(x, y)| x*y(cfg).1).sum())
     }
+
+    fn num_electrons(&self) -> usize {
+        1
+    }
 }

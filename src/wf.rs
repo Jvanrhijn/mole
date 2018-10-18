@@ -62,4 +62,8 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
         // TODO implement efficienctly
         self.det.laplacian(cfg)
     }
+
+    fn num_electrons(&self) -> usize {
+        self.det.num_electrons()
+    }
 }

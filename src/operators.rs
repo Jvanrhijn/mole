@@ -151,3 +151,24 @@ where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
     }
 }
+
+// Local energy
+pub struct LocalEnergy {
+    h: ElectronicHamiltonian
+}
+
+impl LocalEnergy {
+    pub fn new(h: ElectronicHamiltonian) -> Self {
+        LocalEnergy{h}
+    }
+}
+
+impl<T> Operator<T> for LocalEnergy
+where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
+{
+    type V = f64;
+
+    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+        Ok(self.h.act_on(wf, cfg)?/wf.value(cfg)?)
+    }
+}

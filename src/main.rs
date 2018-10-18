@@ -5,19 +5,6 @@ extern crate ndarray;
 extern crate ndarray_rand;
 extern crate ndarray_linalg;
 extern crate rand;
-extern crate assert;
-
-use std::vec::Vec;
-use ndarray::{Array1, Axis, Array2};
-use ndarray_rand::RandomExt;
-use rand::distributions::Range;
-
-use traits::function::Function;
-use math::basis::*;
-use orbitals::*;
-use operators::*;
-use traits::operator::*;
-use traits::metropolis::Metropolis;
 
 mod optim {
     pub mod gd;
@@ -29,6 +16,7 @@ mod traits {
     pub mod function;
     pub mod operator;
     pub mod metropolis;
+    pub mod mcsamplers;
 }
 
 mod math {
@@ -42,15 +30,29 @@ mod orbitals;
 mod determinant;
 mod operators;
 mod error;
+mod montecarlo;
+
+use std::vec::Vec;
+use ndarray::{Array1, Axis, Array2};
+use ndarray_rand::RandomExt;
+use rand::distributions::Range;
+
+use traits::function::Function;
+use traits::mcsamplers::MonteCarloSampler;
+use math::basis::*;
+use orbitals::*;
+use operators::*;
+use traits::operator::*;
+use traits::metropolis::Metropolis;
+use montecarlo::{Sampler, Runner};
 
 fn main() {
     // number of electrons
     let nelec = 2;
-
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-        Box::new(|x| hydrogen_1s(&x)),
-        Box::new(|x| hydrogen_2s(&x))
+        Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
+        Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
     ];
 
     // create orbitals from basis functions
@@ -58,61 +60,36 @@ fn main() {
     let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
 
     // setup Hamiltonian components
-    let v = IonicPotential::new(array![[0., 0., 0.]], array![1]);
+    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 1]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
     // setup electronic structure Hamiltonian
-    let h = ElectronicHamiltonian::new(t, v, ve);
+    let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
 
     // max number of MC steps and equilibration time
-    let iters = 10000_usize;
-    let equib = iters/10;
+    let iters = 1000_usize;
 
     // initial random configuration
     let mut cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.))*(nelec as f64);
 
     // create metropolis algorithm
-    let mut metrop = metrop::MetropolisBox::new(0.1, wf.value(&cfg).unwrap());
+    let mut metrop = metrop::MetropolisBox::new(1.0, wf.value(&cfg).unwrap());
 
-    // vector for storing local energy
-    let mut local_energy = Vec::<f64>::new();
+    // setup monte carlo sampler
+    let mut sampler = Sampler::new(&mut wf, metrop);
+    sampler.add_observable(local_e);
 
-    // acceptance rate
-    let mut acceptance = 0_usize;
+    // create runner
+    let mut runner = Runner::new(sampler);
 
-    // QMC loop
-    for i in 0..iters {
-        // move each electron in turn
-        for j in 0..nelec {
-            // propose a move, if accepted: update the wave function
-            // else, keep the same wave function
-            if let Some(config) = metrop.move_state(&wf, &cfg, j) {
-                cfg = config;
-                acceptance += 1;
-            }
-            // calculate local energy: Eloc = H(\psi)/(\psi)
-            let hpsi = h.act_on(&wf, &cfg).expect("Failed to act on \\psi with H");
-            let local_e = hpsi/wf.value(&cfg).unwrap();
-            // save local energy, discard if we get NaN,
-            // discard non-equilibrated values
-            if !local_e.is_nan() && i > equib {
-                println!("Local E = {:.*}", 5, local_e);
-                local_energy.push(local_e);
-            }
-        }
-    }
+    runner.run(iters);
 
-    // calculate final values (means etc)
-    let local_energy = Array1::<f64>::from_vec(local_energy);
+    let means = runner.means();
 
-    let mean_local_energy = local_energy.mean_axis(Axis(0)).scalar_sum();
-    let std_local_energy = local_energy.var_axis(Axis(0), 0.).scalar_sum().sqrt();
-
-    println!("Final local E: {:.*} +/- {:.*}", 5, mean_local_energy, 10, std_local_energy);
-    println!("Acceptance rate: {}", acceptance as f64 / (iters*nelec) as f64);
+    println!("Local E: {}", means[0]);
 
 }

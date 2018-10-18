@@ -73,4 +73,8 @@ where T: Function<f64, D=Ix1> + WaveFunction<D=Ix1>
         }
         Ok(result*det)
     }
+
+    fn num_electrons(&self) -> usize {
+        self.matrix.shape()[0]
+    }
 }
