@@ -75,7 +75,8 @@ where T: Function<<U as Operator<T>>::V, D=Ix2> + WaveFunction,
 
 pub struct Runner<S: MonteCarloSampler> {
     sampler: S,
-    means: Vec<f64>
+    means: Vec<f64>,
+    variances: Vec<f64>
 }
 
 impl<S> Runner<S>
@@ -83,8 +84,10 @@ where S: MonteCarloSampler
 {
     pub fn new(sampler: S) -> Self {
         let mut means = Vec::<f64>::new();
+        let mut variances = Vec::<f64>::new();
         means.resize(sampler.num_observables(), 0.0);
-        Self{sampler, means}
+        variances.resize(sampler.num_observables(), 0.0);
+        Self{sampler, means, variances}
     }
 
     pub fn run(&mut self, iters: usize) {
@@ -94,8 +97,15 @@ where S: MonteCarloSampler
             for e in 0..nelec {
                 self.sampler.move_state(e);
                 let samples = self.sampler.sample().expect("Failed to sample observables");
+
+                // calculating running mean and variance
+                let means_prev = self.means.clone();
                 self.means.iter_mut().zip(samples.iter()).for_each(|(x, y)| {
                     *x = (count as f64 * *x + y)/(count as f64 + 1.0)
+                });
+                self.variances.iter_mut().zip(samples.iter()).zip(self.means.iter()).zip(means_prev.iter())
+                    .for_each(|(((v, x), m), mprev)| {
+                        *v = *v + ((x - mprev)*(x - m) - *v)/(count as f64 + 1.0)
                 });
                 count += 1;
             }
@@ -104,6 +114,10 @@ where S: MonteCarloSampler
 
     pub fn means(&self) -> &Vec<f64> {
         &self.means
+    }
+
+    pub fn variances(&self) -> &Vec<f64> {
+        &self.variances
     }
 
 }

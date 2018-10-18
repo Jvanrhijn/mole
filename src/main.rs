@@ -52,10 +52,10 @@ fn main() {
     let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital1]);//, orbital2]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
 
     // setup Hamiltonian components
-    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 0]);
+    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 1]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
@@ -78,7 +78,8 @@ fn main() {
     runner.run(iters);
 
     let means = runner.means();
+    let variances = runner.variances();
 
-    println!("Local E: {}", means[0]);
+    println!("Local E: {:.*} +/- {:.*}", 5, means[0], 10, variances[0].sqrt());
 
 }
