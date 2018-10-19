@@ -18,8 +18,10 @@ impl Block {
         &mut self.values[idx]
     }
 
-    pub fn mean(&self) -> f64 {
-        self.values.iter().fold(0.0, |acc, x| acc + x)/self.size as f64
+    pub fn mean_and_variance(&self) -> (f64, f64) {
+        let mean = self.values.iter().sum::<f64>()/self.size as f64;
+        let variance = self.values.iter().map(|x| (x - mean).powi(2)).sum::<f64>()/(self.size - 1) as f64;
+        (mean, variance)
     }
 
     pub fn size(&self) -> usize {

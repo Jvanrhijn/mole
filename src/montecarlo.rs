@@ -92,17 +92,22 @@ where S: MonteCarloSampler
             let mut block_count = 0;
             let mut block = Block::new(nelec*block_size);
             for _ in 0..block_size {
+                // move each electron separately
                 for e in 0..nelec {
                     self.sampler.move_state(e);
                     let samples = self.sampler.sample()
                         .expect("Failed to sample observables");
-                    if b > 0 { // discard first block for equilibration
-                        * block.value_mut(block_count) = samples[0];
-                    block_count += 1;
+                    // discard first block for equilibration
+                    if b > 0 {
+                        *block.value_mut(block_count) = samples[0];
+                        block_count += 1;
                     }
                 }
             }
-            println!("Block average = {}", block.mean());
+            if b > 0 {
+                let (mean, var) = block.mean_and_variance();
+                println!("Block average local energy = {:.*} +/- {:.*}", 5, mean, 10, var.sqrt());
+            }
         }
     }
 
