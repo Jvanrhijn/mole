@@ -4,9 +4,7 @@ use traits::function::Function;
 use error::{Error};
 
 pub trait Operator<T>
-where T: Function<Self::V> + ?Sized
+where T: Function<f64> + ?Sized
 {
-    type V;
-
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error>;
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error>;
 }

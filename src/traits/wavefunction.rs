@@ -1,6 +1,7 @@
 use ndarray::Array;
 use error::Error;
 
+/// Trait representing wave function behaviour
 pub trait WaveFunction {
 
     type D;

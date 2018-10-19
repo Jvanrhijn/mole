@@ -11,23 +11,22 @@ use traits::function::Function;
 use traits::metropolis::Metropolis;
 use traits::operator::Operator;
 use error::Error;
+use block::Block;
 
 
-pub struct Sampler<'a, T, V, U>
-where T: Function<<U as Operator<T>>::V, D=Ix2> + WaveFunction,
+pub struct Sampler<'a, T, V>
+where T: Function<f64, D=Ix2> + WaveFunction,
       V: Metropolis<T>,
-      U: Operator<T, V=f64>
 {
     wave_function: &'a mut T,
     config: Array2<f64>,
     metropolis: V,
-    observables: Vec<U>,
+    observables: Vec<Box<Operator<T>>>
 }
 
-impl<'a, T, V, U> Sampler<'a, T, V, U>
-where T: Function<<U as Operator<T>>::V, D=Ix2> + WaveFunction,
+impl<'a, T, V> Sampler<'a, T, V>
+where T: Function<f64, D=Ix2> + WaveFunction,
       V: Metropolis<T>,
-      U: Operator<T, V=f64>
 {
     pub fn new(wave_function: &'a mut T, mut metrop: V) -> Self {
         let nelec = wave_function.num_electrons();
@@ -38,19 +37,20 @@ where T: Function<<U as Operator<T>>::V, D=Ix2> + WaveFunction,
             wave_function,
             config: cfg,
             metropolis: metrop,
-            observables: Vec::<U>::new(),
+            observables: Vec::<Box<Operator<T>>>::new(),
         }
     }
 
-    pub fn add_observable(&mut self, operator: U) {
-        self.observables.push(operator);
+    pub fn add_observable<O>(&mut self, operator: O)
+    where O: 'static + Operator<T>
+    {
+        self.observables.push(Box::new(operator));
     }
 }
 
-impl<'a, T, V, U> MonteCarloSampler for Sampler<'a, T, V, U>
-where T: Function<<U as Operator<T>>::V, D=Ix2> + WaveFunction,
+impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
+where T: Function<f64, D=Ix2> + WaveFunction,
       V: Metropolis<T>,
-      U: Operator<T, V=f64>
 {
     fn sample(&self) -> Result<Vec<f64>, Error> {
         Ok(self.observables.iter().map(|x| x.act_on(self.wave_function, &self.config)
@@ -76,48 +76,38 @@ where T: Function<<U as Operator<T>>::V, D=Ix2> + WaveFunction,
 pub struct Runner<S: MonteCarloSampler> {
     sampler: S,
     means: Vec<f64>,
-    variances: Vec<f64>
 }
 
 impl<S> Runner<S>
 where S: MonteCarloSampler
 {
     pub fn new(sampler: S) -> Self {
-        let mut means = Vec::<f64>::new();
-        let mut variances = Vec::<f64>::new();
-        means.resize(sampler.num_observables(), 0.0);
-        variances.resize(sampler.num_observables(), 0.0);
-        Self{sampler, means, variances}
+        let means = Vec::<f64>::new();
+        Self{sampler, means}
     }
 
-    pub fn run(&mut self, iters: usize) {
+    pub fn run(&mut self, blocks: usize, block_size: usize) {
         let nelec = self.sampler.num_electrons();
-        let mut count = 0_usize;
-        for _ in 0..iters {
-            for e in 0..nelec {
-                self.sampler.move_state(e);
-                let samples = self.sampler.sample().expect("Failed to sample observables");
-
-                // calculating running mean and variance
-                let means_prev = self.means.clone();
-                self.means.iter_mut().zip(samples.iter()).for_each(|(x, y)| {
-                    *x = (count as f64 * *x + y)/(count as f64 + 1.0)
-                });
-                self.variances.iter_mut().zip(samples.iter()).zip(self.means.iter()).zip(means_prev.iter())
-                    .for_each(|(((v, x), m), mprev)| {
-                        *v = *v + ((x - mprev)*(x - m) - *v)/(count as f64 + 1.0)
-                });
-                count += 1;
+        for b in 0..blocks {
+            let mut block_count = 0;
+            let mut block = Block::new(nelec*block_size);
+            for _ in 0..block_size {
+                for e in 0..nelec {
+                    self.sampler.move_state(e);
+                    let samples = self.sampler.sample()
+                        .expect("Failed to sample observables");
+                    if b > 0 { // discard first block for equilibration
+                        * block.value_mut(block_count) = samples[0];
+                    block_count += 1;
+                    }
+                }
             }
+            println!("Block average = {}", block.mean());
         }
     }
 
     pub fn means(&self) -> &Vec<f64> {
         &self.means
-    }
-
-    pub fn variances(&self) -> &Vec<f64> {
-        &self.variances
     }
 
 }

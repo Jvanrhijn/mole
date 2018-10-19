@@ -24,6 +24,7 @@ mod math {
 }
 
 mod metrop;
+mod block;
 mod wf;
 mod jastrow;
 mod orbitals;
@@ -43,27 +44,22 @@ use montecarlo::{Sampler, Runner};
 fn main() {
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-        Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
-        Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
+        Box::new(|x| hydrogen_1s(&(x + &array![0.0, 0., 0.])))
     ];
 
     // create orbitals from basis functions
-    let orbital1 = Orbital::new(array![1.0, 0.0], &basis_set);
-    let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
+    let orbital1 = Orbital::new(array![1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
+    let mut wf = wf::SingleDeterminant::new(vec![orbital1]);
 
     // setup Hamiltonian components
-    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 1]);
+    let v = IonicPotential::new(array![[0., 0., 0.]], array![1]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
     // setup electronic structure Hamiltonian
     let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
-
-    // max number of MC steps and equilibration time
-    let iters = 1000_usize;
 
     // create metropolis algorithm
     let metrop = metrop::MetropolisBox::new(1.0);
@@ -71,15 +67,12 @@ fn main() {
     // setup monte carlo sampler
     let mut sampler = Sampler::new(&mut wf, metrop);
     sampler.add_observable(local_e);
+    sampler.add_observable(ElectronicPotential::new());
 
     // create runner
     let mut runner = Runner::new(sampler);
 
-    runner.run(iters);
+    runner.run(1000, 100);
 
-    let means = runner.means();
-    let variances = runner.variances();
-
-    println!("Local E: {:.*} +/- {:.*}", 5, means[0], 10, variances[0].sqrt());
-
+    //println!("Local E:       {:.*} +/- {:.*}", 5, means[0], 10, variances[0].sqrt());
 }

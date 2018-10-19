@@ -41,10 +41,7 @@ impl IonicPotential {
 impl<T> Operator<T> for IonicPotential
 where T: Function<f64, D=Ix2> + ?Sized,
 {
-
-    type V = f64;
-
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.value(cfg)?*wf.value(cfg)?)
     }
 }
@@ -78,9 +75,7 @@ impl Function<f64> for ElectronicPotential {
 impl<T> Operator<T> for ElectronicPotential
 where T: Function<f64, D=Ix2> + ?Sized,
 {
-    type V = f64;
-
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.value(cfg)?*wf.value(cfg)?)
     }
 }
@@ -98,9 +93,7 @@ impl KineticEnergy {
 impl<T> Operator<T> for KineticEnergy
 where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized,
 {
-    type V = f64;
-
-    fn act_on(&self, wf: &T, cfg: &Array<Self::V, Ix2>) -> Result<Self::V, Error> {
+    fn act_on(&self, wf: &T, cfg: &Array<f64, Ix2>) -> Result<f64, Error> {
         Ok(-0.5*wf.laplacian(cfg)?)
     }
 }
@@ -122,9 +115,7 @@ impl IonicHamiltonian {
 impl<T> Operator<T> for IonicHamiltonian
 where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized,
 {
-    type V = f64;
-
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
     }
 }
@@ -145,9 +136,7 @@ impl ElectronicHamiltonian {
 impl<T> Operator<T> for ElectronicHamiltonian
 where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
 {
-    type V = f64;
-
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
     }
 }
@@ -166,9 +155,7 @@ impl LocalEnergy {
 impl<T> Operator<T> for LocalEnergy
 where T: Function<f64, D=Ix2> + WaveFunction<D=Ix2> + ?Sized
 {
-    type V = f64;
-
-    fn act_on(&self, wf: &T, cfg: &Array2<Self::V>) -> Result<Self::V, Error> {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.h.act_on(wf, cfg)?/wf.value(cfg)?)
     }
 }
