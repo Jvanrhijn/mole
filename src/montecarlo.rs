@@ -90,23 +90,24 @@ where S: MonteCarloSampler
         let nelec = self.sampler.num_electrons();
         for b in 0..blocks {
             let mut block_count = 0;
-            let mut block = Block::new(nelec*block_size);
+            let mut block = Block::new(block_size, self.sampler.sample().unwrap().len());
             for _ in 0..block_size {
                 // move each electron separately
                 for e in 0..nelec {
                     self.sampler.move_state(e);
+                }
+                // sample after moving each electron
+                // discard first block for equilibration
+                if b > 0 {
                     let samples = self.sampler.sample()
                         .expect("Failed to sample observables");
-                    // discard first block for equilibration
-                    if b > 0 {
-                        *block.value_mut(block_count) = samples[0];
-                        block_count += 1;
-                    }
+                    block.set_value(block_count, samples);
+                    block_count += 1;
                 }
             }
             if b > 0 {
                 let mean = block.mean();
-                println!("Block average local energy = {:.*}", 5, mean);
+                println!("Block average observables = {:.*?}", 5, mean);
             }
         }
     }

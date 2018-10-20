@@ -68,7 +68,6 @@ fn hydrogen_demo() {
     // setup monte carlo sampler
     let mut sampler = Sampler::new(&mut wf, metrop);
     sampler.add_observable(local_e);
-    sampler.add_observable(ElectronicPotential::new());
 
     // create runner
     let mut runner = Runner::new(sampler);
@@ -106,7 +105,6 @@ fn hydrogen_molecule_demo() {
     // setup monte carlo sampler
     let mut sampler = Sampler::new(&mut wf, metrop);
     sampler.add_observable(local_e);
-    sampler.add_observable(ElectronicPotential::new());
 
     // create runner
     let mut runner = Runner::new(sampler);
