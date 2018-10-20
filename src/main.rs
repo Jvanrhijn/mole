@@ -117,6 +117,6 @@ fn hydrogen_molecule_demo() {
 }
 
 fn main() {
-    hydrogen_demo();
-    //hydrogen_molecule_demo();
+    //hydrogen_demo();
+    hydrogen_molecule_demo();
 }

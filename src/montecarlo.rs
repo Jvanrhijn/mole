@@ -105,8 +105,8 @@ where S: MonteCarloSampler
                 }
             }
             if b > 0 {
-                let (mean, var) = block.mean_and_variance();
-                println!("Block average local energy = {:.*} +/- {:.*}", 5, mean, 10, var.sqrt());
+                let mean = block.mean();
+                println!("Block average local energy = {:.*}", 5, mean);
             }
         }
     }
