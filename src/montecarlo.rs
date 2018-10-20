@@ -87,27 +87,26 @@ where S: MonteCarloSampler
     }
 
     pub fn run(&mut self, blocks: usize, block_size: usize) {
-        let nelec = self.sampler.num_electrons();
-        for b in 0..blocks {
-            let mut block_count = 0;
+        let num_electrons = self.sampler.num_electrons();
+        let mut cumav = 0.0;
+        for block_nr in 0..blocks {
             let mut block = Block::new(block_size, self.sampler.sample().unwrap().len());
-            for _ in 0..block_size {
+            for b in 0..block_size {
                 // move each electron separately
-                for e in 0..nelec {
-                    self.sampler.move_state(e);
+                for electron in 0..num_electrons {
+                    self.sampler.move_state(electron);
                 }
                 // sample after moving each electron
                 // discard first block for equilibration
-                if b > 0 {
+                if block_nr > 0 {
                     let samples = self.sampler.sample()
                         .expect("Failed to sample observables");
-                    block.set_value(block_count, samples);
-                    block_count += 1;
+                    block.set_value(b-1, samples);
                 }
             }
-            if b > 0 {
-                let mean = block.mean();
-                println!("Block average observables = {:.*?}", 5, mean);
+            cumav = (block.mean()[0] + block_nr as f64 * cumav)/(block_nr + 1) as f64;
+            if block_nr > 0 {
+                println!("Local E = {:.*}", 5, cumav);
             }
         }
     }
