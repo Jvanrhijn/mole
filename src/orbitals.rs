@@ -1,13 +1,14 @@
 // Standard imports
 use std::vec::Vec;
 // Third party imports
-#[allow(unused_imports)]
-use ndarray::{Array, Array1, Ix1, Ix2, Array2};
+use ndarray::{Array, Array1, Ix1};
 // First party imports
 use traits::function::*;
-use traits::wavefunction::WaveFunction;
+use traits::differentiate::Differentiate;
 use error::{Error};
 
+/// Parametrized orbital as a linear combination of basis functions:
+/// $\phi(x) = \sum_{i=1}^{N_{\text{basis}}} \xi_i(x)$.
 pub struct Orbital<'a, T: 'a>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
@@ -34,7 +35,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
     }
 }
 
-impl<'a, T> WaveFunction for Orbital<'a, T>
+impl<'a, T> Differentiate for Orbital<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
 
     type D = Ix1;
@@ -47,6 +48,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
         Ok(self.parms.iter().zip(self.basis_set).map(|(x, y)| x*y(cfg).1).sum())
     }
 
+    // $\xi_i(x)$ are single-electron orbitals.
     fn num_electrons(&self) -> usize {
         1
     }

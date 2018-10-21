@@ -1,5 +1,6 @@
+// Standard imports
 use std::convert;
-
+// Third party imports
 use ndarray_linalg::error::LinalgError;
 
 #[derive(Debug)]

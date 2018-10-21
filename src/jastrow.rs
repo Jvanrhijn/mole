@@ -2,14 +2,13 @@ use ndarray::{Array1, Array, Ix2};
 use traits::function::*;
 use error::{Error};
 
-#[derive(Debug)]
+/// Jastrow factor struct, used to construct Jastrow-Slater wave functions.
 pub struct JastrowFactor {
     parms_one_body: Array1<f64>,
     parms_two_body: Array1<f64>,
     parms_three_body: Array1<f64>
 }
 
-#[allow(dead_code)]
 impl JastrowFactor {
     pub fn new(parms_one_body: Array1<f64>,
                parms_two_body: Array1<f64>,

@@ -1,8 +1,8 @@
 use ndarray::Array;
 use error::Error;
 
-/// Trait representing wave function behaviour
-pub trait WaveFunction {
+/// Interface for creating once- and twice differentiable functions.
+pub trait Differentiate {
 
     type D;
 

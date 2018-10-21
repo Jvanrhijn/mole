@@ -6,7 +6,7 @@ use ndarray_rand::RandomExt;
 use rand::distributions::Range;
 // First party imports
 use traits::mcsamplers::*;
-use traits::wavefunction::WaveFunction;
+use traits::differentiate::Differentiate;
 use traits::function::Function;
 use traits::metropolis::Metropolis;
 use traits::operator::Operator;
@@ -14,8 +14,10 @@ use error::Error;
 use block::Block;
 
 
+/// Simple Monte Carlo sampler
+/// Performs Metropolis step and keeps list of observables to sample
 pub struct Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + WaveFunction,
+where T: Function<f64, D=Ix2> + Differentiate,
       V: Metropolis<T>,
 {
     wave_function: &'a mut T,
@@ -25,7 +27,7 @@ where T: Function<f64, D=Ix2> + WaveFunction,
 }
 
 impl<'a, T, V> Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + WaveFunction,
+where T: Function<f64, D=Ix2> + Differentiate,
       V: Metropolis<T>,
 {
     pub fn new(wave_function: &'a mut T, mut metrop: V) -> Self {
@@ -49,7 +51,7 @@ where T: Function<f64, D=Ix2> + WaveFunction,
 }
 
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + WaveFunction,
+where T: Function<f64, D=Ix2> + Differentiate,
       V: Metropolis<T>,
 {
     fn sample(&self) -> Result<Vec<f64>, Error> {
@@ -73,6 +75,8 @@ where T: Function<f64, D=Ix2> + WaveFunction,
 
 }
 
+/// Struct for running Monte Carlo integration
+/// Generic over Samplers
 pub struct Runner<S: MonteCarloSampler> {
     sampler: S,
     means: Vec<f64>,

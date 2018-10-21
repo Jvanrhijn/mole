@@ -3,7 +3,7 @@ use std::vec::Vec;
 // Third party imports
 use ndarray::{Axis, Array1, Array2};
 
-/// convenience struct for dealing with block averaging in a simple way
+/// Convenience struct for dealing with block averaging.
 pub struct Block {
     values: Array2<f64>,
     size: usize,

@@ -6,7 +6,7 @@ use ndarray::{Ix2, Ix1, Array, Array2};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
 use traits::function::*;
-use traits::wavefunction::WaveFunction;
+use traits::differentiate::Differentiate;
 use error::{Error};
 
 pub struct Slater<T: Function<f64, D=Ix1>> {
@@ -47,8 +47,8 @@ impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> {
     }
 }
 
-impl<T> WaveFunction for Slater<T>
-where T: Function<f64, D=Ix1> + WaveFunction<D=Ix1>
+impl<T> Differentiate for Slater<T>
+where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type D = Ix2;
 

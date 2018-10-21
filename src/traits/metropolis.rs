@@ -1,12 +1,16 @@
 use ndarray::{Array2, Ix2};
-use traits::wavefunction::WaveFunction;
+use traits::differentiate::Differentiate;
 use traits::function::Function;
 
-pub trait Metropolis<T: WaveFunction + Function<f64, D=Ix2>> {
+/// Interface for implementing Metropolis algorithms that generate
+/// Markov chains of configurations.
+pub trait Metropolis<T: Differentiate + Function<f64, D=Ix2>> {
+    /// Propose a move to a new configuration.
     fn propose_move(&self, wf: &T, cfg: &Array2<f64>, idx: usize) -> Array2<f64>;
-
+    /// Test whether a proposed configuration will be accepted.
     fn accept_move(&self, wf: &T, cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool;
-
+    /// Return an Option containing the new configuration if it was accepted,
+    /// and None otherwise.
     fn move_state(&mut self, wf: &T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>>;
 
     fn wf_val_prev_mut(&mut self) -> &mut f64;

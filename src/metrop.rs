@@ -5,9 +5,12 @@ use ndarray_rand::RandomExt;
 
 use traits::metropolis::Metropolis;
 use traits::function::Function;
-use traits::wavefunction::WaveFunction;
+use traits::differentiate::Differentiate;
 
-#[allow(dead_code)]
+/// Simplest Metropolis algorithm.
+/// Transition matrix T(x -> x') is constant inside a cubical box,
+/// and zero outside it. This yields an acceptance probability of
+/// $A(x -> x') = \min(\psi(x')^2 / \psi(x)^2, 1)$.
 pub struct MetropolisBox {
     box_side: f64,
     wf_value_prev: f64
@@ -23,7 +26,9 @@ impl MetropolisBox {
     }
 }
 
-impl<T: WaveFunction + Function<f64, D=Ix2>> Metropolis<T> for MetropolisBox {
+impl<T> Metropolis<T> for MetropolisBox
+where T: Differentiate + Function<f64, D=Ix2>
+{
 
     fn propose_move(&self, _wf: &T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
         let mut config_proposed = cfg.clone();

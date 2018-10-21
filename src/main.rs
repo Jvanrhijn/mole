@@ -12,7 +12,7 @@ mod optim {
 
 mod traits {
     pub mod optimizer;
-    pub mod wavefunction;
+    pub mod differentiate;
     pub mod function;
     pub mod operator;
     pub mod metropolis;

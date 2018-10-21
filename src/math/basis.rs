@@ -1,21 +1,21 @@
 // Third party imports
 use ndarray::{Array1};
 
+/// Return value and laplacian of the 1s hydrogen orbital
 pub fn hydrogen_1s(pos: &Array1<f64>) -> (f64, f64) {
-    // Return value and laplacian of the 1s hydrogen orbital
     let r = (pos*pos).scalar_sum().sqrt();
     let exp = (-r).exp();
     (exp, (1. - 2./r)*(exp))
 }
 
+/// Return value and laplacian of the 2s hydrogen orbital
 pub fn hydrogen_2s(pos: &Array1<f64>) -> (f64, f64) {
-    // Return value and laplacian of the 2s hydrogen orbital
     let r = (pos*pos).scalar_sum().sqrt();
     let exp = (-r/2.).exp();
     ((1. - r/2.)*exp, exp/8.*(10. - r - 16./r))
 }
 
-#[allow(dead_code)]
+/// Return value and Laplacian of Gaussian orbital
 pub fn gaussian(pos: &Array1<f64>, width: f64) -> (f64, f64) {
     let r = (pos*pos).scalar_sum().sqrt();
     let exp = (-(r).powi(2)/(2.*width).powi(2)).exp();
