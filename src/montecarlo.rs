@@ -82,15 +82,15 @@ impl<S> Runner<S>
 where S: MonteCarloSampler
 {
     pub fn new(sampler: S) -> Self {
-        let means = Vec::<f64>::new();
+        let mut means = Vec::<f64>::new();
+        means.resize(sampler.num_observables(), 0.0);
         Self{sampler, means}
     }
 
     pub fn run(&mut self, blocks: usize, block_size: usize) {
         let num_electrons = self.sampler.num_electrons();
-        let mut cumav = 0.0;
         for block_nr in 0..blocks {
-            let mut block = Block::new(block_size, self.sampler.sample().unwrap().len());
+            let mut block = Block::new(block_size, self.sampler.num_observables());
             for b in 0..block_size {
                 // move each electron separately
                 for electron in 0..num_electrons {
@@ -101,12 +101,13 @@ where S: MonteCarloSampler
                 if block_nr > 0 {
                     let samples = self.sampler.sample()
                         .expect("Failed to sample observables");
-                    block.set_value(b-1, samples);
+                    block.set_value(b, samples);
                 }
             }
-            cumav = (block.mean()[0] + block_nr as f64 * cumav)/(block_nr + 1) as f64;
+            self.means.iter_mut().zip(block.mean().iter())
+                .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);
             if block_nr > 0 {
-                println!("Local E = {:.*}", 5, cumav);
+                println!("Local E = {:.*}", 5, self.means[0]);
             }
         }
     }

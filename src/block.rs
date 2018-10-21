@@ -23,6 +23,7 @@ impl Block {
     pub fn mean(&self) -> Array1<f64> {
         self.values.mean_axis(Axis(0))
     }
+
      pub fn variance(&self) -> Array1<f64> {
          self.values.var_axis(Axis(0), 0.0)
      }
