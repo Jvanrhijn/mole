@@ -57,8 +57,8 @@ where T: Differentiate + Function<f64, D=Ix2>
         }
     }
 
-    fn wf_val_prev_mut(&mut self) -> &mut f64 {
-        &mut self.wf_value_prev
+    fn set_wave_function_value(&mut self, wf_val: f64) {
+        self.wf_value_prev = wf_val;
     }
 
 }

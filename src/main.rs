@@ -17,6 +17,7 @@ mod traits {
     pub mod operator;
     pub mod metropolis;
     pub mod mcsamplers;
+    pub mod wavefunction;
 }
 
 mod math {

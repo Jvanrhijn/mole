@@ -48,8 +48,4 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64) {
         Ok(self.parms.iter().zip(self.basis_set).map(|(x, y)| x*y(cfg).1).sum())
     }
 
-    // $\xi_i(x)$ are single-electron orbitals.
-    fn num_electrons(&self) -> usize {
-        1
-    }
 }

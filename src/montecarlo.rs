@@ -10,6 +10,7 @@ use traits::differentiate::Differentiate;
 use traits::function::Function;
 use traits::metropolis::Metropolis;
 use traits::operator::Operator;
+use traits::wavefunction::WaveFunction;
 use error::Error;
 use block::Block;
 
@@ -27,14 +28,14 @@ where T: Function<f64, D=Ix2> + Differentiate,
 }
 
 impl<'a, T, V> Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate,
+where T: Function<f64, D=Ix2> + Differentiate + WaveFunction,
       V: Metropolis<T>,
 {
     pub fn new(wave_function: &'a mut T, mut metrop: V) -> Self {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.));
-        *metrop.wf_val_prev_mut() = wave_function.value(&cfg)
-            .expect("Failed to evaluate wave function");
+        metrop.set_wave_function_value(wave_function.value(&cfg)
+            .expect("Failed to evaluate wave function"));
         Self{
             wave_function,
             config: cfg,
@@ -51,7 +52,7 @@ where T: Function<f64, D=Ix2> + Differentiate,
 }
 
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate,
+where T: Function<f64, D=Ix2> + Differentiate + WaveFunction,
       V: Metropolis<T>,
 {
     fn sample(&self) -> Result<Vec<f64>, Error> {
@@ -59,14 +60,12 @@ where T: Function<f64, D=Ix2> + Differentiate,
             .expect("Failed to act on wave function with operator")).collect())
     }
 
-    fn move_state(&mut self, elec: usize) {
-        if let Some(config) = self.metropolis.move_state(self.wave_function, &self.config, elec) {
-            self.config = config;
+    fn move_state(&mut self) {
+        for e in 0..self.wave_function.num_electrons() {
+            if let Some(config) = self.metropolis.move_state(self.wave_function, &self.config, e) {
+                self.config = config;
+            }
         }
-    }
-
-    fn num_electrons(&self) -> usize {
-        self.wave_function.num_electrons()
     }
 
     fn num_observables(&self) -> usize {
@@ -92,16 +91,11 @@ where S: MonteCarloSampler
     }
 
     pub fn run(&mut self, blocks: usize, block_size: usize) {
-        let num_electrons = self.sampler.num_electrons();
         for block_nr in 0..blocks {
             let mut block = Block::new(block_size, self.sampler.num_observables());
             for b in 0..block_size {
-                // move each electron separately
-                for electron in 0..num_electrons {
-                    self.sampler.move_state(electron);
-                }
-                // sample after moving each electron
-                // discard first block for equilibration
+                self.sampler.move_state();
+                // Discard first block for equilibration
                 if block_nr > 0 {
                     let samples = self.sampler.sample()
                         .expect("Failed to sample observables");

@@ -4,6 +4,7 @@ use ndarray::{Array1, Ix2, Array2};
 // first party imports
 use traits::differentiate::*;
 use traits::function::Function;
+use traits::wavefunction::WaveFunction;
 use jastrow::JastrowFactor;
 use determinant::Slater;
 use orbitals::*;
@@ -70,7 +71,12 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
         self.det.laplacian(cfg)
     }
 
-    fn num_electrons(&self) -> usize {
-        self.det.num_electrons()
-    }
+}
+
+impl<'a, T> WaveFunction for SingleDeterminant<'a, T>
+where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+{
+   fn num_electrons(&self) -> usize {
+       self.det.num_electrons()
+   }
 }

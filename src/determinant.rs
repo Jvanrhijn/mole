@@ -6,6 +6,7 @@ use ndarray::{Ix2, Ix1, Array, Array2};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
 use traits::function::*;
+use traits::wavefunction::WaveFunction;
 use traits::differentiate::Differentiate;
 use error::{Error};
 
@@ -74,7 +75,12 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         Ok(result*det)
     }
 
+}
+
+impl<T> WaveFunction for Slater<T>
+where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+{
     fn num_electrons(&self) -> usize {
-        self.matrix.shape()[0]
+        self.orbs.len()
     }
 }
