@@ -5,7 +5,6 @@ rust: nightly
 cache: cargo
 
 script:
-  - cargo build --verbose 
   - cargo test --verbose
 
 before_install:
