@@ -11,6 +11,7 @@ script:
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get -qq install -y libcurl4-openssl-dev libelf-dev libdw-dev
+  - sudo apt-get -qq install gfortran
   - sudo apt-get -qq install libopenblas-dev
 
 after_success: |
