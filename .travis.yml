@@ -5,5 +5,5 @@ rust: nightly
 cache: cargo
 
 script:
-  - cargo build --verbose all
-  - cargo test --verbose all
+  - cargo build --verbose 
+  - cargo test --verbose
