@@ -3,13 +3,10 @@ language: rust
 sudo: required
 
 rust:
-  - stable
-  - beta
   - nightly
 
-matrix:
-  allow_failures:
-    - rust: nightly
+script:
+  - cargo test
 
 addons:
   apt:
@@ -42,3 +39,5 @@ after_success: |
   bash <(curl -s https://codecov.io/bash) &&
   echo "Uploaded code coverage"
 
+env:
+  - RUSTFLAGS="-C link-dead-code"
