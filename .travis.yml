@@ -22,7 +22,6 @@ addons:
       - binutils-dev
       - libiberty-dev
       - gfortran
-      - intel-mkl
 
 before_script: |
   wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
