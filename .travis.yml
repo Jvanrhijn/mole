@@ -19,6 +19,7 @@ addons:
       - binutils-dev
       - libiberty-dev
       - gfortran
+      - libblas-dev
       - liblapack-dev
       - liblapack3
       - libopenblas-base
