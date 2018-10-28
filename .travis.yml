@@ -22,6 +22,7 @@ addons:
       - binutils-dev
       - libiberty-dev
       - gfortran
+      - libopenblas-dev
 
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
