@@ -23,6 +23,7 @@ addons:
       - libiberty-dev
       - gfortran
       - libopenblas-dev
+      - liblapack-dev
 
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
