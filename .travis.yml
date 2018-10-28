@@ -5,6 +5,9 @@ sudo: required
 rust:
   - nightly
 
+cache:
+  - cargo
+
 script:
   - cargo test
 
@@ -19,11 +22,6 @@ addons:
       - binutils-dev
       - libiberty-dev
       - gfortran
-      - libblas-dev
-      - liblapack-dev
-      - liblapack3
-      - libopenblas-base
-      - libopenblas-dev
 
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
