@@ -172,3 +172,42 @@ where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + ?Sized
         Ok(self.h.act_on(wf, cfg)?/wf.value(cfg)?)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use wf::SingleDeterminant;
+    use orbitals::Orbital;
+    use math::basis;
+
+    #[test]
+    fn hydrogen_ground_state() {
+        let kinetic = KineticEnergy::new();
+        let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
+        let hamiltonian = IonicHamiltonian::new(kinetic, potential);
+        let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+            Box::new(basis::hydrogen_1s)
+        ];
+        let wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let cfg = Array2::<f64>::ones((1, 3));
+        let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
+        let wval = wf.value(&cfg).unwrap();
+        assert_eq!(hpsi/wval, -0.5);
+    }
+
+    #[test]
+    fn hydrogen_first_excited() {
+        let kinetic = KineticEnergy::new();
+        let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
+        let hamiltonian = IonicHamiltonian::new(kinetic, potential);
+        let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+            Box::new(basis::hydrogen_2s)
+        ];
+        let wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let cfg = Array2::<f64>::ones((1, 3));
+        let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
+        let wval = wf.value(&cfg).unwrap();
+        assert!((hpsi/wval - (-0.125)).abs() < 1e-15);
+    }
+
+}

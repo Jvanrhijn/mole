@@ -29,9 +29,10 @@ mod tests {
     use ndarray_rand::RandomExt;
 
     #[test]
-    fn ground_state() {
+    fn hydrogen_ground_state() {
         let r = Array1::<f64>::random(3, Range::new(-1., 1.));
         let wf_val = hydrogen_1s(&r).0;
         assert!(wf_val > 0.);
     }
+
 }

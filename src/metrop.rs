@@ -62,3 +62,50 @@ where T: Differentiate + Function<f64, D=Ix2>
     }
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use error::Error;
+
+    // define stub wave function
+    struct WaveFunctionMock {
+        value: f64
+    }
+
+    impl WaveFunctionMock {
+        pub fn set_value(&mut self, new_val: f64) {
+            self.value = new_val;
+        }
+    }
+
+    impl Function<f64> for WaveFunctionMock {
+        type D = Ix2;
+
+        fn value(&self, _cfg: &Array2<f64>) -> Result<f64, Error> {
+            Ok(self.value)
+        }
+    }
+
+    impl Differentiate for WaveFunctionMock {
+        type D = Ix2;
+
+        fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
+            cfg.clone()
+        }
+
+        fn laplacian(&self, _cfg: &Array2<f64>) -> Result<f64, Error> {
+            Ok(1.0)
+        }
+    }
+
+    #[test]
+    fn test_uniform_wf() {
+        let cfg = Array2::<f64>::ones((1, 3));
+        let wf = WaveFunctionMock{value: 1.0};
+        let metrop = MetropolisBox::new(1.0);
+        let new_cfg = metrop.propose_move(&wf, &cfg, 0); // should always accept
+        assert!(metrop.accept_move(&wf, &cfg, &new_cfg));
+    }
+
+}

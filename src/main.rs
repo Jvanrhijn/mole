@@ -5,6 +5,7 @@ extern crate ndarray;
 extern crate ndarray_rand;
 extern crate ndarray_linalg;
 extern crate rand;
+extern crate num_traits;
 
 mod optim {
     pub mod gd;
