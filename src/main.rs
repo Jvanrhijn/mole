@@ -4,7 +4,6 @@
 extern crate ndarray;
 extern crate ndarray_rand;
 extern crate ndarray_linalg;
-extern crate openblas_src;
 extern crate rand;
 
 mod optim {
