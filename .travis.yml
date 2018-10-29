@@ -1,20 +1,50 @@
 language: rust
 
-rust: nightly
+sudo: required
 
-cache: cargo
+rust:
+  - nightly
+
+cache:
+  - cargo
 
 script:
-  - cargo test --verbose
+  - cargo test
 
-before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get -qq install -y libcurl4-openssl-dev libelf-dev libdw-dev
-  - sudo apt-get -qq install gfortran
-  - sudo apt-get -qq install liblapack-dev liblapack3 libopenblas-base libopenblas-dev
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - cmake
+      - gcc
+      - binutils-dev
+      - libiberty-dev
+      - gfortran
+
+before_script: |
+  wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB &&
+  sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB &&
+  sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list' &&
+  sudo apt-get update &&
+  sudo apt-get install intel-mkl-64bit-2018.2-046 &&
+  source /opt/intel/parallel_studio_xe_2018/compilers_and_libraries_2018/linux/bin/compilervars_global.sh intel64 
 
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-  tar xzf master.tar.gz && mkdir kcov-master/build && cd kcov-master/build && cmake .. && make &&
-  sudo make install && cd ../.. && rm -rf target/debug/mole* && cargo test --no-run && rm target/debug/*.d &&
-  kcov --coveralls-id=$TRAVIS_JOB_ID --exclude-pattern=/.cargo target/kcov $(find target/debug/mole-*)
+  tar xzf master.tar.gz &&
+  cd kcov-master &&
+  mkdir build &&
+  cd build &&
+  cmake .. &&
+  make &&
+  make install DESTDIR=../../kcov-build &&
+  cd ../.. &&
+  rm -rf kcov-master &&
+  for file in target/debug/mole-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
+  bash <(curl -s https://codecov.io/bash) &&
+  echo "Uploaded code coverage"
+
+env:
+  - RUSTFLAGS="-C link-dead-code"
