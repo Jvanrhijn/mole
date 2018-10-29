@@ -43,41 +43,6 @@ use operators::*;
 use montecarlo::{Sampler, Runner};
 
 
-fn hydrogen_demo() {
-    // create basis function set
-    let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-        Box::new(hydrogen_1s)
-    ];
-
-    // create orbitals from basis functions
-    let orbital1 = Orbital::new(array![1.0], &basis_set);
-
-    // Initialize wave function: single Slater determinant
-    let mut wf = wf::SingleDeterminant::new(vec![orbital1]);
-
-    // setup Hamiltonian components
-    let v = IonicPotential::new(array![[0., 0., 0.]], array![1]);
-    let t = KineticEnergy::new();
-    let ve = ElectronicPotential::new();
-
-    // setup electronic structure Hamiltonian
-    let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
-
-    // create metropolis algorithm
-    let metrop = metrop::MetropolisBox::new(1.0);
-
-    // setup monte carlo sampler
-    let mut sampler = Sampler::new(&mut wf, metrop);
-    sampler.add_observable(local_e);
-
-    // create runner
-    let mut runner = Runner::new(sampler);
-
-    runner.run(1000, 100);
-
-    //println!("Local E:       {:.*} +/- {:.*}", 5, means[0], 10, variances[0].sqrt());
-}
-
 fn hydrogen_molecule_demo() {
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
@@ -112,10 +77,9 @@ fn hydrogen_molecule_demo() {
 
     runner.run(100, 1000);
 
-    //println!("Local E:       {:.*} +/- {:.*}", 5, means[0], 10, variances[0].sqrt());
+    println!("Local E:       {:.*}", 5, runner.means()[0]);
 }
 
 fn main() {
-    //hydrogen_demo();
     hydrogen_molecule_demo();
 }

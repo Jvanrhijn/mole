@@ -85,8 +85,10 @@ impl<S> Runner<S>
 where S: MonteCarloSampler
 {
     pub fn new(sampler: S) -> Self {
-        let mut means = Vec::<f64>::new();
-        means.resize(sampler.num_observables(), 0.0);
+        //let mut means = Vec::<f64>::new();
+        //means.resize(sampler.num_observables(), 0.0);
+        // initialize means at a sample of the current configuration
+        let means = sampler.sample().expect("Failed to sample observables");
         Self{sampler, means}
     }
 
@@ -102,10 +104,9 @@ where S: MonteCarloSampler
                     block.set_value(b, samples);
                 }
             }
-            self.means.iter_mut().zip(block.mean().iter())
-                .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);
             if block_nr > 0 {
-                println!("Local E = {:.*}", 5, self.means[0]);
+                self.means.iter_mut().zip(block.mean().iter())
+                    .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);
             }
         }
     }
@@ -119,10 +120,39 @@ where S: MonteCarloSampler
 #[cfg(test)]
 mod tests {
     use super::*;
+    use math::basis;
+    use ndarray::Array1;
+    use orbitals::Orbital;
+    use wf;
+    use operators::{LocalEnergy, ElectronicPotential, IonicPotential, KineticEnergy, ElectronicHamiltonian};
+    use metrop::MetropolisBox;
 
     #[test]
-    fn test_foo() {
-        assert!(true);
+    fn test_hydrogen_atom_single_det_metrop_box() {
+        // Tests the monte carlo result for a single hydrogen atom
+        const ENERGY_EXACT: f64 = -0.5;
+        let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+            Box::new(basis::hydrogen_1s)
+        ];
+        let orbital = Orbital::new(array![1.0], &basis_set);
+        let mut wave_func = wf::SingleDeterminant::new(vec![orbital]);
+        let local_e = LocalEnergy::new(
+            ElectronicHamiltonian::new(
+                KineticEnergy::new(),
+                IonicPotential::new(array![[0., 0., 0.]], array![1]),
+                ElectronicPotential::new()
+            )
+        );
+        let metropolis = MetropolisBox::new(1.0);
+        let mut sampler = Sampler::new(&mut wave_func, metropolis);
+        sampler.add_observable(local_e);
+
+        let mut runner = Runner::new(sampler);
+        runner.run(10, 1);
+
+        let local_e_result = runner.means()[0];
+
+        assert!((local_e_result - ENERGY_EXACT).abs() < 1e-15);
     }
 
 }
