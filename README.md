@@ -1,5 +1,8 @@
 # Mole
 
+[![Build Status](https://travis-ci.com/Jvanrhijn/Mole.svg?branch=master)](https://travis-ci.com/Jvanrhijn/Mole)
+[![codecov](https://codecov.io/gh/Jvanrhijn/mole/branch/master/graph/badge.svg)](https://codecov.io/gh/Jvanrhijn/mole)
+
 Mole is an open-source quantum monte carlo program, written entirely in Rust.
 
 ### Goals
