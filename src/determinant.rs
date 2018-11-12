@@ -15,7 +15,6 @@ pub struct Slater<T: Function<f64, D=Ix1>> {
     matrix: Array2<f64>,
 }
 
-#[allow(dead_code)]
 impl<T: Function<f64, D=Ix1>> Slater<T> {
 
     pub fn new(orbs: Vec<T>) -> Self {
@@ -83,4 +82,42 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     fn num_electrons(&self) -> usize {
         self.orbs.len()
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ndarray::Array1;
+    use orbitals::Orbital;
+    use math::basis::{hydrogen_1s, hydrogen_2s};
+
+    #[test]
+    fn value_single_electron() {
+        let basis = vec![Box::new(hydrogen_1s)];
+        let orb = Orbital::new(array![1.0], &basis);
+        let det = Slater::new(vec![orb]);
+        let x = array![[1.0, -1.0, 1.0]];
+        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&array![1.0, 1.0, 1.0]).0);
+    }
+
+    #[test]
+    fn value_multiple_electrons() {
+        let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+            Box::new(hydrogen_1s),
+            Box::new(hydrogen_2s)
+        ];
+        let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let det = Slater::new(orbs);
+        let x = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
+        let phi11 = hydrogen_1s(&x.slice(s![0, ..]).to_owned()).0;
+        let phi22 = hydrogen_2s(&x.slice(s![1, ..]).to_owned()).0;
+        let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned()).0;
+        let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned()).0;
+        let value = phi11*phi22 - phi21*phi12;
+        assert_eq!(det.value(&x).unwrap(), value);
+        // switching electron positions should flip determinant sign
+        let x_switched = array![[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]];
+        assert_eq!(det.value(&x_switched).unwrap(), -value);
+    }
+
 }
