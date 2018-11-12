@@ -2,7 +2,7 @@
 use std::vec::Vec;
 use std::result::Result;
 // Third party imports
-use ndarray::{Ix2, Ix1, Array, Array2};
+use ndarray::{Ix2, Ix1, Array, Array1, Array2};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
 use traits::function::*;
@@ -105,7 +105,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     type U = usize;
 
     fn refresh(&mut self, new: &'a Array2<f64>) {
-        self.matrix = self.build_matrix(new).expect("Failed to build matrix");
+        self.matrix = self.build_matrix(new).expect("Failed to construct matrix");
         self.inv_matrix = self.matrix.inv().expect("Failed to take matrix inverse");
         self.current_value = self.matrix.det().expect("Failed to take matrix determinant");
         let mut laplac = 0.0;
@@ -117,11 +117,17 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
                     *self.inv_matrix[[j, i]];
             }
         }
-        self.current_laplac = laplac;
+        self.current_laplac = laplac*self.current_value;
     }
 
     fn update(&mut self, ud: Self::U, new: &'a Array2<f64>) {
         // TODO: implement cache update for Slater determinant
+        // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
+        let orbvec = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
+            phi.value(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
+        }).collect());
+        self.current_value *= orbvec.dot(&self.inv_matrix.slice(s![.., ud]));
+
     }
 
     fn current_value(&self) -> Self::V {
@@ -135,6 +141,8 @@ mod tests {
     use ndarray::Array1;
     use orbitals::Orbital;
     use math::basis::{hydrogen_1s, hydrogen_2s};
+
+    static EPS: f64 = 1e-15;
 
     #[test]
     fn value_single_electron() {
@@ -154,6 +162,7 @@ mod tests {
         let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
         let det = Slater::new(orbs);
         let x = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
+        // manually construct orbitals
         let phi11 = hydrogen_1s(&x.slice(s![0, ..]).to_owned()).0;
         let phi22 = hydrogen_2s(&x.slice(s![1, ..]).to_owned()).0;
         let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned()).0;
@@ -164,5 +173,58 @@ mod tests {
         let x_switched = array![[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]];
         assert_eq!(det.value(&x_switched).unwrap(), -value);
     }
+
+    #[test]
+    fn cache() {
+        let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+            Box::new(hydrogen_1s),
+            Box::new(hydrogen_2s)
+        ];
+        let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let mut cached = Slater::new(orbsc);
+        let not_cached = Slater::new(orbs);
+
+        // arbitrary configuration
+        let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
+        // initialize cache
+        cached.refresh(&x);
+
+        let (cval, clap) = cached.current_value();
+        let val = not_cached.value(&x).unwrap();
+        let lap = not_cached.laplacian(&x).unwrap();
+        assert_eq!(cval, val);
+        assert_eq!(clap,  lap);
+    }
+
+    #[test]
+    fn update_cache() {
+        let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+            Box::new(hydrogen_1s),
+            Box::new(hydrogen_2s)
+        ];
+        let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let mut cached = Slater::new(orbsc);
+        let not_cached = Slater::new(orbs);
+
+        // arbitrary configuration
+        let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
+        // initialize cache
+        cached.refresh(&x);
+
+        // move the first electron
+        let xmov = array![[1.0, 2.0, 3.0], [1.0, 0.2, 1.0]];
+        // update the cached wave function
+        cached.update(0, &xmov);
+
+        // retrieve values
+        let (cval, clap) = cached.current_value();
+        let val = not_cached.value(&xmov).unwrap();
+        let lap = not_cached.laplacian(&xmov).unwrap();
+        assert!((cval - val).abs() < EPS);
+        assert_eq!(clap,  lap);
+    }
+
 
 }
