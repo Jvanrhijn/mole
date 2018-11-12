@@ -8,18 +8,31 @@ use ndarray_linalg::{solve::Determinant, Inverse};
 use traits::function::*;
 use traits::wavefunction::WaveFunction;
 use traits::differentiate::Differentiate;
+use traits::cache::Cache;
 use error::{Error};
 
 pub struct Slater<T: Function<f64, D=Ix1>> {
     orbs: Vec<T>,
     matrix: Array2<f64>,
+    inv_matrix: Array2<f64>,
+    current_value: f64,
+    current_laplac: f64
+
 }
 
 impl<T: Function<f64, D=Ix1>> Slater<T> {
 
     pub fn new(orbs: Vec<T>) -> Self {
         let mat_dim = orbs.len();
-        Self{orbs, matrix: Array::<f64, Ix2>::eye(mat_dim)}
+        let matrix = Array::<f64, Ix2>::eye(mat_dim);
+        let inv = matrix.inv().expect("Failed to take matrix inverse");
+        Self{
+            orbs,
+            matrix: matrix,
+            inv_matrix: inv,
+            current_value: 0.0,
+            current_laplac: 0.0
+        }
     }
 
     fn build_matrix(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
@@ -81,6 +94,38 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     fn num_electrons(&self) -> usize {
         self.orbs.len()
+    }
+}
+
+impl<'a, T> Cache<&'a Array2<f64>> for Slater<T>
+where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+{
+    type A = Array2<f64>;
+    type V = (f64, f64);
+    type U = usize;
+
+    fn refresh(&mut self, new: &'a Array2<f64>) {
+        self.matrix = self.build_matrix(new).expect("Failed to build matrix");
+        self.inv_matrix = self.matrix.inv().expect("Failed to take matrix inverse");
+        self.current_value = self.matrix.det().expect("Failed to take matrix determinant");
+        let mut laplac = 0.0;
+        for i in 0..self.orbs.len() {
+            let ri = array![new[[i, 0]], new[[i, 1]], new[[i, 2]]];
+            for j in 0..self.orbs.len() {
+                laplac += self.orbs[j].laplacian(&ri)
+                    .expect("Failed to evaluate laplacian")
+                    *self.inv_matrix[[j, i]];
+            }
+        }
+        self.current_laplac = laplac;
+    }
+
+    fn update(&mut self, ud: Self::U, new: &'a Array2<f64>) {
+        // TODO: implement cache update for Slater determinant
+    }
+
+    fn current_value(&self) -> Self::V {
+        (self.current_value, self.current_laplac)
     }
 }
 

@@ -19,6 +19,7 @@ mod traits {
     pub mod metropolis;
     pub mod mcsamplers;
     pub mod wavefunction;
+    pub mod cache;
 }
 
 mod math {

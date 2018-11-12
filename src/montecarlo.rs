@@ -85,8 +85,6 @@ impl<S> Runner<S>
 where S: MonteCarloSampler
 {
     pub fn new(sampler: S) -> Self {
-        //let mut means = Vec::<f64>::new();
-        //means.resize(sampler.num_observables(), 0.0);
         // initialize means at a sample of the current configuration
         let means = sampler.sample().expect("Failed to sample observables");
         Self{sampler, means}
@@ -104,6 +102,7 @@ where S: MonteCarloSampler
                     block.set_value(b, samples);
                 }
             }
+            // TODO: write abstraction over statistics
             if block_nr > 0 {
                 self.means.iter_mut().zip(block.mean().iter())
                     .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);

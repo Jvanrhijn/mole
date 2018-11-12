@@ -10,8 +10,8 @@ pub trait Cache<T> {
     fn refresh(&mut self, new: T);
 
     /// Update the cache with a new T and any data needed to update the cache
-    fn update(&mut self, ud: U, new: T);
+    fn update(&mut self, ud: Self::U, new: T);
 
     /// Return the current value of the cached data
-    fn current_value(&self) -> V;
+    fn current_value(&self) -> Self::V;
 }
