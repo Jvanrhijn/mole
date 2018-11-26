@@ -11,51 +11,58 @@ use traits::differentiate::Differentiate;
 use traits::cache::Cache;
 use error::{Error};
 
-pub struct Slater<T: Function<f64, D=Ix1>> {
+pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
     orbs: Vec<T>,
     matrix: Array2<f64>,
+    matrix_laplac: Array2<f64>,
     inv_matrix: Array2<f64>,
     current_value: f64,
     current_laplac: f64
 
 }
 
-impl<T: Function<f64, D=Ix1>> Slater<T> {
+impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
 
     pub fn new(orbs: Vec<T>) -> Self {
         let mat_dim = orbs.len();
         let matrix = Array::<f64, Ix2>::eye(mat_dim);
+        let matrix_laplac = Array::<f64, Ix2>::eye(mat_dim);
         let inv = matrix.inv().expect("Failed to take matrix inverse");
         Self{
             orbs,
             matrix: matrix,
+            matrix_laplac: matrix_laplac,
             inv_matrix: inv,
             current_value: 0.0,
             current_laplac: 0.0
         }
     }
 
-    fn build_matrix(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+    /// Build matrix of orbitals and laplacians of orbitals
+    // TODO: Build 3d-array of gradient values as well
+    fn build_matrices(&self, cfg: &Array2<f64>) -> Result<(Array2<f64>, Array2<f64>), Error> {
         let mat_dim = self.orbs.len();
         let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
+        let mut matrix_laplac = Array2::<f64>::zeros((mat_dim, mat_dim));
         for i in 0..mat_dim {
             for j in 0..mat_dim {
                 let slice = cfg.slice(s![i, ..]);
                 let pos = array![slice[0], slice[1], slice[2]];
                 matrix[[i, j]] = self.orbs[j].value(&pos)?;
+                matrix_laplac[[i, j]] = self.orbs[j].laplacian(&pos)?;
             }
         }
-        Ok(matrix)
+        Ok((matrix, matrix_laplac))
     }
 
 }
 
-impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> {
+impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> + Differentiate<D=Ix1> {
 
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        let matrix = self.build_matrix(cfg)?;
+        let (matrix, _) = self.build_matrices(cfg)?;
         Ok(matrix.det()?)
     }
 }
@@ -74,7 +81,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         // TODO implement more efficienctly
         let mat_dim = self.orbs.len();
-        let matrix = self.build_matrix(cfg)?;
+        let (matrix, _) = self.build_matrices(cfg)?;
         let det = matrix.det()?;
         let mat_inv = matrix.inv()?;
         let mut result = 0.;
@@ -105,19 +112,13 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     type U = usize;
 
     fn refresh(&mut self, new: &'a Array2<f64>) {
-        self.matrix = self.build_matrix(new).expect("Failed to construct matrix");
+        //self.matrix = self.build_matrix(new).expect("Failed to construct matrix");
+        let (values, laplacians) = self.build_matrices(new).expect("Failed to construct matrix");
+        self.matrix = values;
+        self.matrix_laplac = laplacians;
         self.inv_matrix = self.matrix.inv().expect("Failed to take matrix inverse");
         self.current_value = self.matrix.det().expect("Failed to take matrix determinant");
-        let mut laplac = 0.0;
-        for i in 0..self.orbs.len() {
-            let ri = array![new[[i, 0]], new[[i, 1]], new[[i, 2]]];
-            for j in 0..self.orbs.len() {
-                laplac += self.orbs[j].laplacian(&ri)
-                    .expect("Failed to evaluate laplacian")
-                    *self.inv_matrix[[j, i]];
-            }
-        }
-        self.current_laplac = laplac*self.current_value;
+        self.current_laplac = self.current_value * (&self.matrix_laplac * &self.inv_matrix.t()).scalar_sum();
     }
 
     fn update(&mut self, ud: Self::U, new: &'a Array2<f64>) {
@@ -126,8 +127,31 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         let orbvec = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
             phi.value(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
         }).collect());
-        self.current_value *= orbvec.dot(&self.inv_matrix.slice(s![.., ud]));
-
+        let orbvec_laplac = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
+            phi.laplacian(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
+        }).collect());
+        let ratio = orbvec.dot(&self.inv_matrix.slice(s![.., ud]));
+        self.current_value *= ratio;
+        // update matrix and laplacian matrix; only need to update column `ud`
+        for j in 0..self.num_electrons() {
+            self.matrix[[ud, j]] = orbvec[j];
+            self.matrix_laplac[[ud, j]] = orbvec_laplac[j];
+        }
+        // update inverse matrix
+        for j in 0..self.num_electrons() {
+            if j != ud {
+                let s = self.matrix.slice(s![ud, ..]).dot(&self.inv_matrix.slice(s![.., j]));
+                let term = s / ratio * self.inv_matrix.slice(s![.., ud]).to_owned();
+                let mut inv_mat_slice = self.inv_matrix.slice_mut(s![.., j]);
+                inv_mat_slice -= &term;
+            }
+        }
+        {
+            let mut inv_mat_slice = self.inv_matrix.slice_mut(s![.., ud]);
+            inv_mat_slice /= ratio;
+        }
+        // calculate new laplacian
+        self.current_laplac = self.current_value * (&self.matrix_laplac * &self.inv_matrix.t()).scalar_sum();
     }
 
     fn current_value(&self) -> Self::V {
@@ -223,7 +247,7 @@ mod tests {
         let val = not_cached.value(&xmov).unwrap();
         let lap = not_cached.laplacian(&xmov).unwrap();
         assert!((cval - val).abs() < EPS);
-        assert_eq!(clap,  lap);
+        assert!((clap - lap).abs() < EPS);
     }
 
 
