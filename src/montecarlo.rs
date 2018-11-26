@@ -11,6 +11,7 @@ use traits::function::Function;
 use traits::metropolis::Metropolis;
 use traits::operator::Operator;
 use traits::wavefunction::WaveFunction;
+use traits::cache::Cache;
 use error::Error;
 use block::Block;
 
@@ -18,7 +19,7 @@ use block::Block;
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
 pub struct Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate,
+where T: Function<f64, D=Ix2> + Differentiate + Cache<&'a Array2<f64>>,
       V: Metropolis<T>,
 {
     wave_function: &'a mut T,
@@ -28,7 +29,7 @@ where T: Function<f64, D=Ix2> + Differentiate,
 }
 
 impl<'a, T, V> Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate + WaveFunction,
+where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<&'a Array2<f64>>,
       V: Metropolis<T>,
 {
     pub fn new(wave_function: &'a mut T, mut metrop: V) -> Self {
@@ -52,7 +53,7 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction,
 }
 
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate + WaveFunction,
+where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<&'a Array2<f64>>,
       V: Metropolis<T>,
 {
     fn sample(&self) -> Result<Vec<f64>, Error> {

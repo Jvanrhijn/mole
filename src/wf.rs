@@ -5,6 +5,7 @@ use ndarray::{Array1, Ix2, Array2};
 use traits::differentiate::*;
 use traits::function::Function;
 use traits::wavefunction::WaveFunction;
+use traits::cache::Cache;
 use jastrow::JastrowFactor;
 use determinant::Slater;
 use orbitals::*;
@@ -79,4 +80,25 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
    fn num_electrons(&self) -> usize {
        self.det.num_electrons()
    }
+}
+
+impl<'a, T> Cache<&'a Array2<f64>> for SingleDeterminant<'a, T>
+where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+{
+    type A = Array2<f64>;
+    type V = (f64, f64);
+    type U = usize;
+
+    fn refresh(&mut self, new: &'a Self::A) {
+        self.det.refresh(new);
+    }
+
+    fn update(&mut self, ud: Self::U, new: &'a Self::A) {
+        self.det.update(ud, new);
+    }
+
+    fn current_value(&self) -> Self::V {
+        self.det.current_value()
+    }
+
 }
