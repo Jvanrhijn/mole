@@ -82,18 +82,18 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
    }
 }
 
-impl<'a, T> Cache<&'a Array2<f64>> for SingleDeterminant<'a, T>
+impl<'a, T> Cache<Array2<f64>> for SingleDeterminant<'a, T>
 where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     type A = Array2<f64>;
     type V = (f64, f64);
     type U = usize;
 
-    fn refresh(&mut self, new: &'a Self::A) {
+    fn refresh(&mut self, new: &Self::A) {
         self.det.refresh(new);
     }
 
-    fn update(&mut self, ud: Self::U, new: &'a Self::A) {
+    fn update(&mut self, ud: Self::U, new: &Self::A) {
         self.det.update(ud, new);
     }
 

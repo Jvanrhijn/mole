@@ -104,14 +104,14 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     }
 }
 
-impl<'a, T> Cache<&'a Array2<f64>> for Slater<T>
+impl<'a, T> Cache<Array2<f64>> for Slater<T>
 where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type A = Array2<f64>;
     type V = (f64, f64);
     type U = usize;
 
-    fn refresh(&mut self, new: &'a Array2<f64>) {
+    fn refresh(&mut self, new: &Array2<f64>) {
         //self.matrix = self.build_matrix(new).expect("Failed to construct matrix");
         let (values, laplacians) = self.build_matrices(new).expect("Failed to construct matrix");
         self.matrix = values;
@@ -121,7 +121,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         self.current_laplac = self.current_value * (&self.matrix_laplac * &self.inv_matrix.t()).scalar_sum();
     }
 
-    fn update(&mut self, ud: Self::U, new: &'a Array2<f64>) {
+    fn update(&mut self, ud: Self::U, new: &Array2<f64>) {
         // TODO: implement cache update for Slater determinant
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
         let orbvec = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {

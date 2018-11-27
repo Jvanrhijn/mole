@@ -4,6 +4,7 @@ use ndarray::{Array, Array1, Array2, Ix2, Axis};
 use traits::operator::Operator;
 use traits::function::Function;
 use traits::differentiate::Differentiate;
+use traits::cache::Cache;
 use error::{Error};
 
 /// Ionic potential energy operator:
@@ -39,11 +40,11 @@ impl IonicPotential {
     }
 }
 
-impl<T> Operator<T> for IonicPotential
-where T: Function<f64, D=Ix2> + ?Sized,
+impl<'a, T> Operator<T> for IonicPotential
+where T: Function<f64, D=Ix2> + Cache<Array2<f64>, V=(f64, f64)> + ?Sized,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(self.value(cfg)?*wf.value(cfg)?)
+        Ok(self.value(cfg)?*wf.current_value().0)
     }
 }
 
@@ -76,11 +77,11 @@ impl Function<f64> for ElectronicPotential {
     }
 }
 
-impl<T> Operator<T> for ElectronicPotential
-where T: Function<f64, D=Ix2> + ?Sized,
+impl<'a, T> Operator<T> for ElectronicPotential
+where T: Function<f64, D=Ix2> + Cache<Array2<f64>, V=(f64, f64)> + ?Sized,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(self.value(cfg)?*wf.value(cfg)?)
+        Ok(self.value(cfg)?*wf.current_value().0)
     }
 }
 
@@ -96,11 +97,11 @@ impl KineticEnergy {
     }
 }
 
-impl<T> Operator<T> for KineticEnergy
-where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + ?Sized,
+impl<'a, T> Operator<T> for KineticEnergy
+where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)> + ?Sized,
 {
     fn act_on(&self, wf: &T, cfg: &Array<f64, Ix2>) -> Result<f64, Error> {
-        Ok(-0.5*wf.laplacian(cfg)?)
+        Ok(-0.5*wf.current_value().1)
     }
 }
 
@@ -118,8 +119,8 @@ impl IonicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for IonicHamiltonian
-where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + ?Sized,
+impl<'a, T> Operator<T> for IonicHamiltonian
+where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)>+ ?Sized,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
@@ -143,8 +144,8 @@ impl ElectronicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for ElectronicHamiltonian
-where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + ?Sized
+impl<'a, T> Operator<T> for ElectronicHamiltonian
+where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)>+ ?Sized
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
@@ -165,8 +166,8 @@ impl LocalEnergy {
     }
 }
 
-impl<T> Operator<T> for LocalEnergy
-where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + ?Sized
+impl<'a, T> Operator<T> for LocalEnergy
+where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)>+ ?Sized
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.h.act_on(wf, cfg)?/wf.value(cfg)?)

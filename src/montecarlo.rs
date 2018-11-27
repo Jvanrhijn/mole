@@ -19,7 +19,7 @@ use block::Block;
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
 pub struct Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate + Cache<&'a Array2<f64>>,
+where T: Function<f64, D=Ix2> + Differentiate + Cache<Array2<f64>>,
       V: Metropolis<T>,
 {
     wave_function: &'a mut T,
@@ -29,14 +29,14 @@ where T: Function<f64, D=Ix2> + Differentiate + Cache<&'a Array2<f64>>,
 }
 
 impl<'a, T, V> Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<&'a Array2<f64>>,
+where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, V=(f64, f64)>,
       V: Metropolis<T>,
 {
     pub fn new(wave_function: &'a mut T, mut metrop: V) -> Self {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.));
-        metrop.set_wave_function_value(wave_function.value(&cfg)
-            .expect("Failed to evaluate wave function"));
+        wave_function.refresh(&cfg);
+        metrop.set_wave_function_value(wave_function.current_value().0);
         Self{
             wave_function,
             config: cfg,
@@ -53,7 +53,7 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<&'a Array2<
 }
 
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
-where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<&'a Array2<f64>>,
+where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, U=usize>,
       V: Metropolis<T>,
 {
     fn sample(&self) -> Result<Vec<f64>, Error> {
@@ -65,6 +65,7 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<&'a Array2<
         for e in 0..self.wave_function.num_electrons() {
             if let Some(config) = self.metropolis.move_state(self.wave_function, &self.config, e) {
                 self.config = config;
+                self.wave_function.update(e, &self.config);
             }
         }
     }
