@@ -102,3 +102,23 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
     }
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use math::basis;
+
+    #[test]
+    fn single_det_one_basis_function() {
+        let basis = vec![
+            Box::new(basis::hydrogen_1s)
+        ];
+        let orbital = Orbital::new(array![1.0], &basis);
+        let mut wf = SingleDeterminant::new(vec![orbital]);
+        let config = array![[1.0, 0.0, 0.0]];
+        let config_slice = array![1.0, 0.0, 0.0];
+        wf.refresh(&config);
+        let cur_value = wf.current_value().0;
+        assert_eq!(cur_value, basis::hydrogen_1s(&config_slice).0);
+    }
+}

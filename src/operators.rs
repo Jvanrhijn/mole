@@ -189,8 +189,9 @@ mod tests {
         let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
             Box::new(basis::hydrogen_1s)
         ];
-        let wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));
+        wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
         let wval = wf.value(&cfg).unwrap();
         assert_eq!(hpsi/wval, -0.5);
@@ -204,8 +205,9 @@ mod tests {
         let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
             Box::new(basis::hydrogen_2s)
         ];
-        let wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));
+        wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
         let wval = wf.value(&cfg).unwrap();
         assert!((hpsi/wval - (-0.125)).abs() < 1e-15);
