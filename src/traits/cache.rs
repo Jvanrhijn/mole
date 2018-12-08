@@ -11,14 +11,15 @@ pub trait Cache<T> {
     /// Refresh the cached data
     fn refresh(&mut self, new: &T);
 
-    /// Calculate updated value of the cache given update data and new configuration
-    fn update(&self, ud: Self::U, new: &T) -> (Vec<Self::A>, Self::V);
+    /// Calculate updated value of the cache given update data and new configuration,
+    /// and set this data enqueued
+    fn enqueue_update(&mut self, ud: Self::U, new: &T);
 
-    /// Set the cache data directly
-    fn set_cache(&mut self, mut storage: Vec<Self::A>, value: Self::V);
+    /// Push enqueued update into cache
+    fn push_update(&mut self);
 
-    /// Update the cache in place, overwriting old wave function data
-    fn update_inplace(&mut self, ud: Self::U, new: &T);
+    /// Flush the enqueued update data
+    fn flush_update(&mut self);
 
     /// Return the current value of the cached data
     fn current_value(&self) -> Self::V;

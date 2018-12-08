@@ -6,6 +6,7 @@ use ndarray_rand::RandomExt;
 use traits::metropolis::Metropolis;
 use traits::function::Function;
 use traits::differentiate::Differentiate;
+use traits::cache::Cache;
 
 /// Simplest Metropolis algorithm.
 /// Transition matrix T(x -> x') is constant inside a cubical box,
@@ -27,7 +28,7 @@ impl MetropolisBox {
 }
 
 impl<T> Metropolis<T> for MetropolisBox
-where T: Differentiate + Function<f64, D=Ix2>
+where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>>
 {
 
     fn propose_move(&self, _wf: &T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
@@ -96,6 +97,27 @@ mod tests {
 
         fn laplacian(&self, _cfg: &Array2<f64>) -> Result<f64, Error> {
             Ok(1.0)
+        }
+    }
+
+    impl Cache<Array2<f64>> for WaveFunctionMock {
+        type A = Array2<f64>;
+        type V = f64;
+        type U = usize;
+        fn refresh(&mut self, new: &Array2<f64>) {
+
+        }
+        fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
+
+        }
+        fn push_update(&mut self) {
+
+        }
+        fn flush_update(&mut self) {
+
+        }
+        fn current_value(&self) -> Self::V {
+           self.value
         }
     }
 

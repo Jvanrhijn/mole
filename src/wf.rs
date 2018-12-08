@@ -93,16 +93,16 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
         self.det.refresh(new);
     }
 
-    fn update_inplace(&mut self, ud: Self::U, new: &Self::A) {
-        self.det.update_inplace(ud, new);
+    fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
+        self.det.enqueue_update(ud, new);
     }
 
-    fn update(&self, ud: Self::U, new: &Self::A) -> (Vec<Self::A>, Self::V) {
-        self.det.update(ud, new)
+    fn push_update(&mut self) {
+        self.det.push_update();
     }
 
-    fn set_cache(&mut self, storage: Vec<Self::A>, value: Self::V) {
-        self.det.set_cache(storage, value);
+    fn flush_update(&mut self) {
+        self.det.flush_update();
     }
 
     fn current_value(&self) -> Self::V {

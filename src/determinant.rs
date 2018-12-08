@@ -17,8 +17,13 @@ pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
     matrix_laplac: Array2<f64>,
     inv_matrix: Array2<f64>,
     current_value: f64,
-    current_laplac: f64
-
+    current_laplac: f64,
+    // enqueued data
+    enq_matrix: Option<Array2<f64>>,
+    enq_matrix_laplac: Option<Array2<f64>>,
+    enq_inv_matrix: Option<Array2<f64>>,
+    enq_value: Option<f64>,
+    enq_laplac: Option<f64>
 }
 
 impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
@@ -34,7 +39,12 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
             matrix_laplac: matrix_laplac,
             inv_matrix: inv,
             current_value: 0.0,
-            current_laplac: 0.0
+            current_laplac: 0.0,
+            enq_matrix: None,
+            enq_matrix_laplac: None,
+            enq_inv_matrix: None,
+            enq_value: None,
+            enq_laplac: None
         }
     }
 
@@ -121,7 +131,8 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         self.current_laplac = self.current_value * (&self.matrix_laplac * &self.inv_matrix.t()).scalar_sum();
     }
 
-    fn update(&self, ud: Self::U, new: &Self::A) -> (Vec<Self::A>, Self::V) {
+    fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
+        // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
         let orbvec = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
             phi.value(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
@@ -143,7 +154,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
             matrix_laplac[[ud, j]] = orbvec_laplac[j];
         }
 
-        // calcualte updated inverse matrix
+        // calculate updated inverse matrix
         for j in 0..self.num_electrons() {
             if j != ud {
                 let s = matrix.slice(s![ud, ..]).dot(&inv_matrix.slice(s![.., j]));
@@ -160,21 +171,43 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         // calculate new laplacian
         let current_laplac = value * (&matrix_laplac * &inv_matrix.t()).scalar_sum();
 
-        // return updated values
-        (vec![matrix, matrix_laplac, inv_matrix], (value, current_laplac))
+        // enqueue the update data
+        // TODO: more idiomatic solution
+        self.enq_matrix = Some(matrix);
+        self.enq_matrix_laplac = Some(matrix_laplac);
+        self.enq_inv_matrix = Some(inv_matrix);
+        self.enq_value = Some(value);
+        self.enq_laplac = Some(current_laplac);
     }
 
-    fn set_cache(&mut self, mut storage: Vec<Self::A>, value: Self::V) {
-        self.inv_matrix = storage.pop().expect("Failed to retrieve inverse matrix");
-        self.matrix_laplac = storage.pop().expect("Failed to retrieve laplacian matrix");
-        self.matrix = storage.pop().expect("Failed to retrieve slater matrix");
-        self.current_value = value.0;
-        self.current_laplac = value.1;
+    fn push_update(&mut self) {
+        // TODO: more idiomatic solution
+        if let Some(m) = self.enq_inv_matrix.take() {
+            self.inv_matrix = m;
+        }
+        if let Some(m) = self.enq_matrix_laplac.take() {
+            self.matrix_laplac = m;
+        }
+        if let Some(m) = self.enq_inv_matrix.take() {
+            self.inv_matrix = m;
+        }
+        match (self.enq_value.take(), self.enq_laplac.take()) {
+            (Some(v), Some(l)) => {
+                self.current_value = v;
+                self.current_laplac = l;
+            },
+            (Some(v), None) => { self.current_value = v; },
+            (None, Some(l)) => { self.current_laplac = l; }
+            _ => ()
+        };
     }
 
-    fn update_inplace(&mut self, ud: Self::U, new: &Array2<f64>) {
-        let (new_storage, new_value) = self.update(ud, new);
-        self.set_cache(new_storage, new_value);
+    fn flush_update(&mut self) {
+        self.enq_inv_matrix = None;
+        self.enq_matrix_laplac = None;
+        self.enq_matrix = None;
+        self.enq_value = None;
+        self.enq_laplac = None;
     }
 
     fn current_value(&self) -> Self::V {
@@ -263,7 +296,8 @@ mod tests {
         // move the first electron
         let xmov = array![[1.0, 2.0, 3.0], [1.0, 0.2, 1.0]];
         // update the cached wave function
-        cached.update_inplace(0, &xmov);
+        cached.enqueue_update(0, &xmov);
+        cached.push_update();
 
         // retrieve values
         let (cval, clap) = cached.current_value();

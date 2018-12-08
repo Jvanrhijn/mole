@@ -65,7 +65,8 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
         for e in 0..self.wave_function.num_electrons() {
             if let Some(config) = self.metropolis.move_state(self.wave_function, &self.config, e) {
                 self.config = config;
-                self.wave_function.update_inplace(e, &self.config);
+                self.wave_function.enqueue_update(e, &self.config);
+                self.wave_function.push_update();
             }
         }
     }
