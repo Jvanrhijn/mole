@@ -121,8 +121,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         self.current_laplac = self.current_value * (&self.matrix_laplac * &self.inv_matrix.t()).scalar_sum();
     }
 
-    fn update(&mut self, ud: Self::U, new: &Array2<f64>) {
-        // TODO: implement cache update for Slater determinant
+    fn update(&self, ud: Self::U, new: &Self::A) -> (Vec<Self::A>, Self::V) {
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
         let orbvec = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
             phi.value(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
@@ -130,28 +129,52 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         let orbvec_laplac = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
             phi.laplacian(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
         }).collect());
+
+        // compute updated wave function value
         let ratio = orbvec.dot(&self.inv_matrix.slice(s![.., ud]));
-        self.current_value *= ratio;
-        // update matrix and laplacian matrix; only need to update column `ud`
+        let value = self.current_value * ratio;
+
+        // calculate updated matrix, laplacian matrix, and inverse matrix; only need to update column `ud`
+        let mut matrix = self.matrix.clone();
+        let mut matrix_laplac = self.matrix_laplac.clone();
+        let mut inv_matrix = self.inv_matrix.clone();
         for j in 0..self.num_electrons() {
-            self.matrix[[ud, j]] = orbvec[j];
-            self.matrix_laplac[[ud, j]] = orbvec_laplac[j];
+            matrix[[ud, j]] = orbvec[j];
+            matrix_laplac[[ud, j]] = orbvec_laplac[j];
         }
-        // update inverse matrix
+
+        // calcualte updated inverse matrix
         for j in 0..self.num_electrons() {
             if j != ud {
-                let s = self.matrix.slice(s![ud, ..]).dot(&self.inv_matrix.slice(s![.., j]));
-                let term = s / ratio * self.inv_matrix.slice(s![.., ud]).to_owned();
-                let mut inv_mat_slice = self.inv_matrix.slice_mut(s![.., j]);
+                let s = matrix.slice(s![ud, ..]).dot(&inv_matrix.slice(s![.., j]));
+                let term = s / ratio * inv_matrix.slice(s![.., ud]).to_owned();
+                let mut inv_mat_slice = inv_matrix.slice_mut(s![.., j]);
                 inv_mat_slice -= &term;
             }
         }
         {
-            let mut inv_mat_slice = self.inv_matrix.slice_mut(s![.., ud]);
+            let mut inv_mat_slice = inv_matrix.slice_mut(s![.., ud]);
             inv_mat_slice /= ratio;
         }
+
         // calculate new laplacian
-        self.current_laplac = self.current_value * (&self.matrix_laplac * &self.inv_matrix.t()).scalar_sum();
+        let current_laplac = value * (&matrix_laplac * &inv_matrix.t()).scalar_sum();
+
+        // return updated values
+        (vec![matrix, matrix_laplac, inv_matrix], (value, current_laplac))
+    }
+
+    fn set_cache(&mut self, mut storage: Vec<Self::A>, value: Self::V) {
+        self.inv_matrix = storage.pop().expect("Failed to retrieve inverse matrix");
+        self.matrix_laplac = storage.pop().expect("Failed to retrieve laplacian matrix");
+        self.matrix = storage.pop().expect("Failed to retrieve slater matrix");
+        self.current_value = value.0;
+        self.current_laplac = value.1;
+    }
+
+    fn update_inplace(&mut self, ud: Self::U, new: &Array2<f64>) {
+        let (new_storage, new_value) = self.update(ud, new);
+        self.set_cache(new_storage, new_value);
     }
 
     fn current_value(&self) -> Self::V {
@@ -240,7 +263,7 @@ mod tests {
         // move the first electron
         let xmov = array![[1.0, 2.0, 3.0], [1.0, 0.2, 1.0]];
         // update the cached wave function
-        cached.update(0, &xmov);
+        cached.update_inplace(0, &xmov);
 
         // retrieve values
         let (cval, clap) = cached.current_value();

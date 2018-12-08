@@ -1,3 +1,5 @@
+use std::vec::Vec;
+
 pub trait Cache<T> {
     /// storage type e.g. ndarray::Array2
     type A;
@@ -9,8 +11,14 @@ pub trait Cache<T> {
     /// Refresh the cached data
     fn refresh(&mut self, new: &T);
 
-    /// Update the cache with a new T and any data needed to update the cache
-    fn update(&mut self, ud: Self::U, new: &T);
+    /// Calculate updated value of the cache given update data and new configuration
+    fn update(&self, ud: Self::U, new: &T) -> (Vec<Self::A>, Self::V);
+
+    /// Set the cache data directly
+    fn set_cache(&mut self, mut storage: Vec<Self::A>, value: Self::V);
+
+    /// Update the cache in place, overwriting old wave function data
+    fn update_inplace(&mut self, ud: Self::U, new: &T);
 
     /// Return the current value of the cached data
     fn current_value(&self) -> Self::V;
