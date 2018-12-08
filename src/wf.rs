@@ -109,6 +109,10 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
         self.det.current_value()
     }
 
+    fn enqueued_value(&self) -> Option<Self::V> {
+        self.det.enqueued_value()
+    }
+
 }
 
 #[cfg(test)]

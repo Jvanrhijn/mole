@@ -170,7 +170,7 @@ impl<'a, T> Operator<T> for LocalEnergy
 where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)>+ ?Sized
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(self.h.act_on(wf, cfg)?/wf.value(cfg)?)
+        Ok(self.h.act_on(wf, cfg)?/wf.current_value().0)
     }
 }
 

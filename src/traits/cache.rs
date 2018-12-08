@@ -23,4 +23,7 @@ pub trait Cache<T> {
 
     /// Return the current value of the cached data
     fn current_value(&self) -> Self::V;
+
+    /// Return enqueued value
+    fn enqueued_value(&self) -> Option<Self::V>;
 }

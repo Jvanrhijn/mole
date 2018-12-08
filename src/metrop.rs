@@ -28,30 +28,30 @@ impl MetropolisBox {
 }
 
 impl<T> Metropolis<T> for MetropolisBox
-where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>>
+where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f64, f64)>
 {
 
-    fn propose_move(&self, _wf: &T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
+    fn propose_move(&self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
         let mut config_proposed = cfg.clone();
         {
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
             mov_slice += &Array1::random(3, Range::new(-0.5*self.box_side, 0.5*self.box_side));
         }
+        wf.enqueue_update(idx, &config_proposed);
         config_proposed
     }
 
-    fn accept_move(&self, wf: &T, _cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool {
-        let wf_value = wf.value(cfg_prop)
-            .expect("Failed to evaluate wave function in moved configuration");
+    fn accept_move(&self, wf: &mut T, _cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool {
+        let wf_value = wf.enqueued_value()
+            .expect("Attempted to retrieve value from empty cache").0;
         let acceptance = (wf_value.powi(2)/self.wf_value_prev.powi(2)).min(1.);
         acceptance > random::<f64>()
     }
 
-    fn move_state(&mut self, wf: &T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>> {
+    fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>> {
         let cfg_proposed = self.propose_move(wf, cfg, idx);
         if self.accept_move(wf, cfg, &cfg_proposed) {
-            self.wf_value_prev = wf.value(&cfg_proposed)
-                .expect("Failed to evaluate wave function at new configuration");
+            self.wf_value_prev = wf.enqueued_value().unwrap().0;
             Some(cfg_proposed)
         } else {
             None
@@ -102,7 +102,7 @@ mod tests {
 
     impl Cache<Array2<f64>> for WaveFunctionMock {
         type A = Array2<f64>;
-        type V = f64;
+        type V = (f64, f64);
         type U = usize;
         fn refresh(&mut self, new: &Array2<f64>) {
 
@@ -117,17 +117,20 @@ mod tests {
 
         }
         fn current_value(&self) -> Self::V {
-           self.value
+            (self.value, self.value)
+        }
+        fn enqueued_value(&self) -> Option<Self::V> {
+            Some((self.value, self.value))
         }
     }
 
     #[test]
     fn test_uniform_wf() {
         let cfg = Array2::<f64>::ones((1, 3));
-        let wf = WaveFunctionMock{value: 1.0};
+        let mut wf = WaveFunctionMock{value: 1.0};
         let metrop = MetropolisBox::new(1.0);
-        let new_cfg = metrop.propose_move(&wf, &cfg, 0); // should always accept
-        assert!(metrop.accept_move(&wf, &cfg, &new_cfg));
+        let new_cfg = metrop.propose_move(&mut wf, &cfg, 0); // should always accept
+        assert!(metrop.accept_move(&mut wf, &cfg, &new_cfg));
     }
 
 }

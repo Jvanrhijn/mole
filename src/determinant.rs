@@ -213,6 +213,13 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     fn current_value(&self) -> Self::V {
         (self.current_value, self.current_laplac)
     }
+
+    fn enqueued_value(&self) -> Option<Self::V> {
+        match (self.enq_value, self.enq_laplac) {
+            (Some(v), Some(l)) => Some((v, l)),
+            _ => None
+        }
+    }
 }
 
 #[cfg(test)]
