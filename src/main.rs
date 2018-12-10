@@ -83,7 +83,7 @@ fn blocking_analysis() {
         Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
     ];
 
-    let max_ntr = 14;
+    let max_ntr = 18;
     let num_steps = 2_usize.pow(max_ntr);
 
     for ntr in 1..max_ntr {
@@ -94,10 +94,10 @@ fn blocking_analysis() {
         runner.run(num_blocks, steps_per_block);
 
         let local_e = runner.means()[0];
-        let var = runner.variances()[0]/(num_blocks - 1) as f64;
-        let variance_error = (2.0/(num_blocks - 1) as f64).sqrt()*var;
+        let stdev= (runner.variances()[0]/(steps_per_block - 1) as f64).sqrt();
+        let stdev_error = stdev*1.0/(2.0*(steps_per_block - 1) as f64).sqrt();
 
-        println!("Local E: {:.*} variance: {:.*} +/- {:.*}", 16, local_e, 16, var, 16, variance_error);
+        println!("Local E: {:.*} stdev: {:.*} +/- {:.*} {}", 16, local_e, 16, stdev, 16, stdev_error, steps_per_block);
     }
 
 }

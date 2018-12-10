@@ -116,13 +116,9 @@ where S: MonteCarloSampler
                     .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);
                 // running variance algorithm
                 izip!(self.square_mean_diff.iter_mut(), block.mean().iter(), self.means.iter(), prev_mean.iter())
-                    .for_each(|(s, bm, m, pm)| {
-                        *s += (bm - pm)*(bm - m)
-                });
+                    .for_each(|(s, bm, m, pm)| *s += (bm - pm)*(bm - m));
                 izip!(self.variances.iter_mut(), self.square_mean_diff.iter())
-                    .for_each(|(v, s)| {
-                        *v = s/(block_nr as f64)
-                    });
+                    .for_each(|(v, s)| *v = s/(block_nr as f64));
                 //println!("mean: {:.*} variance: {:.*}", 5, self.means[0], 5, self.variances[0]);
             }
         }
