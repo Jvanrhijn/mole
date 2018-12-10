@@ -100,7 +100,7 @@ impl KineticEnergy {
 impl<'a, T> Operator<T> for KineticEnergy
 where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)> + ?Sized,
 {
-    fn act_on(&self, wf: &T, cfg: &Array<f64, Ix2>) -> Result<f64, Error> {
+    fn act_on(&self, wf: &T, _cfg: &Array<f64, Ix2>) -> Result<f64, Error> {
         Ok(-0.5*wf.current_value().1)
     }
 }

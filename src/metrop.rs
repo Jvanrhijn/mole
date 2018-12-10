@@ -41,7 +41,7 @@ where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f
         config_proposed
     }
 
-    fn accept_move(&self, wf: &mut T, _cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool {
+    fn accept_move(&self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
         let wf_value = wf.enqueued_value()
             .expect("Attempted to retrieve value from empty cache").0;
         let acceptance = (wf_value.powi(2)/self.wf_value_prev.powi(2)).min(1.);
@@ -104,18 +104,10 @@ mod tests {
         type A = Array2<f64>;
         type V = (f64, f64);
         type U = usize;
-        fn refresh(&mut self, new: &Array2<f64>) {
-
-        }
-        fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
-
-        }
-        fn push_update(&mut self) {
-
-        }
-        fn flush_update(&mut self) {
-
-        }
+        fn refresh(&mut self, _new: &Array2<f64>) {}
+        fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) {}
+        fn push_update(&mut self) {}
+        fn flush_update(&mut self) {}
         fn current_value(&self) -> Self::V {
             (self.value, self.value)
         }

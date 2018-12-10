@@ -1,5 +1,3 @@
-use std::vec::Vec;
-
 pub trait Cache<T> {
     /// storage type e.g. ndarray::Array2
     type A;
