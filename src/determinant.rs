@@ -136,6 +136,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
             .det().expect("Failed to take matrix determinant");
         *self.current_laplac_queue.get_mut(FRONT).unwrap() = self.current_value_queue.get(0).unwrap()
             * (*&self.matrix_laplac_queue.get(FRONT).unwrap() * &self.inv_matrix_queue.get(0).unwrap().t()).scalar_sum();
+        self.flush_update();
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
