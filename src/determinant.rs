@@ -125,27 +125,28 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
-        //self.matrix = self.build_matrix(new).expect("Failed to construct matrix");
+        const FRONT: usize = 0;
         let (values, laplacians) = self.build_matrices(new).expect("Failed to construct matrix");
-        *self.matrix_queue.get_mut(0).unwrap() = values;
-        *self.matrix_laplac_queue.get_mut(0).unwrap() = laplacians;
-        *self.inv_matrix_queue.get_mut(0).unwrap() = self.matrix_queue.get(0).unwrap()
-            .inv().expect("Failed to take matrix inverse");
-        *self.current_value_queue.get_mut(0).unwrap() = self.matrix_queue.get(0).unwrap()
+        let inv = values.inv().expect("Failed to take matrix inverse");
+        for (queue, data) in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut()
+            .zip(vec![values, laplacians, inv].into_iter()) {
+            *queue.get_mut(FRONT).expect("Attempt to retrieve data from empty queue") = data;
+        }
+        *self.current_value_queue.get_mut(FRONT).unwrap() = self.matrix_queue.get(0).unwrap()
             .det().expect("Failed to take matrix determinant");
-        *self.current_laplac_queue.get_mut(0).unwrap() = self.current_value_queue.get(0).unwrap()
-            * (*&self.matrix_laplac_queue.get(0).unwrap() * &self.inv_matrix_queue.get(0).unwrap().t()).scalar_sum();
+        *self.current_laplac_queue.get_mut(FRONT).unwrap() = self.current_value_queue.get(0).unwrap()
+            * (*&self.matrix_laplac_queue.get(FRONT).unwrap() * &self.inv_matrix_queue.get(0).unwrap().t()).scalar_sum();
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
         // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
-        let orbvec = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
-            phi.value(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
-        }).collect());
-        let orbvec_laplac = Array1::<f64>::from_vec(self.orbs.iter().map(|phi| {
-            phi.laplacian(&new.slice(s![ud, ..]).to_owned()).expect("Failed to evaluate orbital")
-        }).collect());
+        let data: Vec<(f64, f64)> = self.orbs.iter().map(|phi| {
+            (phi.value(&new.slice(s![ud, ..]).to_owned()).unwrap(),
+             phi.laplacian(&new.slice(s![ud, ..]).to_owned()).unwrap())
+        }).collect();
+        let orbvec = Array1::<f64>::from_vec(data.iter().map(|x| x.0).collect());
+        let orbvec_laplac = Array1::<f64>::from_vec(data.into_iter().map(|x| x.1).collect());
 
         // compute updated wave function value
         let ratio = orbvec.dot(&self.inv_matrix_queue.get(0).unwrap().slice(s![.., ud]));
