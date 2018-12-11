@@ -66,6 +66,8 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
             if let Some(config) = self.metropolis.move_state(&mut self.wave_function, &self.config, e) {
                 self.config = config;
                 self.wave_function.push_update();
+            } else {
+                self.wave_function.flush_update();
             }
         }
     }
@@ -168,6 +170,7 @@ mod tests {
         runner.run(10, 1);
 
         let local_e_result = runner.means()[0];
+        println!("{} {}", local_e_result, ENERGY_EXACT);
 
         assert!((local_e_result - ENERGY_EXACT).abs() < 1e-15);
     }
