@@ -34,7 +34,8 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
 {
     pub fn new(wave_function: &'a mut T, metrop: V) -> Self {
         let nelec = wave_function.num_electrons();
-        let cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.));
+        let width = nelec as f64;
+        let cfg = Array2::<f64>::random((nelec, 3), Range::new(-width, width));
         wave_function.refresh(&cfg);
         Self{
             wave_function,
@@ -110,7 +111,7 @@ where S: MonteCarloSampler
             if block_nr > 0 {
                 self.means.iter_mut().zip(block.mean().iter())
                     .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);
-                println!("{}", self.means[0]);
+                //println!("{}", self.means[0]);
             }
         }
     }

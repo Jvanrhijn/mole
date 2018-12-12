@@ -68,7 +68,7 @@ fn hydrogen_molecule_demo() {
     let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
 
     // create metropolis algorithm
-    let metrop = metrop::MetropolisBox::new(1.0);
+    let metrop = metrop::MetropolisBox::new(2.0);
 
     // setup monte carlo sampler
     let mut sampler = Sampler::new(&mut wf, metrop);
@@ -76,7 +76,7 @@ fn hydrogen_molecule_demo() {
 
     // create runner
     let mut runner = Runner::new(sampler);
-    runner.run(100, 1000);
+    runner.run(1000, 100);
     println!("Local E:       {:.*}", 5, runner.means()[0]);
 }
 
