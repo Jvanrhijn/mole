@@ -49,12 +49,12 @@ fn hydrogen_molecule_demo() {
     // create basis function set
     let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
         Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
-        Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
+        Box::new(|x| hydrogen_2s(&(x - &array![1.0, 0., 0.])))
     ];
 
     // create orbitals from basis functions
     let orbital1 = Orbital::new(array![1.0, 0.0], &basis_set);
-    let orbital2 = Orbital::new(array![0.0, 1.0], &basis_set);
+    let orbital2 = Orbital::new(array![0.0, -1.0], &basis_set);
 
     // Initialize wave function: single Slater determinant
     let mut wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
@@ -76,7 +76,7 @@ fn hydrogen_molecule_demo() {
 
     // create runner
     let mut runner = Runner::new(sampler);
-    runner.run(1000, 100);
+    runner.run(100, 100);
     println!("Local E:       {:.*}", 5, runner.means()[0]);
 }
 
