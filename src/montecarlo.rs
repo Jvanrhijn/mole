@@ -34,9 +34,9 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
 {
     pub fn new(mut wave_function: T, mut metrop: V) -> Self {
         let nelec = wave_function.num_electrons();
-        let cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.));
+        let width = nelec as f64;
+        let cfg = Array2::<f64>::random((nelec, 3), Range::new(-width, width));
         wave_function.refresh(&cfg);
-        metrop.set_wave_function_value(wave_function.current_value().0);
         Self{
             wave_function,
             config: cfg,
@@ -66,8 +66,11 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
             if let Some(config) = self.metropolis.move_state(&mut self.wave_function, &self.config, e) {
                 self.config = config;
                 self.wave_function.push_update();
+            } else {
+                self.wave_function.flush_update();
             }
         }
+        self.wave_function.refresh(&self.config);
     }
 
     fn num_observables(&self) -> usize {
@@ -120,6 +123,7 @@ where S: MonteCarloSampler
                 izip!(self.variances.iter_mut(), self.square_mean_diff.iter())
                     .for_each(|(v, s)| *v = s/(block_nr as f64));
                 //println!("mean: {:.*} variance: {:.*}", 5, self.means[0], 5, self.variances[0]);
+                //println!("{}", self.means[0]);
             }
         }
     }
