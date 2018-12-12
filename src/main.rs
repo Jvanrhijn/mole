@@ -76,9 +76,7 @@ fn hydrogen_molecule_demo() {
 
     // create runner
     let mut runner = Runner::new(sampler);
-
     runner.run(100, 1000);
-
     println!("Local E:       {:.*}", 5, runner.means()[0]);
 }
 

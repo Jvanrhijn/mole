@@ -69,6 +69,7 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
                 self.wave_function.flush_update();
             }
         }
+        self.wave_function.refresh(&self.config);
     }
 
     fn num_observables(&self) -> usize {
@@ -109,6 +110,7 @@ where S: MonteCarloSampler
             if block_nr > 0 {
                 self.means.iter_mut().zip(block.mean().iter())
                     .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);
+                println!("{}", self.means[0]);
             }
         }
     }
