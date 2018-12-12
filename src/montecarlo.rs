@@ -32,11 +32,10 @@ impl<'a, T, V> Sampler<'a, T, V>
 where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, V=(f64, f64)>,
       V: Metropolis<T>,
 {
-    pub fn new(wave_function: &'a mut T, mut metrop: V) -> Self {
+    pub fn new(wave_function: &'a mut T, metrop: V) -> Self {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random((nelec, 3), Range::new(-1., 1.));
         wave_function.refresh(&cfg);
-        metrop.set_wave_function_value(wave_function.current_value().0);
         Self{
             wave_function,
             config: cfg,
@@ -154,8 +153,6 @@ mod tests {
         runner.run(10, 1);
 
         let local_e_result = runner.means()[0];
-        println!("{} {}", local_e_result, ENERGY_EXACT);
-
         assert!((local_e_result - ENERGY_EXACT).abs() < 1e-15);
     }
 

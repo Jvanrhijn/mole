@@ -14,16 +14,11 @@ use traits::cache::Cache;
 /// $A(x -> x') = \min(\psi(x')^2 / \psi(x)^2, 1)$.
 pub struct MetropolisBox {
     box_side: f64,
-    wf_value_prev: f64
 }
 
 impl MetropolisBox {
     pub fn new(box_side: f64) -> Self {
-        Self{box_side, wf_value_prev: 0.}
-    }
-
-    pub fn set_wave_function_value(&mut self, wf_value: f64) {
-        self.wf_value_prev = wf_value;
+        Self{box_side}
     }
 }
 
@@ -44,24 +39,18 @@ where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f
     fn accept_move(&self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
         let wf_value = wf.enqueued_value()
             .expect("Attempted to retrieve value from empty cache").0;
-        let acceptance = (wf_value.powi(2)/self.wf_value_prev.powi(2)).min(1.);
+        let acceptance = (wf_value.powi(2)/wf.current_value().0.powi(2)).min(1.);
         acceptance > random::<f64>()
     }
 
     fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>> {
         let cfg_proposed = self.propose_move(wf, cfg, idx);
         if self.accept_move(wf, cfg, &cfg_proposed) {
-            self.wf_value_prev = wf.enqueued_value().unwrap().0;
             Some(cfg_proposed)
         } else {
             None
         }
     }
-
-    fn set_wave_function_value(&mut self, wf_val: f64) {
-        self.wf_value_prev = wf_val;
-    }
-
 }
 
 #[cfg(test)]

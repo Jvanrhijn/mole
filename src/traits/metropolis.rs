@@ -12,6 +12,4 @@ pub trait Metropolis<T: Differentiate + Function<f64, D=Ix2>> {
     /// Return an Option containing the new configuration if it was accepted,
     /// and None otherwise.
     fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>>;
-
-    fn set_wave_function_value(&mut self, wf_val: f64);
 }
