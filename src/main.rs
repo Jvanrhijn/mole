@@ -40,6 +40,8 @@ mod montecarlo;
 
 use std::vec::Vec;
 use ndarray::{Array1};
+use rand::rngs::SmallRng;
+use rand::SeedableRng;
 
 use math::basis::*;
 use orbitals::*;
@@ -48,8 +50,9 @@ use montecarlo::{Sampler, Runner};
 
 type Func = Fn(&Array1<f64>) -> (f64, f64);
 
-fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>) -> Runner<Sampler<wf::SingleDeterminant<Func>, metrop::MetropolisBox>> {
-    // create basis function set
+fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>) -> Runner<Sampler<wf::SingleDeterminant<Func>, metrop::MetropolisBox<SmallRng>>> {
+    // create seeded rng
+    let rng = SmallRng::seed_from_u64(0);
 
     // create orbitals from basis functions
     let orbital1 = Orbital::new(array![1.0, 0.0], basis_set);
@@ -67,7 +70,7 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>) -> Runner<Sampler<wf::SingleD
     let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
 
     // create metropolis algorithm
-    let metrop = metrop::MetropolisBox::new(1.0);
+    let metrop = metrop::MetropolisBox::from_rng(1.0, rng);
 
     // setup monte carlo sampler
     let mut sampler = Sampler::new( wf, metrop);
@@ -79,16 +82,14 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>) -> Runner<Sampler<wf::SingleD
 
 fn blocking_analysis() {
     let basis_set: Vec<Box<Func>> = vec![
-        Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
-        Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
+        Box::new(|x| hydrogen_2s(&(x + &array![1.0, 0., 0.]))),
+        Box::new(|x| hydrogen_2s(&(x - &array![1.0, 0., 0.])))
     ];
 
-    let max_ntr = 18;
-    let num_steps = 2_usize.pow(max_ntr);
+    let num_steps = 2_usize.pow(12);
 
-    for ntr in 1..max_ntr {
-        let steps_per_block = num_steps/2usize.pow(ntr as u32);
-        let num_blocks = num_steps / steps_per_block;
+    for num_blocks in (2..num_steps/2).step_by(num_steps/100) {
+        let steps_per_block = num_steps / num_blocks;
 
         let mut runner = get_hydrogen_runner(&basis_set);
         runner.run(num_blocks, steps_per_block);
@@ -97,7 +98,7 @@ fn blocking_analysis() {
         let stdev= (runner.variances()[0]/(steps_per_block - 1) as f64).sqrt();
         let stdev_error = stdev*1.0/(2.0*(steps_per_block - 1) as f64).sqrt();
 
-        println!("Local E: {:.*} stdev: {:.*} +/- {:.*} {}", 16, local_e, 16, stdev, 16, stdev_error, steps_per_block);
+        println!("Local E: {:.*} stdev: {:.*} +/- {:.*} {}", 16, local_e, 16, stdev, 16, stdev_error, num_blocks);
     }
 
 }
