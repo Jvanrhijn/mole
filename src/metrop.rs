@@ -1,4 +1,4 @@
-use rand::{FromEntropy, random, Rng};
+use rand::{FromEntropy, Rng};
 use rand::rngs::SmallRng;
 use rand::distributions::Range;
 use ndarray::{Array1, Array2, Ix2};

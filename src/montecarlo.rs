@@ -102,7 +102,9 @@ where S: MonteCarloSampler
         Self{sampler, means, variances, square_mean_diff, mean_sq}
     }
 
-    pub fn run(&mut self, blocks: usize, block_size: usize) {
+    pub fn run(&mut self, steps: usize, block_size: usize) {
+        assert!(steps >= 2*block_size);
+        let blocks = steps / block_size;
         for block_nr in 0..blocks {
             let mut block = Block::new(block_size, self.sampler.num_observables());
             for b in 0..block_size {
@@ -116,18 +118,20 @@ where S: MonteCarloSampler
             }
             // TODO: write abstraction over statistics
             if block_nr > 0 {
-                let prev_mean = self.means().clone();
+                let block_mean = block.mean();
                 // running mean algorithm
-                izip!(self.means.iter_mut(), block.mean().iter())
-                    .for_each(|(m, x)| *m = (x + block_nr as f64 * *m)/(block_nr + 1) as f64);
-                // running variance algorithm
-                izip!(self.square_mean_diff.iter_mut(), block.mean().iter(), self.means.iter(), prev_mean.iter())
-                    .for_each(|(s, bm, m, pm)| *s += (bm - pm)*(bm - m));
-                izip!(self.variances.iter_mut(), self.square_mean_diff.iter())
-                    .for_each(|(v, s)| *v = s/(block_nr as f64));
-                //println!("mean: {:.*} variance: {:.*}", 5, self.means[0], 5, self.variances[0]);
+                izip!(self.means.iter_mut(), block_mean.iter())
+                    .for_each(|(m, x)| *m += x);
+                izip!(self.mean_sq.iter_mut(), block_mean.iter())
+                    .for_each(|(msq, m)| *msq += m.powi(2));
             }
         }
+        izip!(self.means.iter_mut(), self.mean_sq.iter_mut()).for_each(|(m, msq)| {
+            *m /= blocks as f64;
+            *msq /= blocks as f64;
+        });
+        izip!(self.variances.iter_mut(), self.means.iter(), self.mean_sq.iter())
+            .for_each(|(v, m, msq)| *v = msq - m.powi(2));
     }
 
     pub fn means(&self) -> &Vec<f64> {
@@ -172,7 +176,7 @@ mod tests {
         sampler.add_observable(local_e);
 
         let mut runner = Runner::new(sampler);
-        runner.run(10, 1);
+        runner.run(100, 1);
 
         let local_e_result = runner.means()[0];
 

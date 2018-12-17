@@ -1,4 +1,3 @@
-use rand::Rng;
 use ndarray::{Array2, Ix2};
 use traits::differentiate::Differentiate;
 use traits::function::Function;

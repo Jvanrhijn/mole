@@ -50,19 +50,21 @@ use montecarlo::{Sampler, Runner};
 
 type Func = Fn(&Array1<f64>) -> (f64, f64);
 
-fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>) -> Runner<Sampler<wf::SingleDeterminant<Func>, metrop::MetropolisBox<SmallRng>>> {
+fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>)
+    -> Runner<Sampler<wf::SingleDeterminant<Func>, metrop::MetropolisBox<SmallRng>>>
+{
     // create seeded rng
     let rng = SmallRng::seed_from_u64(0);
 
     // create orbitals from basis functions
-    let orbital1 = Orbital::new(array![1.0, 0.0], basis_set);
-    let orbital2 = Orbital::new(array![0.0, 1.0], basis_set);
+    let orbital1 = Orbital::new(array![1.0, 1.0], basis_set);
+    let orbital2 = Orbital::new(array![1.0, -1.0], basis_set);
 
     // Initialize wave function: single Slater determinant
     let wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
 
     // setup Hamiltonian components
-    let v = IonicPotential::new(array![[-1., 0., 0.], [1.0, 0., 0.]], array![1, 1]);
+    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 1]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
@@ -70,7 +72,7 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>) -> Runner<Sampler<wf::SingleD
     let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
 
     // create metropolis algorithm
-    let metrop = metrop::MetropolisBox::from_rng(1.0, rng);
+    let metrop = metrop::MetropolisBox::from_rng(1., rng);
 
     // setup monte carlo sampler
     let mut sampler = Sampler::new( wf, metrop);
@@ -86,17 +88,21 @@ fn blocking_analysis() {
         Box::new(|x| hydrogen_2s(&(x - &array![1.0, 0., 0.])))
     ];
 
-    let num_steps = 2_usize.pow(12);
+    let num_steps = 2_usize.pow(14);
 
-    for num_blocks in (2..num_steps/2).step_by(num_steps/100) {
-        let steps_per_block = num_steps / num_blocks;
-
+    let mut last_block_size = 0;
+    for num_blocks in (20..num_steps/2).step_by(num_steps/500) {
+        let block_size = num_steps/num_blocks;
+        if last_block_size == block_size {
+            continue;
+        }
+        last_block_size = block_size;
         let mut runner = get_hydrogen_runner(&basis_set);
-        runner.run(num_blocks, steps_per_block);
+        runner.run(num_steps, block_size);
 
         let local_e = runner.means()[0];
-        let stdev= (runner.variances()[0]/(steps_per_block - 1) as f64).sqrt();
-        let stdev_error = stdev*1.0/(2.0*(steps_per_block - 1) as f64).sqrt();
+        let stdev= runner.variances()[0].sqrt();
+        let stdev_error = stdev*1.0/(2.0*(block_size - 1) as f64).sqrt();
 
         println!("Local E: {:.*} stdev: {:.*} +/- {:.*} {}", 16, local_e, 16, stdev, 16, stdev_error, num_blocks);
     }
