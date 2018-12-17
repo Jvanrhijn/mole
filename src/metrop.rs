@@ -21,7 +21,7 @@ pub struct MetropolisBox<R> where R: Rng {
 impl<R> MetropolisBox<R> where R: Rng {
 
     pub fn from_rng(box_side: f64, rng: R) -> Self {
-        Self{box_side, wf_value_prev: 0.0, rng}
+        Self{box_side, rng}
     }
 
 }
