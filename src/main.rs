@@ -82,7 +82,8 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>)
     Runner::new(sampler)
 }
 
-fn blocking_analysis() {
+
+fn main() {
     let basis_set: Vec<Box<Func>> = vec![
         Box::new(|x| hydrogen_2s(&(x + &array![1.0, 0., 0.]))),
         Box::new(|x| hydrogen_2s(&(x - &array![1.0, 0., 0.])))
@@ -90,25 +91,6 @@ fn blocking_analysis() {
 
     let num_steps = 2_usize.pow(14);
 
-    let mut last_block_size = 0;
-    for num_blocks in (20..num_steps/2).step_by(num_steps/500) {
-        let block_size = num_steps/num_blocks;
-        if last_block_size == block_size {
-            continue;
-        }
-        last_block_size = block_size;
-        let mut runner = get_hydrogen_runner(&basis_set);
-        runner.run(num_steps, block_size);
-
-        let local_e = runner.means()[0];
-        let stdev= runner.variances()[0].sqrt();
-        let stdev_error = stdev*1.0/(2.0*(block_size - 1) as f64).sqrt();
-
-        println!("Local E: {:.*} stdev: {:.*} +/- {:.*} {}", 16, local_e, 16, stdev, 16, stdev_error, num_blocks);
-    }
-
-}
-
-fn main() {
-    blocking_analysis();
+    let mut runner = get_hydrogen_runner(&basis_set);
+    runner.run(num_steps, 1);
 }

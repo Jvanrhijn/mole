@@ -113,6 +113,7 @@ where S: MonteCarloSampler
                 if block_nr > 0 {
                     let samples = self.sampler.sample()
                         .expect("Failed to sample observables");
+                    println!("{}", samples[0]);
                     block.set_value(b, samples);
                 }
             }
