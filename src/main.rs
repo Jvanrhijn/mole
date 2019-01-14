@@ -50,7 +50,7 @@ use montecarlo::{Sampler, Runner};
 
 type Func = Fn(&Array1<f64>) -> (f64, f64);
 
-fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>)
+fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
     -> Runner<Sampler<wf::SingleDeterminant<Func>, metrop::MetropolisBox<SmallRng>>>
 {
     // create seeded rng
@@ -72,7 +72,7 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>)
     let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
 
     // create metropolis algorithm
-    let metrop = metrop::MetropolisBox::from_rng(1., rng);
+    let metrop = metrop::MetropolisBox::from_rng(box_size, rng);
 
     // setup monte carlo sampler
     let mut sampler = Sampler::new( wf, metrop);
@@ -91,6 +91,6 @@ fn main() {
 
     let num_steps = 2_usize.pow(14);
 
-    let mut runner = get_hydrogen_runner(&basis_set);
+    let mut runner = get_hydrogen_runner(&basis_set, 0.1);
     runner.run(num_steps, 1);
 }

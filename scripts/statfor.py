@@ -77,9 +77,9 @@ if __name__ == "__main__":
     ERRORS, SIZES = blocking(SERIES)
     
     if "-p" in sys.argv:
-        plt.plot(len(SERIES)/SIZES, ERRORS, '.')
+        plt.plot(SIZES, ERRORS, '.')
         plt.ylabel("$\sigma$")
-        plt.xlabel("nblk")
+        plt.xlabel("Block size")
         plt.grid()
         plt.show()
 
