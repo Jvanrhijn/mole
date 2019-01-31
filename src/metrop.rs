@@ -15,13 +15,14 @@ use traits::cache::Cache;
 /// $A(x -> x') = \min(\psi(x')^2 / \psi(x)^2, 1)$.
 pub struct MetropolisBox<R> where R: Rng {
     box_side: f64,
+    wf_value_prev: f64,
     rng: R
 }
 
 impl<R> MetropolisBox<R> where R: Rng {
 
     pub fn from_rng(box_side: f64, rng: R) -> Self {
-        Self{box_side, rng}
+        Self{box_side, wf_value_prev: 0.0, rng}
     }
 
 }
@@ -29,7 +30,7 @@ impl<R> MetropolisBox<R> where R: Rng {
 impl MetropolisBox<SmallRng> {
     pub fn new(box_side: f64) -> Self {
         let rng = SmallRng::from_entropy();
-        Self{box_side, rng}
+        Self{box_side, wf_value_prev: 0.0, rng}
     }
 }
 
@@ -56,7 +57,7 @@ where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f
     fn accept_move(&mut self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
         let wf_value = wf.enqueued_value()
             .expect("Attempted to retrieve value from empty cache").0;
-        let acceptance = (wf_value.powi(2)/wf.current_value().0.powi(2)).min(1.);
+        let acceptance = (wf_value.powi(2)/wf.current_value().0.powi(2)).min(1.0);
         acceptance > self.rng.gen::<f64>()
     }
 

@@ -85,12 +85,12 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
 
 fn main() {
     let basis_set: Vec<Box<Func>> = vec![
-        Box::new(|x| hydrogen_2s(&(x + &array![1.0, 0., 0.]))),
-        Box::new(|x| hydrogen_2s(&(x - &array![1.0, 0., 0.])))
+        Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
+        Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
     ];
 
-    let num_steps = 2_usize.pow(14);
+    let num_steps = 10000;
 
-    let mut runner = get_hydrogen_runner(&basis_set, 0.1);
+    let mut runner = get_hydrogen_runner(&basis_set, 0.5);
     runner.run(num_steps, 1);
 }

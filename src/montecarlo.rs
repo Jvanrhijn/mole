@@ -26,7 +26,7 @@ where T: Function<f64, D=Ix2> + Differentiate + Cache<Array2<f64>>,
     wave_function: T,
     config: Array2<f64>,
     metropolis: V,
-    observables: Vec<Box<Operator<T>>>
+    observables: Vec<Box<Operator<T>>>,
 }
 
 impl<T, V> Sampler<T, V>

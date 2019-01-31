@@ -29,18 +29,11 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
         let matrix_laplac = Array::<f64, Ix2>::eye(mat_dim);
         let inv = matrix.inv().expect("Failed to take matrix inverse");
         // put cached data in queues
-        let mut matrix_queue = VecDeque::from(vec![matrix]);
-        let mut matrix_laplac_queue = VecDeque::from(vec![matrix_laplac]);
-        let mut inv_matrix_queue = VecDeque::from(vec![inv]);
-        let mut current_value_queue = VecDeque::from(vec![0.0]);
-        let mut current_laplac_queue = VecDeque::from(vec![0.0]);
-        // reserve space for proposed data in queues
-        for q in vec![&mut matrix_queue, &mut matrix_laplac_queue, &mut inv_matrix_queue].iter_mut() {
-            q.reserve_exact(1);
-        }
-        for q in vec![&mut current_value_queue, &mut current_laplac_queue].iter_mut() {
-            q.reserve_exact(1);
-        }
+        let matrix_queue = VecDeque::from(vec![matrix]);
+        let matrix_laplac_queue = VecDeque::from(vec![matrix_laplac]);
+        let inv_matrix_queue = VecDeque::from(vec![inv]);
+        let current_value_queue = VecDeque::from(vec![0.0]);
+        let current_laplac_queue = VecDeque::from(vec![0.0]);
         Self{
             orbs,
             matrix_queue,
@@ -125,18 +118,20 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
-        const FRONT: usize = 0;
-        let (values, laplacians) = self.build_matrices(new).expect("Failed to construct matrix");
-        let inv = values.inv().expect("Failed to take matrix inverse");
+        let (values, laplacians) = self.build_matrices(new)
+            .expect("Failed to construct matrix");
+        let inv = values.inv()
+            .expect("Failed to take matrix inverse");
+        let value = values.det()
+            .expect("Failed to take matrix determinant");
+
+        *self.current_value_queue.front_mut().unwrap() = value;
+        *self.current_laplac_queue.front_mut().unwrap() = value * (&laplacians * &inv.t()).scalar_sum();
+
         for (queue, data) in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut()
             .zip(vec![values, laplacians, inv].into_iter()) {
-            *queue.get_mut(FRONT).expect("Attempt to retrieve data from empty queue") = data;
+            *queue.front_mut().expect("Attempt to retrieve data from empty queue") = data;
         }
-        *self.current_value_queue.get_mut(FRONT).unwrap() = self.matrix_queue.get(0).unwrap()
-            .det().expect("Failed to take matrix determinant");
-        *self.current_laplac_queue.get_mut(FRONT).unwrap() = self.current_value_queue.get(0).unwrap()
-            * (*&self.matrix_laplac_queue.get(FRONT).unwrap() * &self.inv_matrix_queue.get(0).unwrap().t()).scalar_sum();
-        self.flush_update();
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
@@ -150,13 +145,13 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
         let orbvec_laplac = Array1::<f64>::from_vec(data.into_iter().map(|x| x.1).collect());
 
         // compute updated wave function value
-        let ratio = orbvec.dot(&self.inv_matrix_queue.get(0).unwrap().slice(s![.., ud]));
-        let value = self.current_value_queue.get(0).unwrap() * ratio;
+        let ratio = orbvec.dot(&self.inv_matrix_queue.front().unwrap().slice(s![.., ud]));
+        let value = self.current_value_queue.front().unwrap() * ratio;
 
         // calculate updated matrix, laplacian matrix, and inverse matrix; only need to update column `ud`
-        let mut matrix = self.matrix_queue.get(0).unwrap().clone();
-        let mut matrix_laplac = self.matrix_laplac_queue.get(0).unwrap().clone();
-        let mut inv_matrix = self.inv_matrix_queue.get(0).unwrap().clone();
+        let mut matrix = self.matrix_queue.front().unwrap().clone();
+        let mut matrix_laplac = self.matrix_laplac_queue.front().unwrap().clone();
+        let mut inv_matrix = self.inv_matrix_queue.front().unwrap().clone();
         for j in 0..self.num_electrons() {
             matrix[[ud, j]] = orbvec[j];
             matrix_laplac[[ud, j]] = orbvec_laplac[j];
@@ -189,28 +184,32 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 
     fn push_update(&mut self) {
         for q in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut() {
-            q.remove(0);
+            q.pop_front();
         }
         for q in vec![&mut self.current_value_queue, &mut self.current_laplac_queue].iter_mut() {
-            q.remove(0);
+            q.pop_front();
         }
     }
 
     fn flush_update(&mut self) {
         for q in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut() {
-            q.remove(1);
+            if q.len() == 2 {
+                q.pop_back();
+            }
         }
         for q in vec![&mut self.current_value_queue, &mut self.current_laplac_queue].iter_mut() {
-            q.remove(1);
+            if q.len() == 2 {
+                q.pop_back();
+            }
         }
     }
 
     fn current_value(&self) -> Self::V {
-        (*self.current_value_queue.get(0).unwrap(), *self.current_laplac_queue.get(0).unwrap())
+        (*self.current_value_queue.front().unwrap(), *self.current_laplac_queue.front().unwrap())
     }
 
     fn enqueued_value(&self) -> Option<Self::V> {
-        match (self.current_laplac_queue.get(1), self.current_laplac_queue.get(1)) {
+        match (self.current_value_queue.back(), self.current_laplac_queue.back()) {
             (Some(&v), Some(&l)) => Some((v, l)),
             _ => None
         }
