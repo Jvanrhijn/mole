@@ -10,7 +10,7 @@ cmd = "cargo run --release {}"
 
 def get_tcor_and_acceptance(box_side):
     process = subprocess.Popen(cmd.format(box_side).split(), 
-            stdout=subprocess.PIPE)
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     out, err = process.communicate()
 
     data = np.array([float(x) for x in out.decode("ascii").split("\n")[:-1]])
@@ -33,11 +33,13 @@ for side in sides:
 fig, ax1 = plt.subplots()
 ax2 = ax1.twinx()
 
-ax2.plot(sides, acceptance)
-ax1.plot(sides, tcorr, 'r')
+ax2.plot(sides, acceptance, 'r')
+ax1.plot(sides, tcorr, 'b')
 
 ax1.set_xlabel("Box side")
-ax1.set_ylabel("Tcorr")
+ax1.set_ylabel("Tcorr", color='b')
+ax1.tick_params('y', colors='b')
+
 
 ax2.set_ylabel("Acceptance rate", color='r')
 ax2.tick_params('y', colors='r')
