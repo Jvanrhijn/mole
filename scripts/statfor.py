@@ -78,7 +78,7 @@ if __name__ == "__main__":
     
     if "-p" in sys.argv:
         plt.plot(SIZES, ERRORS, '.')
-        plt.ylabel("$\sigma$")
+        plt.ylabel("Error")
         plt.xlabel("Block size")
         plt.grid()
         plt.show()

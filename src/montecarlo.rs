@@ -27,6 +27,7 @@ where T: Function<f64, D=Ix2> + Differentiate + Cache<Array2<f64>>,
     config: Array2<f64>,
     metropolis: V,
     observables: Vec<Box<Operator<T>>>,
+    acceptance: f64
 }
 
 impl<T, V> Sampler<T, V>
@@ -43,6 +44,7 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
             config: cfg,
             metropolis: metrop,
             observables: Vec::<Box<Operator<T>>>::new(),
+            acceptance: 0.0
         }
     }
 
@@ -67,6 +69,7 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
             if let Some(config) = self.metropolis.move_state(&mut self.wave_function, &self.config, e) {
                 self.config = config;
                 self.wave_function.push_update();
+                self.acceptance += 1.0/self.wave_function.num_electrons() as f64;
             } else {
                 self.wave_function.flush_update();
             }
@@ -76,6 +79,10 @@ where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>
 
     fn num_observables(&self) -> usize {
         self.observables.len()
+    }
+
+    fn acceptance(&self) -> f64 {
+        self.acceptance
     }
 
 }
@@ -133,6 +140,7 @@ where S: MonteCarloSampler
         });
         izip!(self.variances.iter_mut(), self.means.iter(), self.mean_sq.iter())
             .for_each(|(v, m, msq)| *v = msq - m.powi(2));
+        println!("{}", self.sampler.acceptance()/(blocks*block_size) as f64);
     }
 
     pub fn means(&self) -> &Vec<f64> {

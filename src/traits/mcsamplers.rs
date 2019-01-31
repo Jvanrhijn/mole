@@ -11,4 +11,6 @@ pub trait MonteCarloSampler {
 
     fn num_observables(&self) -> usize;
 
+    fn acceptance(&self) -> f64;
+
 }

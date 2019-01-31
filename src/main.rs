@@ -8,6 +8,7 @@ extern crate rand;
 extern crate num_traits;
 #[macro_use]
 extern crate itertools;
+use std::env;
 
 mod optim {
     pub mod gd;
@@ -84,13 +85,17 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
 
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    let box_side = args[args.len()-1].parse::<f64>().unwrap();
+
     let basis_set: Vec<Box<Func>> = vec![
         Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
         Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
     ];
 
-    let num_steps = 10000;
 
-    let mut runner = get_hydrogen_runner(&basis_set, 0.5);
+    let num_steps = 1000;
+
+    let mut runner = get_hydrogen_runner(&basis_set, box_side);
     runner.run(num_steps, 1);
 }
