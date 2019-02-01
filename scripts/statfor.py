@@ -30,7 +30,9 @@ def correlation(data, mean, var):
         for i in range(1, max_i + 1):
             corr = ((data[:nsteps-i] - mean)*(data[i:] - mean))[:nsteps-i].sum()
             corr /= (nsteps-i)*var
-            tcorr += 2*corr*(0 if corr < 0 else 1)
+            if corr < 0:
+                f = 0
+            tcorr += 2*corr*f
             file.write(f"{i}" +" "*(max_width-int_width(i)+4) + f"{corr:.10e}\n")
         tcorr = max(1, tcorr)
 

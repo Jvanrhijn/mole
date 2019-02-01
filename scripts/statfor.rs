@@ -34,6 +34,7 @@ fn correlation(data: &[f64], mean: f64, variance: f64) -> Result<(f64, f64, f64)
     let max_i = MAX_STEPS.min(nsteps - 1);
 
     let mut file = File::create("corr.out")?;
+    let mut f = 1.0;
 
     for i in 1..=max_i {
         let mut corr = data[..nsteps-i].iter().zip(data[i..].iter())
@@ -41,7 +42,10 @@ fn correlation(data: &[f64], mean: f64, variance: f64) -> Result<(f64, f64, f64)
             .take(nsteps - i)
             .sum::<f64>();
         corr /= variance*(nsteps - i) as f64;
-        tcorr += 2.0 * corr * if corr < 0.0 { 0.0 } else { 1.0 };
+        if corr < 0. {
+            f = 0.0;
+        }
+        tcorr += 2.0 * corr * f;
         file.write(format!("{} {}\n", i, corr).as_bytes())?;
     }
     tcorr = tcorr.max(1.0);
