@@ -42,9 +42,12 @@ impl<S> Runner<S>
             if block_nr > 0 {
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
-                println!("{:.*}    {:.*} +/- {:.*}", 8, block_mean[0], 8, self.means[0], 8, self.variances[0].sqrt());
+                let acceptance = self.sampler.acceptance()/(block_nr*block_size) as f64;
+                println!("{:.*}    {:.*} +/- {:.*}    acc {:.*}",
+                         8, block_mean[0], 8, self.means[0], 8, self.variances[0].sqrt(), 8, acceptance);
             }
         }
+        println!("{}", self.sampler.acceptance()/(blocks*block_size) as f64);
     }
 
     pub fn means(&self) -> &Vec<f64> {
