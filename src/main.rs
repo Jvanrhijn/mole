@@ -8,7 +8,7 @@ use rand::{StdRng, SeedableRng};
 
 use wavefunction::{SingleDeterminant, Orbital};
 use metropolis::MetropolisBox;
-use basis::{Func, hydrogen_1s, hydrogen_2s, gaussian};
+use basis::*;
 use montecarlo::{Runner, Sampler};
 use operator::*;
 
@@ -76,13 +76,13 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let box_side = args[args.len()-1].parse::<f64>().unwrap();
 
-    let basis_set: Vec<Box<Func>> = vec![
+    let _basis_set: Vec<Box<Func>> = vec![
         Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
         Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
     ];
 
     let gauss_basis: Vec<Box<Func>> = vec![
-        Box::new(|x| gaussian(x, 5.0))
+        Box::new(|x| gaussian(x, 3.0))
     ];
 
     let num_steps = 1_000_000;

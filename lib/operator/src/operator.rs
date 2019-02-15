@@ -174,9 +174,8 @@ impl<'a, T> Operator<T> for LocalEnergy
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wf::SingleDeterminant;
-    use orbitals::Orbital;
-    use math::basis;
+    use wavefunction::{SingleDeterminant, Orbital};
+    use basis;
 
     #[test]
     fn hydrogen_ground_state() {

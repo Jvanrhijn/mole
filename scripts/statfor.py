@@ -99,7 +99,7 @@ if __name__ == "__main__":
         ax[0].set_xlabel("Block size")
         ax[0].grid()
         
-        blksize = 2000
+        blksize = 4000
         blocks = np.array_split(SERIES, len(SERIES)//blksize)
         means = np.array([b.mean() for b in blocks])
 

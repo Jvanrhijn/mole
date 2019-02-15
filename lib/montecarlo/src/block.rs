@@ -8,15 +8,13 @@ use ndarray::{Axis, Array1, Array2};
 /// Convenience struct for dealing with block averaging.
 pub struct Block<T> {
     values: Array2<T>,
-    size: usize,
-    idx: usize
 }
 
 impl<T> Block<T>
     where T: 'static + Clone + Copy + One + Zero + Float + AddAssign + Sub<Output=T> + Div<Output=T>
 {
     pub fn new(size: usize, num_observables: usize) -> Self {
-        Self{values: Array2::<T>::zeros((size, num_observables)), size, idx: 0}
+        Self{values: Array2::<T>::zeros((size, num_observables))}
     }
 
     pub fn set_value(&mut self, idx: usize, value: Vec<T>) {
@@ -32,9 +30,6 @@ impl<T> Block<T>
         self.values.var_axis(Axis(0), T::zero())
     }
 
-    pub fn size(&self) -> usize {
-        self.size
-    }
 }
 
 #[cfg(test)]

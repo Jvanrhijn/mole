@@ -1,4 +1,7 @@
 // Third party imports
+#[macro_use]
+#[cfg(test)]
+extern crate ndarray;
 use ndarray::{Array1};
 
 /// Interface for implementing optimization algorithms.

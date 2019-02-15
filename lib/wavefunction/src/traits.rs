@@ -1,4 +1,3 @@
-#![feature(uniform_paths)]
 use ndarray::Array;
 use crate::error::Error;
 

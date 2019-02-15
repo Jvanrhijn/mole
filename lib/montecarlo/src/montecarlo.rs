@@ -1,17 +1,8 @@
 // Standard imports
 use std::vec::Vec;
-//Third party imports
-use ndarray::{Ix2, Array2};
-use ndarray_rand::RandomExt;
-use rand::distributions::Range;
-use rand::Rng;
 // First party imports
 use crate::traits::*;
-use crate::samplers::*;
 use crate::block::Block;
-use wavefunction::{Differentiate, Function, WaveFunction, Cache, Error};
-use metropolis::Metropolis;
-use operator::Operator;
 
 /// Struct for running Monte Carlo integration
 /// Generic over Samplers
@@ -83,12 +74,12 @@ impl<S> Runner<S>
 mod tests {
     use super::*;
     use rand::rngs::SmallRng;
-    use math::basis;
+    use basis;
     use ndarray::Array1;
-    use orbitals::Orbital;
-    use wf;
-    use operators::{LocalEnergy, ElectronicPotential, IonicPotential, KineticEnergy, ElectronicHamiltonian};
-    use metrop::MetropolisBox;
+    use wavefunction::{Orbital, SingleDeterminant};
+    use operator::{LocalEnergy, ElectronicPotential, IonicPotential, KineticEnergy, ElectronicHamiltonian};
+    use metropolis::MetropolisBox;
+    use crate::samplers::Sampler;
 
     #[test]
     fn test_hydrogen_atom_single_det_metrop_box() {
@@ -98,7 +89,7 @@ mod tests {
             Box::new(basis::hydrogen_1s)
         ];
         let orbital = Orbital::new(array![1.0], &basis_set);
-        let wave_func = wf::SingleDeterminant::new(vec![orbital]);
+        let wave_func = SingleDeterminant::new(vec![orbital]);
         let local_e = LocalEnergy::new(
             ElectronicHamiltonian::new(
                 KineticEnergy::new(),

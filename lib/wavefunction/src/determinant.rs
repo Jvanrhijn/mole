@@ -1,4 +1,3 @@
-#![feature(uniform_paths)]
 // Standard imports
 use std::vec::Vec;
 use std::collections::VecDeque;
@@ -218,8 +217,8 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
 mod tests {
     use super::*;
     use ndarray::Array1;
-    use orbitals::Orbital;
-    use math::basis::{hydrogen_1s, hydrogen_2s};
+    use crate::orbitals::Orbital;
+    use basis::{hydrogen_1s, hydrogen_2s};
 
     static EPS: f64 = 1e-15;
 

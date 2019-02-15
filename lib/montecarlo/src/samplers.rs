@@ -7,7 +7,6 @@ use rand::distributions::Range;
 use rand::Rng;
 // First party imports
 use crate::traits::*;
-use crate::block::Block;
 use wavefunction::{Differentiate, Function, WaveFunction, Cache, Error};
 use metropolis::Metropolis;
 use operator::Operator;

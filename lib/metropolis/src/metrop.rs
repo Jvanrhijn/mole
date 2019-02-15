@@ -13,14 +13,13 @@ use wavefunction::{Function, Differentiate, Cache};
 /// $A(x -> x') = \min(\psi(x')^2 / \psi(x)^2, 1)$.
 pub struct MetropolisBox<R> where R: Rng {
     box_side: f64,
-    wf_value_prev: f64,
     rng: R
 }
 
 impl<R> MetropolisBox<R> where R: Rng {
 
     pub fn from_rng(box_side: f64, rng: R) -> Self {
-        Self{box_side, wf_value_prev: 0.0, rng}
+        Self{box_side, rng}
     }
 
 }
@@ -28,7 +27,7 @@ impl<R> MetropolisBox<R> where R: Rng {
 impl MetropolisBox<SmallRng> {
     pub fn new(box_side: f64) -> Self {
         let rng = SmallRng::from_entropy();
-        Self{box_side, wf_value_prev: 0.0, rng}
+        Self{box_side, rng}
     }
 }
 
@@ -74,13 +73,14 @@ where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f
 mod tests {
     use super::*;
     use rand::rngs::SmallRng;
-    use error::Error;
+    use wavefunction::Error;
 
     // define stub wave function
     struct WaveFunctionMock {
         value: f64
     }
 
+    #[allow(dead_code)]
     impl WaveFunctionMock {
         pub fn set_value(&mut self, new_val: f64) {
             self.value = new_val;

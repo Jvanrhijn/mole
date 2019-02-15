@@ -1,8 +1,18 @@
 [package]
-name = "Mole"
+name = "mole"
 version = "0.2.0"
 authors = ["Jesse van Rhijn <jesse.v.rhijn@gmail.com>"]
 edition = "2018"
+
+[workspace]
+members = [
+  "lib/basis",
+  "lib/metropolis",
+  "lib/montecarlo",
+  "lib/operator",
+  "lib/optimizers",
+  "lib/wavefunction",
+]
 
 [dependencies]
 montecarlo = { path = "lib/montecarlo" }

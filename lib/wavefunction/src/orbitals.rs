@@ -1,4 +1,3 @@
-#![feature(uniform_paths)]
 // Standard imports
 use std::vec::Vec;
 // Third party imports

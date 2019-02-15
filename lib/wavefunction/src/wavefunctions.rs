@@ -1,4 +1,3 @@
-#![feature(uniform_paths)]
 // Defines various wave function representations, e.g. Jastrow-Slater
 // third party imports
 use ndarray::{Array1, Ix2, Array2};
@@ -15,6 +14,7 @@ use crate::error::Error;
 /// Slater determinants with a prefactor that takes care of electron-electron cusp
 /// conditions. The functional form is tailored to be easy to evaluate and differentiate
 /// with respect to its parameters.
+#[allow(dead_code)]
 pub struct JastrowSlater {
     ci_coeffs: Array1<f64>,
     orb_coeffs: Array1<f64>,
@@ -23,7 +23,8 @@ pub struct JastrowSlater {
 
 impl JastrowSlater {
     pub fn new(cis: Array1<f64>, orbs: Array1<f64>, jas: JastrowFactor) -> Self {
-        Self{ci_coeffs: cis, orb_coeffs: orbs, jastrow: jas}
+        unimplemented!()
+        //Self{ci_coeffs: cis, orb_coeffs: orbs, jastrow: jas}
     }
 }
 
@@ -116,7 +117,7 @@ impl<'a, T> Cache<Array2<f64>> for SingleDeterminant<'a, T>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use math::basis;
+    use basis;
 
     #[test]
     fn single_det_one_basis_function() {
