@@ -1,4 +1,5 @@
-use rand::random;
+use rand::{FromEntropy, Rng};
+use rand::rngs::SmallRng;
 use rand::distributions::Range;
 use ndarray::{Array1, Array2, Ix2};
 use ndarray_rand::RandomExt;
@@ -12,35 +13,52 @@ use traits::cache::Cache;
 /// Transition matrix T(x -> x') is constant inside a cubical box,
 /// and zero outside it. This yields an acceptance probability of
 /// $A(x -> x') = \min(\psi(x')^2 / \psi(x)^2, 1)$.
-pub struct MetropolisBox {
+pub struct MetropolisBox<R> where R: Rng {
     box_side: f64,
+    wf_value_prev: f64,
+    rng: R
 }
 
-impl MetropolisBox {
+impl<R> MetropolisBox<R> where R: Rng {
+
+    pub fn from_rng(box_side: f64, rng: R) -> Self {
+        Self{box_side, wf_value_prev: 0.0, rng}
+    }
+
+}
+
+impl MetropolisBox<SmallRng> {
     pub fn new(box_side: f64) -> Self {
-        Self{box_side}
+        let rng = SmallRng::from_entropy();
+        Self{box_side, wf_value_prev: 0.0, rng}
     }
 }
 
-impl<T> Metropolis<T> for MetropolisBox
-where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f64, f64)>
+impl<T, R> Metropolis<T> for MetropolisBox<R>
+where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f64, f64)>,
+      R: Rng
 {
+    type R = R;
 
-    fn propose_move(&self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
+    fn rng_mut(&mut self) -> &mut R {
+        &mut self.rng
+    }
+
+    fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
         let mut config_proposed = cfg.clone();
         {
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
-            mov_slice += &Array1::random(3, Range::new(-0.5*self.box_side, 0.5*self.box_side));
+            mov_slice += &Array1::random_using(3, Range::new(-0.5*self.box_side, 0.5*self.box_side), &mut self.rng);
         }
         wf.enqueue_update(idx, &config_proposed);
         config_proposed
     }
 
-    fn accept_move(&self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
+    fn accept_move(&mut self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
         let wf_value = wf.enqueued_value()
             .expect("Attempted to retrieve value from empty cache").0;
-        let acceptance = (wf_value.powi(2)/wf.current_value().0.powi(2)).min(1.);
-        acceptance > random::<f64>()
+        let acceptance = (wf_value.powi(2)/wf.current_value().0.powi(2)).min(1.0);
+        acceptance > self.rng.gen::<f64>()
     }
 
     fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>> {
@@ -51,11 +69,13 @@ where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f
             None
         }
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::rngs::SmallRng;
     use error::Error;
 
     // define stub wave function
@@ -109,7 +129,7 @@ mod tests {
     fn test_uniform_wf() {
         let cfg = Array2::<f64>::ones((1, 3));
         let mut wf = WaveFunctionMock{value: 1.0};
-        let metrop = MetropolisBox::new(1.0);
+        let mut metrop = MetropolisBox::<SmallRng>::new(1.0);
         let new_cfg = metrop.propose_move(&mut wf, &cfg, 0); // should always accept
         assert!(metrop.accept_move(&mut wf, &cfg, &new_cfg));
     }

@@ -10,4 +10,7 @@ pub trait MonteCarloSampler {
     fn move_state(&mut self);
 
     fn num_observables(&self) -> usize;
+
+    fn acceptance(&self) -> f64;
+
 }
