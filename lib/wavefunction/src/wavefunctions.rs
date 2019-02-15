@@ -1,15 +1,13 @@
+#![feature(uniform_paths)]
 // Defines various wave function representations, e.g. Jastrow-Slater
 // third party imports
 use ndarray::{Array1, Ix2, Array2};
 // first party imports
-use traits::differentiate::*;
-use traits::function::Function;
-use traits::wavefunction::WaveFunction;
-use traits::cache::Cache;
-use jastrow::JastrowFactor;
-use determinant::Slater;
-use orbitals::*;
-use error::{Error};
+use crate::orbitals::Orbital;
+use crate::traits::{Function, WaveFunction, Cache, Differentiate};
+use crate::jastrow::JastrowFactor;
+use crate::determinant::Slater;
+use crate::error::Error;
 
 /// Jastrow-Slater form wave function:
 /// $\psi(x) = J(\alpha)\sum_{i=1}^{N_e}c_i D_i$.
@@ -34,13 +32,13 @@ impl JastrowSlater {
 /// This wave function is currently used for testing, but will be removed once the Jastrow-Slater
 /// wave function is properly implemented.
 pub struct SingleDeterminant<'a, T>
-where T: 'a + ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: 'a + ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     det: Slater<Orbital<'a, T>>,
 }
 
 impl<'a, T> SingleDeterminant<'a, T>
-where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     pub fn new(orbs: Vec<Orbital<'a, T>>) -> Self {
         Self{det: Slater::new(orbs)}
@@ -48,7 +46,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 }
 
 impl<'a, T> Function<f64> for SingleDeterminant<'a, T>
-where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     type D = Ix2;
 
@@ -58,7 +56,7 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 }
 
 impl<'a, T> Differentiate for SingleDeterminant<'a, T>
-where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     type D = Ix2;
 
@@ -75,15 +73,15 @@ where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 }
 
 impl<'a, T> WaveFunction for SingleDeterminant<'a, T>
-where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
-   fn num_electrons(&self) -> usize {
-       self.det.num_electrons()
-   }
+    fn num_electrons(&self) -> usize {
+        self.det.num_electrons()
+    }
 }
 
 impl<'a, T> Cache<Array2<f64>> for SingleDeterminant<'a, T>
-where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
 {
     type A = Array2<f64>;
     type V = (f64, f64);

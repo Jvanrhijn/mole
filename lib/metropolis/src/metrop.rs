@@ -4,10 +4,8 @@ use rand::distributions::Range;
 use ndarray::{Array1, Array2, Ix2};
 use ndarray_rand::RandomExt;
 
-use traits::metropolis::Metropolis;
-use traits::function::Function;
-use traits::differentiate::Differentiate;
-use traits::cache::Cache;
+use crate::traits::Metropolis;
+use wavefunction::{Function, Differentiate, Cache};
 
 /// Simplest Metropolis algorithm.
 /// Transition matrix T(x -> x') is constant inside a cubical box,

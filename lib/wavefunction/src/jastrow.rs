@@ -1,6 +1,7 @@
+#![feature(uniform_paths)]
 use ndarray::{Array1, Array, Ix2};
-use traits::function::*;
-use error::{Error};
+use crate::traits::Function;
+use crate::error::Error;
 
 /// Jastrow factor struct, used to construct Jastrow-Slater wave functions.
 pub struct JastrowFactor {

@@ -1,5 +1,5 @@
 use std::vec::Vec;
-use error::Error;
+use wavefunction::Error;
 
 /// Interface for sampling observables from Monte Carlo integration.
 pub trait MonteCarloSampler {

@@ -1,3 +1,7 @@
+#![feature(uniform_paths)]
+use ndarray::Array;
+use crate::error::Error;
+
 pub trait Cache<T> {
     /// storage type e.g. ndarray::Array2
     type A;
@@ -25,3 +29,28 @@ pub trait Cache<T> {
     /// Return enqueued value
     fn enqueued_value(&self) -> Option<Self::V>;
 }
+
+/// Interface for dealing with functions f: F^n -> F, where F is any field.
+pub trait Function<T> {
+
+    type D;
+
+    fn value(&self, cfg: &Array<T, Self::D>) -> Result<T, Error>;
+}
+
+/// Interface for creating once- and twice differentiable functions.
+pub trait Differentiate {
+
+    type D;
+
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Array<f64, Self::D>;
+
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error>;
+
+}
+
+pub trait WaveFunction {
+    fn num_electrons(&self) -> usize;
+}
+
+

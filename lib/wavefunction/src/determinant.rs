@@ -1,3 +1,4 @@
+#![feature(uniform_paths)]
 // Standard imports
 use std::vec::Vec;
 use std::collections::VecDeque;
@@ -6,11 +7,8 @@ use std::result::Result;
 use ndarray::{Ix2, Ix1, Array, Array1, Array2};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
-use traits::function::*;
-use traits::wavefunction::WaveFunction;
-use traits::differentiate::Differentiate;
-use traits::cache::Cache;
-use error::{Error};
+use crate::traits::{WaveFunction, Differentiate, Cache, Function};
+use crate::error::Error;
 
 pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
     orbs: Vec<T>,
@@ -74,7 +72,7 @@ impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> + Differentiat
 }
 
 impl<T> Differentiate for Slater<T>
-where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type D = Ix2;
 
@@ -103,7 +101,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 }
 
 impl<T> WaveFunction for Slater<T>
-where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     fn num_electrons(&self) -> usize {
         self.orbs.len()
@@ -111,7 +109,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 }
 
 impl<'a, T> Cache<Array2<f64>> for Slater<T>
-where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type A = Array2<f64>;
     type V = (f64, f64);

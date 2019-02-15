@@ -1,6 +1,8 @@
 // Third party imports
 use ndarray::{Array1};
 
+pub type Func = Fn(&Array1<f64>) -> (f64, f64);
+
 /// Return value and laplacian of the 1s hydrogen orbital
 pub fn hydrogen_1s(pos: &Array1<f64>) -> (f64, f64) {
     let r = (pos*pos).scalar_sum().sqrt();

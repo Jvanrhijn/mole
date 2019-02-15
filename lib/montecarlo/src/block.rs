@@ -13,7 +13,7 @@ pub struct Block<T> {
 }
 
 impl<T> Block<T>
-where T: 'static + Clone + Copy + One + Zero + Float + AddAssign + Sub<Output=T> + Div<Output=T>
+    where T: 'static + Clone + Copy + One + Zero + Float + AddAssign + Sub<Output=T> + Div<Output=T>
 {
     pub fn new(size: usize, num_observables: usize) -> Self {
         Self{values: Array2::<T>::zeros((size, num_observables)), size, idx: 0}
@@ -29,8 +29,8 @@ where T: 'static + Clone + Copy + One + Zero + Float + AddAssign + Sub<Output=T>
     }
 
     pub fn variance(&self) -> Array1<T> {
-         self.values.var_axis(Axis(0), T::zero())
-     }
+        self.values.var_axis(Axis(0), T::zero())
+    }
 
     pub fn size(&self) -> usize {
         self.size
