@@ -1,5 +1,6 @@
 // Standard imports
 use std::vec::Vec;
+use ndarray::Array1;
 // First party imports
 use crate::traits::*;
 use crate::block::Block;
@@ -38,11 +39,10 @@ impl<S> Runner<S>
                     block.set_value(b, samples);
                 }
             }
-            // TODO: write abstraction over statistics
             if block_nr > 0 {
-                let mean = block.mean();
-                self.update_means_and_variances(block_nr, &block);
-                println!("{:.*}    {:.*} +/- {:.*}", 8, mean[0], 8, self.means[0], 8, self.variances[0].sqrt());
+                let block_mean = block.mean();
+                self.update_means_and_variances(block_nr, &block_mean);
+                println!("{:.*}    {:.*} +/- {:.*}", 8, block_mean[0], 8, self.means[0], 8, self.variances[0].sqrt());
             }
         }
     }
@@ -55,8 +55,7 @@ impl<S> Runner<S>
         &self.variances
     }
 
-    fn update_means_and_variances(&mut self, idx: usize, block: &Block<f64>) {
-        let block_mean = block.mean();
+    fn update_means_and_variances(&mut self, idx: usize, block_mean: &Array1<f64>) {
         // running mean algorithm
         let old_mean = self.means.clone();
         izip!(self.means.iter_mut(), block_mean.iter())

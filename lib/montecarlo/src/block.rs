@@ -26,6 +26,7 @@ impl<T> Block<T>
         self.values.mean_axis(Axis(0))
     }
 
+    #[allow(dead_code)]
     pub fn variance(&self) -> Array1<T> {
         self.values.var_axis(Axis(0), T::zero())
     }
