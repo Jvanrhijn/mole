@@ -51,7 +51,7 @@ use montecarlo::{Sampler, Runner};
 
 type Func = Fn(&Array1<f64>) -> (f64, f64);
 
-fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
+fn get_hydrogen2_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
     -> Runner<Sampler<wf::SingleDeterminant<Func>, metrop::MetropolisBox<SmallRng>>>
 {
     // create seeded rng
@@ -84,6 +84,30 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
 }
 
 
+fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64) 
+    -> Runner<Sampler<wf::SingleDeterminant<Func>, metrop::MetropolisBox<SmallRng>>>
+{
+    let rng = SmallRng::seed_from_u64(0);
+
+    let orbital = Orbital::new(array![1.0], basis_set);
+
+    let wf = wf::SingleDeterminant::new(vec![orbital]);
+
+    let v = IonicPotential::new(array![[0.0, 0.0, 0.0]], array![1]);
+    let t = KineticEnergy::new();
+    let ve = ElectronicPotential::new();
+
+    let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
+
+    let metrop = metrop::MetropolisBox::from_rng(box_size, rng);
+
+    let mut sampler = Sampler::new(wf, metrop);
+    sampler.add_observable(local_e);
+
+    Runner::new(sampler)
+}
+
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let box_side = args[args.len()-1].parse::<f64>().unwrap();
@@ -93,9 +117,13 @@ fn main() {
         Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
     ];
 
+    let gauss_basis: Vec<Box<Func>> = vec![
+        Box::new(|x| gaussian(x, 5.0))
+    ];
 
-    let num_steps = 100_00000;
+    let num_steps = 1_000_000;
 
-    let mut runner = get_hydrogen_runner(&basis_set, box_side);
+    //let mut runner = get_hydrogen2_runner(&basis_set, box_side);
+    let mut runner = get_hydrogen_runner(&gauss_basis, box_side);
     runner.run(num_steps, 1);
 }

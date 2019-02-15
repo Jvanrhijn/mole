@@ -43,7 +43,7 @@ def correlation(data, mean, var):
 def blocking(data):
     """Perform blocking analysis"""
     ndata = len(data)
-    min_left = 200
+    min_left = 100
     nsizes = 100
     large = int(ndata/min_left)
     step_size = int(max(1, large/nsizes))
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         ax[0].set_xlabel("Block size")
         ax[0].grid()
         
-        blksize = 200 
+        blksize = 2000
         blocks = np.array_split(SERIES, len(SERIES)//blksize)
         means = np.array([b.mean() for b in blocks])
 
