@@ -11,7 +11,6 @@ pub struct Runner<S: MonteCarloSampler> {
     means: Vec<f64>,
     variances: Vec<f64>,
     square_mean_diff: Vec<f64>,
-    mean_sq: Vec<f64>
 }
 
 impl<S> Runner<S>
@@ -22,8 +21,7 @@ impl<S> Runner<S>
         let means = sampler.sample().expect("Failed to sample observables");
         let variances = vec![0.0; means.len()];
         let square_mean_diff = vec![0.0; means.len()];
-        let mean_sq: Vec<f64> = means.iter().map(|x| x.powi(2)).collect();
-        Self{sampler, means, variances, square_mean_diff, mean_sq}
+        Self{sampler, means, variances, square_mean_diff}
     }
 
     pub fn run(&mut self, steps: usize, block_size: usize) {
@@ -37,27 +35,16 @@ impl<S> Runner<S>
                 if block_nr > 0 {
                     let samples = self.sampler.sample()
                         .expect("Failed to sample observables");
-                    println!("{}", samples[0]);
                     block.set_value(b, samples);
                 }
             }
             // TODO: write abstraction over statistics
             if block_nr > 0 {
-                let block_mean = block.mean();
-                // running mean algorithm
-                izip!(self.means.iter_mut(), block_mean.iter())
-                    .for_each(|(m, x)| *m += x);
-                izip!(self.mean_sq.iter_mut(), block_mean.iter())
-                    .for_each(|(msq, m)| *msq += m.powi(2));
+                let mean = block.mean();
+                self.update_means_and_variances(block_nr, &block);
+                println!("{:.*}    {:.*} +/- {:.*}", 8, mean[0], 8, self.means[0], 8, self.variances[0].sqrt());
             }
         }
-        izip!(self.means.iter_mut(), self.mean_sq.iter_mut()).for_each(|(m, msq)| {
-            *m /= blocks as f64;
-            *msq /= blocks as f64;
-        });
-        izip!(self.variances.iter_mut(), self.means.iter(), self.mean_sq.iter())
-            .for_each(|(v, m, msq)| *v = msq - m.powi(2));
-        println!("{}", self.sampler.acceptance()/(blocks*block_size) as f64);
     }
 
     pub fn means(&self) -> &Vec<f64> {
@@ -66,6 +53,17 @@ impl<S> Runner<S>
 
     pub fn variances(&self) -> &Vec<f64> {
         &self.variances
+    }
+
+    fn update_means_and_variances(&mut self, idx: usize, block: &Block<f64>) {
+        let block_mean = block.mean();
+        // running mean algorithm
+        let old_mean = self.means.clone();
+        izip!(self.means.iter_mut(), block_mean.iter())
+            .for_each(|(m, x)| *m += (x - *m)/idx as f64);
+        izip!(self.square_mean_diff.iter_mut(), block_mean.iter(), old_mean.iter(), self.means.iter())
+            .for_each(|(m2, x, xbarold, xbar)| *m2 += (x - xbarold)*(x - xbar));
+        self.variances = self.square_mean_diff.iter().map(|m2| m2/idx as f64).collect();
     }
 
 }

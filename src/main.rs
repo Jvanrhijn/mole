@@ -87,7 +87,7 @@ fn main() {
 
     let num_steps = 1_000_000;
 
-    //let mut runner = get_hydrogen2_runner(&basis_set, box_side);
+    //let mut runner = get_hydrogen2_runner(&_basis_set, box_side);
     let mut runner = get_hydrogen_runner(&gauss_basis, box_side);
     runner.run(num_steps, 1);
 }
