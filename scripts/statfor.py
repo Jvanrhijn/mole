@@ -4,6 +4,7 @@ import sys
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
 
 
 MAX_STEPS = 200
@@ -42,7 +43,7 @@ def correlation(data, mean, var):
 def blocking(data):
     """Perform blocking analysis"""
     ndata = len(data)
-    min_left = 20
+    min_left = 200
     nsizes = 100
     large = int(ndata/min_left)
     step_size = int(max(1, large/nsizes))
@@ -68,8 +69,17 @@ def blocking(data):
     return np.array(errors), np.array(sizes)
 
 
+def histogram(data, bins=12):
+    hist, edges = np.histogram(data, bins)
+    with open("histo.out", "w") as file:
+        for edge, h in zip(edges, hist):
+            file.write(f"{edge:.10e} {h:.10e}\n")
+    return hist, edges
+
+
+
 if __name__ == "__main__":
-    SERIES = read_data(sys.argv[1])
+    SERIES = read_data(sys.argv[1])[:-1]
 
     MEAN = SERIES.mean()
     VAR = SERIES.var(ddof=1)
@@ -77,12 +87,28 @@ if __name__ == "__main__":
     TCORR, NEFF, SIGMA = correlation(SERIES, MEAN, VAR)
 
     ERRORS, SIZES = blocking(SERIES)
+
+    hist, bin_edges = histogram(SERIES)
     
     if "-p" in sys.argv:
-        plt.plot(SIZES, ERRORS, '.')
-        plt.ylabel("Error")
-        plt.xlabel("Block size")
-        plt.grid()
+        fig = plt.figure()
+        ax = [fig.add_subplot(121), fig.add_subplot(122)]
+
+        ax[0].plot(SIZES, ERRORS, '.')
+        ax[0].set_ylabel("Error")
+        ax[0].set_xlabel("Block size")
+        ax[0].grid()
+        
+        blksize = 200 
+        blocks = np.array_split(SERIES, len(SERIES)//blksize)
+        means = np.array([b.mean() for b in blocks])
+
+        n, bins = ax[1].hist(means, density=True, bins=len(means)//10)[:2]
+        gaussian = mlab.normpdf(bins, means.mean(), np.sqrt(means.var()))
+        ax[1].plot(bins, gaussian)
+        ax[1].grid()
+        ax[1].set_title("Block average histogram")
+
         plt.show()
 
     # Print output

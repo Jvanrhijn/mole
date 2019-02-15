@@ -65,7 +65,7 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
     let wf = wf::SingleDeterminant::new(vec![orbital1, orbital2]);
 
     // setup Hamiltonian components
-    let v = IonicPotential::new(array![[-1., 0., 0.], [1., 0., 0.]], array![1, 1]);
+    let v = IonicPotential::new(array![[-1.0, 0., 0.], [1.0, 0., 0.]], array![1, 1]);
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
@@ -94,7 +94,7 @@ fn main() {
     ];
 
 
-    let num_steps = 1000;
+    let num_steps = 100_00000;
 
     let mut runner = get_hydrogen_runner(&basis_set, box_side);
     runner.run(num_steps, 1);

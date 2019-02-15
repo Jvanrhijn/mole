@@ -82,6 +82,7 @@ fn blocking(data: &[f64]) -> Result<()> {
 
 fn main() {
     let data = read_data().expect("Failed to parse input stream");
+    let data = &data[..data.len()-1];
     let average = mean(&data);
     let var = variance(&data, 1);
     let (tcorr, neff, sigma) = correlation(&data, average, var)

@@ -36,7 +36,7 @@ ax2 = ax1.twinx()
 ax2.plot(sides, acceptance, 'r')
 ax1.plot(sides, tcorr, 'b')
 
-ax1.set_xlabel("Box side")
+ax1.set_xlabel("Box side (atomic units)")
 ax1.set_ylabel("Tcorr", color='b')
 ax1.tick_params('y', colors='b')
 
