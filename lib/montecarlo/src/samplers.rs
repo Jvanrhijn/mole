@@ -1,5 +1,6 @@
 // Standard imports
 use std::vec::Vec;
+use std::collections::HashMap;
 //Third party imports
 use ndarray::{Ix2, Array2};
 use ndarray_rand::RandomExt;
@@ -20,7 +21,7 @@ pub struct Sampler<T, V>
     wave_function: T,
     config: Array2<f64>,
     metropolis: V,
-    observables: Vec<Box<Operator<T>>>,
+    observables: HashMap<String, Box<Operator<T>>>,
     acceptance: f64
 }
 
@@ -37,15 +38,15 @@ impl<T, V> Sampler<T, V>
             wave_function,
             config: cfg,
             metropolis: metrop,
-            observables: Vec::<Box<Operator<T>>>::new(),
+            observables: HashMap::<String, Box<Operator<T>>>::new(),
             acceptance: 0.0
         }
     }
 
-    pub fn add_observable<O>(&mut self, operator: O)
+    pub fn add_observable<O>(&mut self, name: &str, operator: O)
         where O: 'static + Operator<T>
     {
-        self.observables.push(Box::new(operator));
+        self.observables.insert(name.to_string(), Box::new(operator));
     }
 }
 
@@ -53,9 +54,13 @@ impl<T, V> MonteCarloSampler for Sampler<T, V>
     where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, U=usize>,
           V: Metropolis<T>
 {
-    fn sample(&self) -> Result<Vec<f64>, Error> {
-        Ok(self.observables.iter().map(|x| x.act_on(&self.wave_function, &self.config)
-            .expect("Failed to act on wave function with operator")).collect())
+    fn sample(&self) -> Result<HashMap<String, f64>, Error> {
+        Ok(self.observables.iter()
+            .map(|(name, operator)| {
+                (name.clone(), operator.act_on(&self.wave_function, &self.config)
+                    .expect("Failed to act on wave function with operator"))
+            }
+        ).collect())
     }
 
     fn move_state(&mut self) {

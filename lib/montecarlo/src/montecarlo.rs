@@ -19,7 +19,8 @@ impl<S> Runner<S>
 {
     pub fn new(sampler: S) -> Self {
         // initialize means at a sample of the current configuration
-        let means = sampler.sample().expect("Failed to sample observables");
+        let means: Vec<_> = sampler.sample()
+            .expect("Failed to sample observables").drain().map(|(_, value)| value).collect();
         let variances = vec![0.0; means.len()];
         let square_mean_diff = vec![0.0; means.len()];
         Self{sampler, means, variances, square_mean_diff}
@@ -28,17 +29,20 @@ impl<S> Runner<S>
     pub fn run(&mut self, steps: usize, block_size: usize) {
         assert!(steps >= 2*block_size);
         let blocks = steps / block_size;
+
         for block_nr in 0..blocks {
             let mut block = Block::new(block_size, self.sampler.num_observables());
+
             for b in 0..block_size {
                 self.sampler.move_state();
                 // Discard first block for equilibration
                 if block_nr > 0 {
                     let samples = self.sampler.sample()
-                        .expect("Failed to sample observables");
+                        .expect("Failed to sample observables").drain().map(|(_, value)| value).collect();
                     block.set_value(b, samples);
                 }
             }
+            // compute block mean, log output
             if block_nr > 0 {
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
@@ -46,6 +50,7 @@ impl<S> Runner<S>
                 println!("{:.*}    {:.*} +/- {:.*}    acc {:.*}",
                          8, block_mean[0], 8, self.means[0], 8, self.variances[0].sqrt(), 8, acceptance);
             }
+
         }
         println!("{}", self.sampler.acceptance()/(blocks*block_size) as f64);
     }
@@ -99,7 +104,7 @@ mod tests {
         );
         let metropolis = MetropolisBox::<SmallRng>::new(1.0);
         let mut sampler = Sampler::new(wave_func, metropolis);
-        sampler.add_observable(local_e);
+        sampler.add_observable("Local Energy", local_e);
 
         let mut runner = Runner::new(sampler);
         runner.run(100, 1);

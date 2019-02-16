@@ -40,7 +40,7 @@ fn get_hydrogen2_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
 
     // setup monte carlo sampler
     let mut sampler = Sampler::new( wf, metrop);
-    sampler.add_observable(local_e);
+    sampler.add_observable("Local Energy", local_e);
 
     // create runner
     Runner::new(sampler)
@@ -66,7 +66,7 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
     let metrop = MetropolisBox::from_rng(box_size, rng);
 
     let mut sampler = Sampler::new(wf, metrop);
-    sampler.add_observable(local_e);
+    sampler.add_observable("Local Energy", local_e);
 
     Runner::new(sampler)
 }
@@ -87,7 +87,7 @@ fn main() {
 
     let num_steps = 1_000_000;
 
-    //let mut runner = get_hydrogen2_runner(&_basis_set, box_side);
-    let mut runner = get_hydrogen_runner(&gauss_basis, box_side);
+    let mut runner = get_hydrogen2_runner(&_basis_set, box_side);
+    //let mut runner = get_hydrogen_runner(&gauss_basis, box_side);
     runner.run(num_steps, 1);
 }
