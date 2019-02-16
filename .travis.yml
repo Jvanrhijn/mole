@@ -9,7 +9,7 @@ cache:
   - cargo
 
 script:
-  - cargo test
+  - cargo test --all
 
 addons:
   apt:
