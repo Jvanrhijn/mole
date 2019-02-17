@@ -15,9 +15,9 @@ def get_tcor_and_acceptance(box_side):
 
     lines = out.decode("ascii").split("\n")[:-1]
     data = np.array([float(line.split()[0]) for line in lines])
-    acceptance = data[-1]
-    mean = np.mean(data[:-1])
-    var = np.var(data[:-1])
+    acceptance = float(lines[-1].split()[-1])
+    mean = np.mean(data)
+    var = np.var(data)
 
     return correlation(data[:-1], mean, var)[0], acceptance
 

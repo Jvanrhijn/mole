@@ -79,7 +79,7 @@ def histogram(data, bins=12):
 
 
 if __name__ == "__main__":
-    SERIES = read_data(sys.argv[1])[:-1]
+    SERIES = read_data(sys.argv[1])
 
     MEAN = SERIES.mean()
     VAR = SERIES.var(ddof=1)

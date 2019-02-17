@@ -38,7 +38,10 @@ impl<S> Runner<S>
                 // Discard first block for equilibration
                 if block_nr > 0 {
                     let samples = self.sampler.sample()
-                        .expect("Failed to sample observables").drain().map(|(_, value)| value).collect();
+                        .expect("Failed to sample observables")
+                        .drain()
+                        .map(|(_, value)| value)
+                        .collect();
                     block.set_value(b, samples);
                 }
             }
@@ -52,7 +55,6 @@ impl<S> Runner<S>
             }
 
         }
-        println!("{}", self.sampler.acceptance()/(blocks*block_size) as f64);
     }
 
     pub fn means(&self) -> &Vec<f64> {
