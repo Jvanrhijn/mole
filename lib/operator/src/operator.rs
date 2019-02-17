@@ -1,5 +1,6 @@
 // Third party imports
 use ndarray::{Array, Array1, Array2, Ix2, Axis};
+use ndarray_linalg::Norm;
 // First party imports
 use crate::traits::Operator;
 use wavefunction::{Function, Differentiate, Cache, Error};
@@ -149,27 +150,67 @@ impl<'a, T> Operator<T> for ElectronicHamiltonian
     }
 }
 
+pub struct HarmonicPotential1D {
+    frequency: f64
+}
+
+impl HarmonicPotential1D {
+    pub fn new(frequency: f64) -> Self {
+        Self{frequency}
+    }
+}
+
+impl<'a, T> Operator<T> for HarmonicPotential1D
+    where T: Function<f64, D=Ix2> + Cache<Array2<f64>, V=(f64, f64)>+ ?Sized
+{
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
+        Ok(0.5*self.frequency.powi(2)*cfg.norm_l2().powi(2)*wf.current_value().0)
+    }
+}
+
+pub struct HarmonicHamiltonian {
+    t: KineticEnergy,
+    v: HarmonicPotential1D,
+}
+
+impl HarmonicHamiltonian {
+    pub fn new(frequency: f64) -> Self {
+        Self{t: KineticEnergy::new(), v: HarmonicPotential1D::new(frequency)}
+    }
+}
+
+impl<'a, T> Operator<T> for HarmonicHamiltonian
+    where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)>+ ?Sized
+{
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
+        Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
+    }
+}
+
 /// Local energy operator:
 /// $\hat{E}_{L}\psi(x) = \frac{\hat{H}\psi}{\psi(x)}$.
 /// This operator should be used in any Monte Carlo simulation
 /// trying to calculate the electronic ground state of a molecular system.
-pub struct LocalEnergy {
-    h: ElectronicHamiltonian
+pub struct LocalEnergy<H>
+{
+    h: H
 }
 
-impl LocalEnergy {
-    pub fn new(h: ElectronicHamiltonian) -> Self {
+impl<H> LocalEnergy<H> {
+    pub fn new(h: H) -> Self {
         LocalEnergy{h}
     }
 }
 
-impl<'a, T> Operator<T> for LocalEnergy
+impl<'a, T, H: Operator<T>> Operator<T> for LocalEnergy<H>
     where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, f64)>+ ?Sized
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.h.act_on(wf, cfg)?/wf.current_value().0)
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
