@@ -6,11 +6,8 @@ use std::result::Result;
 use ndarray::{Ix2, Ix1, Array, Array1, Array2};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
-use traits::function::*;
-use traits::wavefunction::WaveFunction;
-use traits::differentiate::Differentiate;
-use traits::cache::Cache;
-use error::{Error};
+use crate::traits::{WaveFunction, Differentiate, Cache, Function};
+use crate::error::Error;
 
 pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
     orbs: Vec<T>,
@@ -74,7 +71,7 @@ impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> + Differentiat
 }
 
 impl<T> Differentiate for Slater<T>
-where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type D = Ix2;
 
@@ -103,7 +100,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 }
 
 impl<T> WaveFunction for Slater<T>
-where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     fn num_electrons(&self) -> usize {
         self.orbs.len()
@@ -111,7 +108,7 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 }
 
 impl<'a, T> Cache<Array2<f64>> for Slater<T>
-where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type A = Array2<f64>;
     type V = (f64, f64);
@@ -220,34 +217,34 @@ where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 mod tests {
     use super::*;
     use ndarray::Array1;
-    use orbitals::Orbital;
-    use math::basis::{hydrogen_1s, hydrogen_2s};
+    use crate::orbitals::Orbital;
+    use basis::{hydrogen_1s, hydrogen_2s, Func};
 
     static EPS: f64 = 1e-15;
 
     #[test]
     fn value_single_electron() {
-        let basis = vec![Box::new(hydrogen_1s)];
+        let basis: Vec<Box<Func>> = vec![Box::new(|x| hydrogen_1s(x, 1.0))];
         let orb = Orbital::new(array![1.0], &basis);
         let det = Slater::new(vec![orb]);
         let x = array![[1.0, -1.0, 1.0]];
-        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&array![1.0, 1.0, 1.0]).0);
+        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&array![1.0, 1.0, 1.0], 1.0).0);
     }
 
     #[test]
     fn value_multiple_electrons() {
         let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(hydrogen_1s),
-            Box::new(hydrogen_2s)
+            Box::new(|x| hydrogen_1s(&x, 1.0)),
+            Box::new(|x| hydrogen_2s(&x, 2.0))
         ];
         let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
         let det = Slater::new(orbs);
         let x = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
         // manually construct orbitals
-        let phi11 = hydrogen_1s(&x.slice(s![0, ..]).to_owned()).0;
-        let phi22 = hydrogen_2s(&x.slice(s![1, ..]).to_owned()).0;
-        let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned()).0;
-        let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned()).0;
+        let phi11 = hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0;
+        let phi22 = hydrogen_2s(&x.slice(s![1, ..]).to_owned(), 2.0).0;
+        let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned(), 1.0).0;
+        let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned(), 2.0).0;
         let value = phi11*phi22 - phi21*phi12;
         assert_eq!(det.value(&x).unwrap(), value);
         // switching electron positions should flip determinant sign
@@ -258,8 +255,8 @@ mod tests {
     #[test]
     fn cache() {
         let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(hydrogen_1s),
-            Box::new(hydrogen_2s)
+            Box::new(|x| hydrogen_1s(&x, 1.0)),
+            Box::new(|x| hydrogen_2s(&x, 0.5))
         ];
         let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
         let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
@@ -281,8 +278,8 @@ mod tests {
     #[test]
     fn update_cache() {
         let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(hydrogen_1s),
-            Box::new(hydrogen_2s)
+            Box::new(|x| hydrogen_1s(&x, 1.0)),
+            Box::new(|x| hydrogen_2s(&x, 0.5))
         ];
         let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
         let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];

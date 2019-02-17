@@ -1,6 +1,5 @@
 use ndarray::{Array2, Ix2};
-use traits::differentiate::Differentiate;
-use traits::function::Function;
+use wavefunction::{Differentiate, Function};
 
 /// Interface for implementing Metropolis algorithms that generate
 /// Markov chains of configurations.

@@ -1,0 +1,14 @@
+[package]
+name = "operator"
+version = "0.1.0"
+authors = ["Jesse van Rhijn <jesse.v.rhijn@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+wavefunction = { path = "../wavefunction" }
+ndarray = "0.12.0"
+ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
+
+[dev-dependencies]
+basis = { path = "../basis" }
+

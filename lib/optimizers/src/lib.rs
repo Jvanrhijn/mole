@@ -1,5 +1,13 @@
-use traits::optimizer::*;
+// Third party imports
+#[macro_use]
+#[cfg(test)]
+extern crate ndarray;
 use ndarray::{Array1};
+
+/// Interface for implementing optimization algorithms.
+pub trait Optimizer {
+    fn step(&self, parms: &mut Array1<f64>, grads: &Array1<f64>);
+}
 
 #[allow(dead_code)]
 pub struct GradientDescent {
@@ -9,7 +17,7 @@ pub struct GradientDescent {
 impl GradientDescent {
 
     pub fn new(step_size: f64) -> Self {
-        GradientDescent{step_size} 
+        GradientDescent{step_size}
     }
 
 }

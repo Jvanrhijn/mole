@@ -1,8 +1,9 @@
 use ndarray::{Array1, Array, Ix2};
-use traits::function::*;
-use error::{Error};
+use crate::traits::Function;
+use crate::error::Error;
 
 /// Jastrow factor struct, used to construct Jastrow-Slater wave functions.
+#[allow(dead_code)]
 pub struct JastrowFactor {
     parms_one_body: Array1<f64>,
     parms_two_body: Array1<f64>,

@@ -16,7 +16,7 @@ def int_width(num):
 
 def read_data(fpath):
     """Read data from file located at fpath"""
-    return np.array(list(float(line) for line in open(fpath, "r")))
+    return np.array(list(float(line.split()[0]) for line in open(fpath, "r")))
 
 
 def correlation(data, mean, var):
@@ -79,7 +79,7 @@ def histogram(data, bins=12):
 
 
 if __name__ == "__main__":
-    SERIES = read_data(sys.argv[1])[:-1]
+    SERIES = read_data(sys.argv[1])
 
     MEAN = SERIES.mean()
     VAR = SERIES.var(ddof=1)
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         ax[0].set_xlabel("Block size")
         ax[0].grid()
         
-        blksize = 2000
+        blksize = 1
         blocks = np.array_split(SERIES, len(SERIES)//blksize)
         means = np.array([b.mean() for b in blocks])
 
