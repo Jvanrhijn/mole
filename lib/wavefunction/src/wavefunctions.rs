@@ -121,8 +121,8 @@ mod tests {
 
     #[test]
     fn single_det_one_basis_function() {
-        let basis = vec![
-            Box::new(basis::hydrogen_1s)
+        let basis: Vec<Box<basis::Func>> = vec![
+            Box::new(|x| basis::hydrogen_1s(x, 1.0))
         ];
         let orbital = Orbital::new(array![1.0], &basis);
         let mut wf = SingleDeterminant::new(vec![orbital]);
@@ -130,6 +130,6 @@ mod tests {
         let config_slice = array![1.0, 0.0, 0.0];
         wf.refresh(&config);
         let cur_value = wf.current_value().0;
-        assert_eq!(cur_value, basis::hydrogen_1s(&config_slice).0);
+        assert_eq!(cur_value, basis::hydrogen_1s(&config_slice, 1.0).0);
     }
 }

@@ -218,33 +218,33 @@ mod tests {
     use super::*;
     use ndarray::Array1;
     use crate::orbitals::Orbital;
-    use basis::{hydrogen_1s, hydrogen_2s};
+    use basis::{hydrogen_1s, hydrogen_2s, Func};
 
     static EPS: f64 = 1e-15;
 
     #[test]
     fn value_single_electron() {
-        let basis = vec![Box::new(hydrogen_1s)];
+        let basis: Vec<Box<Func>> = vec![Box::new(|x| hydrogen_1s(x, 1.0))];
         let orb = Orbital::new(array![1.0], &basis);
         let det = Slater::new(vec![orb]);
         let x = array![[1.0, -1.0, 1.0]];
-        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&array![1.0, 1.0, 1.0]).0);
+        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&array![1.0, 1.0, 1.0], 1.0).0);
     }
 
     #[test]
     fn value_multiple_electrons() {
         let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(hydrogen_1s),
-            Box::new(hydrogen_2s)
+            Box::new(|x| hydrogen_1s(&x, 1.0)),
+            Box::new(|x| hydrogen_2s(&x, 2.0))
         ];
         let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
         let det = Slater::new(orbs);
         let x = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
         // manually construct orbitals
-        let phi11 = hydrogen_1s(&x.slice(s![0, ..]).to_owned()).0;
-        let phi22 = hydrogen_2s(&x.slice(s![1, ..]).to_owned()).0;
-        let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned()).0;
-        let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned()).0;
+        let phi11 = hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0;
+        let phi22 = hydrogen_2s(&x.slice(s![1, ..]).to_owned(), 2.0).0;
+        let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned(), 1.0).0;
+        let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned(), 2.0).0;
         let value = phi11*phi22 - phi21*phi12;
         assert_eq!(det.value(&x).unwrap(), value);
         // switching electron positions should flip determinant sign
@@ -255,8 +255,8 @@ mod tests {
     #[test]
     fn cache() {
         let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(hydrogen_1s),
-            Box::new(hydrogen_2s)
+            Box::new(|x| hydrogen_1s(&x, 1.0)),
+            Box::new(|x| hydrogen_2s(&x, 0.5))
         ];
         let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
         let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
@@ -278,8 +278,8 @@ mod tests {
     #[test]
     fn update_cache() {
         let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(hydrogen_1s),
-            Box::new(hydrogen_2s)
+            Box::new(|x| hydrogen_1s(&x, 1.0)),
+            Box::new(|x| hydrogen_2s(&x, 0.5))
         ];
         let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
         let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];

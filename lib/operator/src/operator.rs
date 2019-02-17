@@ -182,8 +182,8 @@ mod tests {
         let kinetic = KineticEnergy::new();
         let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
         let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(basis::hydrogen_1s)
+        let basis_set: Vec<Box<basis::Func>> = vec![
+            Box::new(|x| basis::hydrogen_1s(x, 1.0))
         ];
         let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));
@@ -198,8 +198,8 @@ mod tests {
         let kinetic = KineticEnergy::new();
         let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
         let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(basis::hydrogen_2s)
+        let basis_set: Vec<Box<basis::Func>> = vec![
+            Box::new(|x| basis::hydrogen_2s(x, 2.0))
         ];
         let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));

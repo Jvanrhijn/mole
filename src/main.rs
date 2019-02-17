@@ -71,14 +71,13 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
     Runner::new(sampler)
 }
 
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     let box_side = args[args.len()-1].parse::<f64>().unwrap();
 
     let _basis_set: Vec<Box<Func>> = vec![
-        Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]))),
-        Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.])))
+        Box::new(|x| hydrogen_1s(&(x + &array![1.0, 0., 0.]), 1.0)),
+        Box::new(|x| hydrogen_1s(&(x - &array![1.0, 0., 0.]), 1.0))
     ];
 
     let gauss_basis: Vec<Box<Func>> = vec![
@@ -87,7 +86,7 @@ fn main() {
 
     let num_steps = 1_000_000;
 
-    let mut runner = get_hydrogen2_runner(&_basis_set, box_side);
-    //let mut runner = get_hydrogen_runner(&gauss_basis, box_side);
+    //let mut runner = get_hydrogen2_runner(&_basis_set, box_side);
+    let mut runner = get_hydrogen_runner(&gauss_basis, box_side);
     runner.run(num_steps, 1);
 }

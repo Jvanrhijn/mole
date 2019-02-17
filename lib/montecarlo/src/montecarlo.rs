@@ -80,7 +80,6 @@ mod tests {
     use super::*;
     use rand::rngs::SmallRng;
     use basis;
-    use ndarray::Array1;
     use wavefunction::{Orbital, SingleDeterminant};
     use operator::{LocalEnergy, ElectronicPotential, IonicPotential, KineticEnergy, ElectronicHamiltonian};
     use metropolis::MetropolisBox;
@@ -90,8 +89,8 @@ mod tests {
     fn test_hydrogen_atom_single_det_metrop_box() {
         // Tests the monte carlo result for a single hydrogen atom
         const ENERGY_EXACT: f64 = -0.5;
-        let basis_set: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
-            Box::new(basis::hydrogen_1s)
+        let basis_set: Vec<Box<basis::Func>> = vec![
+            Box::new(|x| basis::hydrogen_1s(x, 1.0))
         ];
         let orbital = Orbital::new(array![1.0], &basis_set);
         let wave_func = SingleDeterminant::new(vec![orbital]);

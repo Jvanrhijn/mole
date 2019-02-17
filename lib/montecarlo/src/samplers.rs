@@ -1,5 +1,4 @@
 // Standard imports
-use std::vec::Vec;
 use std::collections::HashMap;
 //Third party imports
 use ndarray::{Ix2, Array2};
