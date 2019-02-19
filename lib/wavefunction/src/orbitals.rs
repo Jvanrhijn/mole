@@ -39,8 +39,8 @@ impl<'a, T> Differentiate for Orbital<'a, T>
 
     type D = Ix1;
 
-    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Array<f64, Self::D> {
-        Array1::<f64>::ones(cfg.len())
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
+        unimplemented!()
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {

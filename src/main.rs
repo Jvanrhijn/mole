@@ -81,7 +81,7 @@ fn main() {
     //];
 
     let gauss_basis: Vec<Box<Func>> = vec![
-        Box::new(|x| gaussian(x, 5.0))
+        Box::new(|x| gaussian(x, 1.0))
     ];
 
     let num_steps = 1_000_000;

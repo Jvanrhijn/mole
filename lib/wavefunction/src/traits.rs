@@ -42,7 +42,7 @@ pub trait Differentiate {
 
     type D;
 
-    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Array<f64, Self::D>;
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error>;
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error>;
 

@@ -75,14 +75,11 @@ impl<T> Differentiate for Slater<T>
 {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
-        // TODO implement
-        let shape = cfg.shape();
-        Array2::<f64>::ones((shape[0], shape[1]))
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        unimplemented!()
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
-        // TODO implement more efficienctly
         let mat_dim = self.orbs.len();
         let (matrix, _) = self.build_matrices(cfg)?;
         let det = matrix.det()?;

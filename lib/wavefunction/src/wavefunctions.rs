@@ -61,9 +61,8 @@ impl<'a, T> Differentiate for SingleDeterminant<'a, T>
 {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
-        let shape = cfg.shape();
-        Array2::<f64>::ones((shape[0], shape[1]))
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        unimplemented!()
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {

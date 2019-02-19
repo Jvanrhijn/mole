@@ -98,8 +98,8 @@ mod tests {
     impl Differentiate for WaveFunctionMock {
         type D = Ix2;
 
-        fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
-            cfg.clone()
+        fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+            unimplemented!()
         }
 
         fn laplacian(&self, _cfg: &Array2<f64>) -> Result<f64, Error> {
