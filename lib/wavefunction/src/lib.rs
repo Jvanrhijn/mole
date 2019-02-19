@@ -2,6 +2,8 @@
 #[macro_use]
 extern crate ndarray;
 extern crate ndarray_linalg;
+#[macro_use]
+extern crate itertools;
 
 mod orbitals;
 mod jastrow;

@@ -8,6 +8,7 @@ edition = "2018"
 basis = { path = "../basis" }
 ndarray = "0.12.0"
 ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
+itertools = "0.7"
 
 [dev-dependencies]
 ndarray-rand = "0.8.0"
