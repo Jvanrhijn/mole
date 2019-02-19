@@ -4,7 +4,6 @@ use ndarray::{Array1, Ix2, Array2};
 // first party imports
 use crate::orbitals::Orbital;
 use crate::traits::{Function, WaveFunction, Cache, Differentiate};
-use crate::jastrow::JastrowFactor;
 use crate::determinant::Slater;
 use crate::error::Error;
 
@@ -14,19 +13,19 @@ use crate::error::Error;
 /// Slater determinants with a prefactor that takes care of electron-electron cusp
 /// conditions. The functional form is tailored to be easy to evaluate and differentiate
 /// with respect to its parameters.
-#[allow(dead_code)]
-pub struct JastrowSlater {
-    ci_coeffs: Array1<f64>,
-    orb_coeffs: Array1<f64>,
-    jastrow: JastrowFactor
-}
-
-impl JastrowSlater {
-    pub fn new(cis: Array1<f64>, orbs: Array1<f64>, jas: JastrowFactor) -> Self {
-        unimplemented!()
-        //Self{ci_coeffs: cis, orb_coeffs: orbs, jastrow: jas}
-    }
-}
+//#[allow(dead_code)]
+//pub struct JastrowSlater {
+//    ci_coeffs: Array1<f64>,
+//    orb_coeffs: Array1<f64>,
+//    jastrow: JastrowFactor
+//}
+//
+//impl JastrowSlater {
+//    pub fn new(cis: Array1<f64>, orbs: Array1<f64>, jas: JastrowFactor) -> Self {
+//        unimplemented!()
+//        //Self{ci_coeffs: cis, orb_coeffs: orbs, jastrow: jas}
+//    }
+//}
 
 /// Single Slater determinant wave function:
 /// $\psi(x) = \langle x | \hat{a}_{k_1}\ldots\hat{a}_{k_{N_e}} | 0 \rangle$.

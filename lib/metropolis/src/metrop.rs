@@ -98,7 +98,7 @@ mod tests {
     impl Differentiate for WaveFunctionMock {
         type D = Ix2;
 
-        fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        fn gradient(&self, _cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
             unimplemented!()
         }
 
