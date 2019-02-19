@@ -27,6 +27,9 @@ impl Function<f64> for ElectronElectronTerm {
         let mut value = 0.0;
         for i in 0..num_elec {
             for j in i..num_elec {
+                if i == j {
+                    continue;
+                }
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 value += self.parms[0]*rij/(1.0 + self.parms[1]*rij);
                 value += izip!(self.parms.slice(s![2..nparms]), (2..nparms))
@@ -49,17 +52,20 @@ impl Differentiate for ElectronElectronTerm {
         for k in 0..nelec {
             let slice = {
                 let mut magnitude = 0.0;
+                let mut component = Array1::<f64>::zeros( 3);
                 for i in 0..nelec {
+                    let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![k, ..]);
                     if i == k {
                         continue;
                     }
-                    let rik: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![k, ..])).norm_l2();
+                    let rik: f64 = separation.norm_l2();
                     magnitude += self.parms[0]/(1.0 + self.parms[1]*rik).powi(2);
                     magnitude += izip!(self.parms.slice(s![2..nparms]), (2..nparms))
                         .map(|(b, p)| (p as f64)*b*rik.powi(p as i32 - 1))
                         .sum::<f64>();
+                    component += &(separation*magnitude/rik);
                 }
-                Array1::from_elem(3, magnitude)
+                component
             };
             for i in 0..3 {
                 grad[[k, i]] = slice[i];
@@ -78,11 +84,13 @@ impl Differentiate for ElectronElectronTerm {
                 if i == k {
                     continue;
                 }
+                let xi = cfg.slice(s![i, ..]);
                 let rik: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![k, ..])).norm_l2();
-                laplacian += -2.0*self.parms[0]*self.parms[1]/(1.0 + self.parms[1] * rik).powi(3)*xk.sum();
-                laplacian += izip!(self.parms.slice(s![2..nparm]), (2..nparm))
-                    .map(|(b, p)| b*(p*(p - 1)) as f64*rik.powi(p as i32 - 3))
-                    .sum::<f64>()*xk.sum();
+                laplacian += (-2.0*self.parms[0]*self.parms[1]/(1.0 + self.parms[1] * rik).powi(3)
+                    + izip!(self.parms.slice(s![2..nparm]), (2..nparm))
+                        .map(|(b, p)| b*(p*(p - 1)) as f64*rik.powi(p as i32 - 3))
+                        .sum::<f64>())
+                    * (&xi - &xk).sum()/rik;
             }
         }
         Ok(laplacian)
@@ -104,8 +112,8 @@ mod tests {
         assert_eq!(value.unwrap(), value_exact);
 
         let grad = jas_ee.gradient(&cfg).unwrap();
-        let grad_1 = 1.0/(1.0 + 6.0*3.0_f64.sqrt()).powi(2) + 18.0*3.0_f64.sqrt();
-        let grad_exact = array![[grad_1, grad_1, grad_1], [grad_1, grad_1, grad_1]];
+        let grad_1 = (1.0/(1.0 + 6.0*3.0_f64.sqrt()).powi(2) + 18.0*3.0_f64.sqrt())/3.0_f64.sqrt();
+        let grad_exact = array![[grad_1, grad_1, grad_1], [-grad_1, -grad_1, -grad_1]];
         for i in 0..2 {
             for j in 0..3 {
                 assert!((grad[[i, j]] - grad_exact[[i, j]]).abs() < EPS);
@@ -113,7 +121,7 @@ mod tests {
         }
 
         let laplac = jas_ee.laplacian(&cfg);
-        let laplac_exact = 21.0*(2.0/3.0_f64.sqrt() - 4.0/(1.0 + 6.0*3.0_f64.sqrt()).powi(3));
-        assert!((laplac.unwrap() - laplac_exact).abs() < EPS);
+        let laplac_exact = 0.0; // symmetry; $\Delta_1 f_ee = - \Delta_2 f_ee
+        assert_eq!(laplac.unwrap(),  laplac_exact);
     }
 }
