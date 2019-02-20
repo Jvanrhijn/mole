@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate ndarray;
 use montecarlo::{Runner, Sampler};
-use basis::{gaussian, hydrogen_1s, Func};
+use basis::{gaussian, Func};
 use wavefunction::{Orbital, SingleDeterminant};
 use metropolis::MetropolisBox;
 use operator::{IonicPotential, KineticEnergy, IonicHamiltonian};
@@ -9,14 +9,13 @@ use operator::{IonicPotential, KineticEnergy, IonicHamiltonian};
 fn main() {
     // setup basis set
     let basis_set: Vec<Box<Func>> = vec![
-        //Box::new(|x| gaussian(x, 1.0)),
-        Box::new(|x| hydrogen_1s(x, 1.0)),
+        Box::new(|x| gaussian(x, 1.0)),
         Box::new(|x| gaussian(x, 2.0)),
         Box::new(|x| gaussian(x, 3.0)),
     ];
 
     // construct orbital
-    let orbital = Orbital::new(array![1.0, 0.0, 0.0], &basis_set);
+    let orbital = Orbital::new(array![1.0, 0.5, 0.25], &basis_set);
 
     // construct Slater-determinant wave function
     let wave_function = SingleDeterminant::new(vec![orbital]);
@@ -56,7 +55,7 @@ fn main() {
     let var_energy = *runner.variances().get("Hamiltonian").unwrap();
     
     println!("");
-    println!("Kinetic energy:   {:.*} +/- {:.*}", 8, ke, 8, var_ke.sqrt());
+    println!("Kinetic energy:    {:.*} +/- {:.*}", 8, ke, 8, var_ke.sqrt());
     println!("Potential energy: {:.*} +/- {:.*}", 8, pe, 8, var_pe.sqrt());
     println!("Total Energy:     {:.*} +/- {:.*}", 8, energy, 8, var_energy.sqrt());
 

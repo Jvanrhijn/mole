@@ -1,7 +1,5 @@
 // Standard imports
-use std::vec::Vec;
 use std::collections::HashMap;
-use ndarray::Array1;
 // First party imports
 use crate::traits::*;
 use crate::block::Block;
@@ -27,9 +25,10 @@ impl<S> Runner<S>
     }
 
     pub fn run(&mut self, steps: usize, block_size: usize) {
+        // needed for pretty printing output
+        let max_strlen = self.means.keys().map(|key| key.len()).max().unwrap();
         assert!(steps >= 2*block_size);
         let blocks = steps / block_size;
-
         for block_nr in 0..blocks {
             let mut block = Block::new(block_size, &self.sampler.observable_names());
 
@@ -42,13 +41,19 @@ impl<S> Runner<S>
                     block.set_value(b, &samples);
                 }
             }
-            // compute block mean, log output
             if block_nr > 0 {
+                // compute block mean
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
-                let acceptance = self.sampler.acceptance()/(block_nr*block_size) as f64;
-                //println!("{:.*}    {:.*} +/- {:.*}    acc {:.*}",
-                         //8, block_mean[0], 8, self.means[0], 8, self.variances[0].sqrt(), 8, acceptance);
+                // log output
+                // TODO: find better way to log output
+                for key in block_mean.keys() {
+                    let mean = self.means.get(key).unwrap();
+                    let var = self.variances.get(key).unwrap();
+
+                    let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
+                    println!("{}:{:>width$} {:.*} +/- {:.*}", key, "", 8, mean, 8, var, width=padding);
+                }
             }
 
         }
@@ -67,8 +72,8 @@ impl<S> Runner<S>
         for (name, current_mean) in self.means.iter_mut() {
             let bm = block_mean.get(name).unwrap();
             let om = old_mean.get(name).unwrap();
-            let mut smd = self.square_mean_diff.get_mut(name).unwrap();
-            let mut var = self.variances.get_mut(name).unwrap();
+            let smd = self.square_mean_diff.get_mut(name).unwrap();
+            let var = self.variances.get_mut(name).unwrap();
 
             // update running mean
             *current_mean += (bm - *current_mean)/idx as f64;

@@ -1,10 +1,9 @@
 // Standard imports
-use std::vec::Vec;
 use std::collections::HashMap;
 use std::ops::{AddAssign, Sub, Div};
 // Third party imports
 use num_traits::{Float, identities::{Zero, One}};
-use ndarray::{Axis, Array1, Array2};
+use ndarray::{Axis, Array1};
 
 /// Convenience struct for dealing with block averaging.
 pub struct Block<T> {
