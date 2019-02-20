@@ -1,0 +1,47 @@
+\documentclass{article}
+
+\title{Jastrow Factor}
+
+\author{Jesse van Rhijn}
+
+\date{2019-02-20}
+
+\usepackage{amsmath}
+
+\begin{document}
+
+\maketitle
+
+The Jastrow factor employed in this library has the functional form
+
+\begin{align}
+  J(\mathbf{R}, \mathbf{r}) = \exp(f_{ee} + f_{en} + f_{een}),
+\end{align}
+
+with 
+
+\begin{align}
+  f_{ee}(r_{ij}) = \sum_{i=1}^{N_e}\sum_{j > i}^{N_e} 
+    \left( \frac{b_1 r_{ij}}{1 + b_2 r_{ij}} + \sum_{p=2}^{N_b - 1} b_{p+1}r_ij^p \right).
+\end{align}
+
+The gradient and laplacian of this term are given by
+
+\begin{align}
+  \nabla_k f_{ee} = \sum_{i=1}^{N_e} \hat{r}_{ik}\left( \frac{b_1}{1 + b_2 r_{ik})^3}
+    \sum_{p=2}^{N_b - 1} b_{p+1}pr_{ik}^{p-1} \right),
+\end{align}
+
+and
+
+\begin{align}
+  \nabla^2_k f_{ee} = \sum_{i=1}^{N_e} \frac{1}{r_{ik}}
+    \left( \frac{-2 b_1 b_2}{(1 + b_2 r_{ik})^3}
+    + \sum_{p=2}^{N_b - 1} b_{p+1}p(p-1)r_{ik}^{p-2}\right) \\ 
+    \times (x_i - x_k + y_i - y_k + z_i - z_k).
+\end{align}
+
+We then have $\nabla f_{ee} = \sum_{k=1}^{N_e} \nabla_k f_{ee}$ and $\nabla^2 f_{ee} = \sum_{k=1}^{N_e}\nabla^2_k f_{ee}$. 
+
+
+\end{document}
