@@ -11,10 +11,12 @@ use wavefunction::{Differentiate, Function, WaveFunction, Cache, Error};
 use metropolis::Metropolis;
 use operator::Operator;
 
+type Vgl = (f64, Array2<f64>, f64);
+
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
 pub struct Sampler<T, V>
-    where T: Function<f64, D=Ix2> + Differentiate + Cache<Array2<f64>, V=(f64, f64)>,
+    where T: Function<f64, D=Ix2> + Differentiate + Cache<Array2<f64>, V=Vgl>,
           V: Metropolis<T>
 {
     wave_function: T,
@@ -25,7 +27,7 @@ pub struct Sampler<T, V>
 }
 
 impl<T, V> Sampler<T, V>
-    where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, V=(f64, f64)>,
+    where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, V=Vgl>,
           V: Metropolis<T>,
           <V as Metropolis<T>>::R: Rng
 {
@@ -51,7 +53,7 @@ impl<T, V> Sampler<T, V>
 }
 
 impl<T, V> MonteCarloSampler for Sampler<T, V>
-    where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, U=usize, V=(f64, f64)>,
+    where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, U=usize, V=Vgl>,
           V: Metropolis<T>
 {
     fn sample(&self) -> Result<HashMap<String, f64>, Error> {

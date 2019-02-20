@@ -7,6 +7,8 @@ use ndarray_rand::RandomExt;
 use crate::traits::Metropolis;
 use wavefunction::{Function, Differentiate, Cache};
 
+type Vgl = (f64, Array2<f64>, f64);
+
 /// Simplest Metropolis algorithm.
 /// Transition matrix T(x -> x') is constant inside a cubical box,
 /// and zero outside it. This yields an acceptance probability of
@@ -32,7 +34,7 @@ impl MetropolisBox<SmallRng> {
 }
 
 impl<T, R> Metropolis<T> for MetropolisBox<R>
-where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=(f64, f64)>,
+where T: Differentiate + Function<f64, D=Ix2> + Cache<Array2<f64>, U=usize, V=Vgl>,
       R: Rng
 {
     type R = R;
@@ -109,17 +111,17 @@ mod tests {
 
     impl Cache<Array2<f64>> for WaveFunctionMock {
         type A = Array2<f64>;
-        type V = (f64, f64);
+        type V = (f64, Array2<f64>, f64);
         type U = usize;
         fn refresh(&mut self, _new: &Array2<f64>) {}
         fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) {}
         fn push_update(&mut self) {}
         fn flush_update(&mut self) {}
         fn current_value(&self) -> Self::V {
-            (self.value, self.value)
+            (self.value, Array2::ones((1, 1))*self.value, self.value)
         }
         fn enqueued_value(&self) -> Option<Self::V> {
-            Some((self.value, self.value))
+            Some((self.value, Array2::ones((1, 1))*self.value, self.value))
         }
     }
 

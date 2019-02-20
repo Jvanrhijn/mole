@@ -133,7 +133,7 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
     where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type A = Array2<f64>;
-    type V = (f64, f64);
+    type V = (f64, Array2<f64>, f64);
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
@@ -145,7 +145,7 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
             .expect("Failed to take matrix determinant");
 
         *self.current_value_queue.front_mut().unwrap() = value;
-        *self.current_grad_queue.front_mut().unwrap() = value * (&gradients * &inv.t()).sum_axis(Axis(1));
+        *self.current_grad_queue.front_mut().unwrap() = value * (&gradients * &inv.t().insert_axis(Axis(2))).sum_axis(Axis(1));
         *self.current_laplac_queue.front_mut().unwrap() = value * (&laplacians * &inv.t()).scalar_sum();
         *self.matrix_grad_queue.front_mut().unwrap()  = gradients;
 
@@ -161,25 +161,34 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
+        let mat_dim = self.num_electrons();
         // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
-        let data: Vec<(f64, f64)> = self.orbs.iter().map(|phi| {
+        let data: Vec<(f64, Array1<f64>, f64)> = self.orbs.iter().map(|phi| {
             (phi.value(&new.slice(s![ud, ..]).to_owned()).unwrap(),
+             phi.gradient(&new.slice(s![ud, ..]).to_owned()).unwrap(),
              phi.laplacian(&new.slice(s![ud, ..]).to_owned()).unwrap())
         }).collect();
         let orbvec = Array1::<f64>::from_vec(data.iter().map(|x| x.0).collect());
-        let orbvec_laplac = Array1::<f64>::from_vec(data.into_iter().map(|x| x.1).collect());
+        let orbvec_laplac = Array1::<f64>::from_vec(data.iter().map(|x| x.2).collect());
+        let orbvec_grad = data.into_iter()
+            .map(|x| x.1)
+            .collect::<Vec<Array1<f64>>>();
 
         // compute updated wave function value
         let ratio = orbvec.dot(&self.inv_matrix_queue.front().unwrap().slice(s![.., ud]));
         let value = self.current_value_queue.front().unwrap() * ratio;
 
-        // calculate updated matrix, laplacian matrix, and inverse matrix; only need to update column `ud`
+        // calculate updated matrix, gradient matrix, laplacian matrix, and inverse matrix; only need to update column `ud`
         let mut matrix = self.matrix_queue.front().unwrap().clone();
+        let mut matrix_grad = self.matrix_grad_queue.front().unwrap().clone();
         let mut matrix_laplac = self.matrix_laplac_queue.front().unwrap().clone();
         let mut inv_matrix = self.inv_matrix_queue.front().unwrap().clone();
         for j in 0..self.num_electrons() {
             matrix[[ud, j]] = orbvec[j];
+            for k in 0..3 {
+                matrix_grad[[ud, j, k]] = orbvec_grad[j][k];
+            }
             matrix_laplac[[ud, j]] = orbvec_laplac[j];
         }
 
@@ -197,14 +206,19 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
             inv_mat_slice /= ratio;
         }
 
+        // calculate new gradient
+        let current_grad = value * (&matrix_grad * &inv_matrix.t().insert_axis(Axis(2))).sum_axis(Axis(1));
+
         // calculate new laplacian
         let current_laplac = value * (&matrix_laplac * &inv_matrix.t()).scalar_sum();
 
         // enqueue the update data
         self.matrix_queue.push_back(matrix);
+        self.matrix_grad_queue.push_back(matrix_grad);
         self.matrix_laplac_queue.push_back(matrix_laplac);
         self.inv_matrix_queue.push_back(inv_matrix);
         self.current_value_queue.push_back(value);
+        self.current_grad_queue.push_back(current_grad);
         self.current_laplac_queue.push_back(current_laplac);
     }
 
@@ -212,9 +226,11 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
         for q in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut() {
             q.pop_front();
         }
+        self.matrix_grad_queue.pop_front();
         for q in vec![&mut self.current_value_queue, &mut self.current_laplac_queue].iter_mut() {
             q.pop_front();
         }
+        self.current_grad_queue.pop_front();
     }
 
     fn flush_update(&mut self) {
@@ -223,20 +239,31 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
                 q.pop_back();
             }
         }
+        if self.matrix_grad_queue.len() == 2 {
+            self.matrix_grad_queue.pop_back();
+        }
         for q in vec![&mut self.current_value_queue, &mut self.current_laplac_queue].iter_mut() {
             if q.len() == 2 {
                 q.pop_back();
             }
         }
+        if self.current_grad_queue.len() == 2 {
+            self.current_grad_queue.pop_back();
+        }
     }
 
     fn current_value(&self) -> Self::V {
-        (*self.current_value_queue.front().unwrap(), *self.current_laplac_queue.front().unwrap())
+        // TODO: find a way to get rid of the call to .clone()
+        (*self.current_value_queue.front().unwrap(),
+         self.current_grad_queue.front().unwrap().clone(),
+         *self.current_laplac_queue.front().unwrap())
     }
 
     fn enqueued_value(&self) -> Option<Self::V> {
-        match (self.current_value_queue.back(), self.current_laplac_queue.back()) {
-            (Some(&v), Some(&l)) => Some((v, l)),
+        match (self.current_value_queue.back(),
+               self.current_grad_queue.back(),
+               self.current_laplac_queue.back()) {
+            (Some(&v), Some(g), Some(&l)) => Some((v, g.clone(), l)),
             _ => None
         }
     }
@@ -297,7 +324,7 @@ mod tests {
         // initialize cache
         cached.refresh(&x);
 
-        let (cval, clap) = cached.current_value();
+        let (cval, _, clap) = cached.current_value();
         let val = not_cached.value(&x).unwrap();
         let lap = not_cached.laplacian(&x).unwrap();
         assert_eq!(cval, val);
@@ -327,7 +354,7 @@ mod tests {
         cached.push_update();
 
         // retrieve values
-        let (cval, clap) = cached.current_value();
+        let (cval, _, clap) = cached.current_value();
         let val = not_cached.value(&xmov).unwrap();
         let lap = not_cached.laplacian(&xmov).unwrap();
         assert!((cval - val).abs() < EPS);

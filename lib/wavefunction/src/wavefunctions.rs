@@ -84,7 +84,7 @@ impl<'a, T> Cache<Array2<f64>> for SingleDeterminant<'a, T>
     where T: ?Sized + Fn(&Array1<f64>) -> Vgl
 {
     type A = Array2<f64>;
-    type V = (f64, f64);
+    type V = (f64, Array2<f64>, f64);
     type U = usize;
 
     fn refresh(&mut self, new: &Self::A) {
