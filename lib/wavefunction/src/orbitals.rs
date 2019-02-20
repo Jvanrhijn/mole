@@ -40,12 +40,15 @@ impl<'a, T> Differentiate for Orbital<'a, T>
 
     type D = Ix1;
 
-    fn gradient(&self, _cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
-        unimplemented!()
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
+        Ok(self.parms.iter().zip(self.basis_set)
+            .map(|(&parm, func)| parm*&func(cfg).1)
+            .fold(Array1::zeros(3), |acc, x| acc + x))
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
-        Ok(self.parms.iter().zip(self.basis_set).map(|(x, y)| x*y(cfg).2).sum())
+        Ok(self.parms.iter().zip(self.basis_set)
+            .map(|(parm, func)| parm*func(cfg).2).sum())
     }
 
 }
