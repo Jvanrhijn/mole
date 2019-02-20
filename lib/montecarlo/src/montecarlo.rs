@@ -86,7 +86,13 @@ mod tests {
     use rand::rngs::SmallRng;
     use basis;
     use wavefunction::{Orbital, SingleDeterminant};
-    use operator::{LocalEnergy, ElectronicPotential, IonicPotential, KineticEnergy, ElectronicHamiltonian};
+    use operator::{
+        LocalEnergy, 
+        ElectronicPotential, 
+        IonicPotential, 
+        KineticEnergy, 
+        ElectronicHamiltonian
+    };
     use metropolis::MetropolisBox;
     use crate::samplers::Sampler;
 

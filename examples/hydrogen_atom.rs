@@ -4,7 +4,7 @@ use montecarlo::{Runner, Sampler};
 use basis::{gaussian, Func};
 use wavefunction::{Orbital, SingleDeterminant};
 use metropolis::MetropolisBox;
-use operator::{IonicPotential, IonicHamiltonian, KineticEnergy};
+use operator::{IonicPotential, KineticEnergy};
 
 fn main() {
     // setup basis set
@@ -30,8 +30,6 @@ fn main() {
     let kinetic = KineticEnergy::new();
     // One ion located at r = (0, 0, 0) with Z = 1
     let potential = IonicPotential::new(array![[0.0, 0.0, 0.0]], array![1]);
-    // Ionic Hamiltonian: H = T + V
-    //let hamiltonian = IonicHamiltonian::new(kinetic, potential);
 
     // construct sampler
     let mut sampler = Sampler::new(wave_function, metrop);
@@ -42,7 +40,7 @@ fn main() {
     // create MC runner
     let mut runner = Runner::new(sampler);
     
-    // Run Monte Carlo integration for 100000 steps, with block size 10
+    // Run Monte Carlo integration for 100000 steps, with block size 200
     runner.run(100_000, 200);
 
     // Retrieve mean values of operators over MC run
