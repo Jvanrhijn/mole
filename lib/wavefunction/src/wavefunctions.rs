@@ -60,7 +60,7 @@ impl<'a, T> Differentiate for SingleDeterminant<'a, T>
 {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+    fn gradient(&self, _cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
         unimplemented!()
     }
 

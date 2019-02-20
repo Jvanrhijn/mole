@@ -39,7 +39,7 @@ impl<'a, T> Differentiate for Orbital<'a, T>
 
     type D = Ix1;
 
-    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
+    fn gradient(&self, _cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
         unimplemented!()
     }
 

@@ -93,8 +93,7 @@ mod tests {
     use basis;
     use wavefunction::{Orbital, SingleDeterminant};
     use operator::{
-        LocalEnergy, 
-        ElectronicPotential, 
+        ElectronicPotential,
         IonicPotential, 
         KineticEnergy, 
         ElectronicHamiltonian

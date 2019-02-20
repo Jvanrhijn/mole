@@ -1,7 +1,6 @@
 use ndarray::{Array1, Array2, Array, Ix2};
 use ndarray_linalg::Norm;
-use itertools;
-use crate::traits::{Function, Differentiate, Cache};
+use crate::traits::{Function, Differentiate};
 use crate::error::Error;
 
 // f_ee in notes
@@ -10,6 +9,7 @@ struct ElectronElectronTerm {
     parms: Array1<f64>
 }
 
+#[allow(dead_code)]
 impl ElectronElectronTerm {
     pub fn new(parms: Array1<f64>) -> Self {
         Self{parms}
@@ -32,7 +32,7 @@ impl Function<f64> for ElectronElectronTerm {
                 }
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 value += self.parms[0]*rij/(1.0 + self.parms[1]*rij);
-                value += izip!(self.parms.slice(s![2..nparms]), (2..nparms))
+                value += izip!(self.parms.slice(s![2..nparms]), 2..nparms)
                     .map(|(b, p)| b*rij.powi(p as i32))
                     .sum::<f64>();
             }
@@ -60,7 +60,7 @@ impl Differentiate for ElectronElectronTerm {
                     }
                     let rik: f64 = separation.norm_l2();
                     magnitude += self.parms[0]/(1.0 + self.parms[1]*rik).powi(2);
-                    magnitude += izip!(self.parms.slice(s![2..nparms]), (2..nparms))
+                    magnitude += izip!(self.parms.slice(s![2..nparms]), 2..nparms)
                         .map(|(b, p)| (p as f64)*b*rik.powi(p as i32 - 1))
                         .sum::<f64>();
                     component += &(separation*magnitude/rik);
@@ -87,7 +87,7 @@ impl Differentiate for ElectronElectronTerm {
                 let xi = cfg.slice(s![i, ..]);
                 let rik: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![k, ..])).norm_l2();
                 laplacian += (-2.0*self.parms[0]*self.parms[1]/(1.0 + self.parms[1] * rik).powi(3)
-                    + izip!(self.parms.slice(s![2..nparm]), (2..nparm))
+                    + izip!(self.parms.slice(s![2..nparm]), 2..nparm)
                         .map(|(b, p)| b*(p*(p - 1)) as f64*rik.powi(p as i32 - 3))
                         .sum::<f64>())
                     * (&xi - &xk).sum()/rik;

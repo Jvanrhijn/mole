@@ -26,6 +26,3 @@ ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
 ndarray-rand = "0.8.0"
 num-traits = "0.2"
 itertools = "0.7"
-
-[build]
-rustflags = ["-C", "target-cpu=native"]
