@@ -1,5 +1,6 @@
 #![feature(uniform_paths)]
 extern crate itertools;
+#[macro_use]
 extern crate ndarray;
 extern crate ndarray_linalg;
 extern crate ndarray_rand;
