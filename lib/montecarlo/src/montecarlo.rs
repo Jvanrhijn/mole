@@ -96,12 +96,10 @@ mod tests {
         ];
         let orbital = Orbital::new(array![1.0], &basis_set);
         let wave_func = SingleDeterminant::new(vec![orbital]);
-        let local_e = LocalEnergy::new(
-            ElectronicHamiltonian::new(
-                KineticEnergy::new(),
-                IonicPotential::new(array![[0., 0., 0.]], array![1]),
-                ElectronicPotential::new()
-            )
+        let local_e = ElectronicHamiltonian::new(
+            KineticEnergy::new(),
+            IonicPotential::new(array![[0., 0., 0.]], array![1]),
+            ElectronicPotential::new()
         );
         let metropolis = MetropolisBox::<SmallRng>::new(1.0);
         let mut sampler = Sampler::new(wave_func, metropolis);
