@@ -230,7 +230,7 @@ mod tests {
 
     #[test]
     fn value_multiple_electrons() {
-        let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+        let basis: Vec<Box<Func>> = vec![
             Box::new(|x| hydrogen_1s(&x, 1.0)),
             Box::new(|x| hydrogen_2s(&x, 2.0))
         ];
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn cache() {
-        let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+        let basis: Vec<Box<Func>> = vec![
             Box::new(|x| hydrogen_1s(&x, 1.0)),
             Box::new(|x| hydrogen_2s(&x, 0.5))
         ];
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn update_cache() {
-        let basis: Vec<Box<Fn(&Array1<f64>) -> (f64, f64)>> = vec![
+        let basis: Vec<Box<Func>> = vec![
             Box::new(|x| hydrogen_1s(&x, 1.0)),
             Box::new(|x| hydrogen_2s(&x, 0.5))
         ];
