@@ -3,7 +3,7 @@ use std::vec::Vec;
 use std::collections::VecDeque;
 use std::result::Result;
 // Third party imports
-use ndarray::{Ix2, Ix1, Array, Array1, Array2};
+use ndarray::{Ix3, Ix2, Ix1, Array, Array1, Array2, Array3, Axis};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
 use crate::traits::{WaveFunction, Differentiate, Cache, Function};
@@ -12,9 +12,11 @@ use crate::error::Error;
 pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
     orbs: Vec<T>,
     matrix_queue: VecDeque<Array2<f64>>,
+    matrix_grad_queue: VecDeque<Array3<f64>>,
     matrix_laplac_queue: VecDeque<Array2<f64>>,
     inv_matrix_queue: VecDeque<Array2<f64>>,
     current_value_queue: VecDeque<f64>,
+    current_grad_queue: VecDeque<Array2<f64>>,
     current_laplac_queue: VecDeque<f64>,
 }
 
@@ -23,39 +25,48 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
     pub fn new(orbs: Vec<T>) -> Self {
         let mat_dim = orbs.len();
         let matrix = Array::<f64, Ix2>::eye(mat_dim);
-        let matrix_laplac = Array::<f64, Ix2>::eye(mat_dim);
+        let matrix_grad = Array::<f64, Ix3>::zeros((mat_dim, mat_dim, mat_dim));
+        let matrix_laplac = Array::<f64, Ix2>::zeros((mat_dim, mat_dim));
         let inv = matrix.inv().expect("Failed to take matrix inverse");
         // put cached data in queues
         let matrix_queue = VecDeque::from(vec![matrix]);
         let matrix_laplac_queue = VecDeque::from(vec![matrix_laplac]);
+        let matrix_grad_queue = VecDeque::from(vec![matrix_grad]);
         let inv_matrix_queue = VecDeque::from(vec![inv]);
         let current_value_queue = VecDeque::from(vec![0.0]);
+        let current_grad_queue = VecDeque::from(vec![Array2::zeros((mat_dim, 3))]);
         let current_laplac_queue = VecDeque::from(vec![0.0]);
+        // construct Self
         Self{
             orbs,
             matrix_queue,
+            matrix_grad_queue,
             matrix_laplac_queue,
             inv_matrix_queue,
             current_value_queue,
+            current_grad_queue,
             current_laplac_queue
         }
     }
 
     /// Build matrix of orbitals and laplacians of orbitals
     // TODO: Build 3d-array of gradient values as well
-    fn build_matrices(&self, cfg: &Array2<f64>) -> Result<(Array2<f64>, Array2<f64>), Error> {
+    fn build_matrices(&self, cfg: &Array2<f64>) -> Result<(Array2<f64>, Array3<f64>, Array2<f64>), Error> {
         let mat_dim = self.orbs.len();
         let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
+        let mut matrix_grad = Array3::<f64>::zeros((mat_dim, mat_dim, 3));
         let mut matrix_laplac = Array2::<f64>::zeros((mat_dim, mat_dim));
         for i in 0..mat_dim {
             for j in 0..mat_dim {
                 let slice = cfg.slice(s![i, ..]);
                 let pos = array![slice[0], slice[1], slice[2]];
                 matrix[[i, j]] = self.orbs[j].value(&pos)?;
+                let mut grad_slice = matrix_grad.slice_mut(s![i, j, ..]);
+                grad_slice = self.orbs[j].gradient(&pos)?.view_mut();
                 matrix_laplac[[i, j]] = self.orbs[j].laplacian(&pos)?;
             }
         }
-        Ok((matrix, matrix_laplac))
+        Ok((matrix, matrix_grad, matrix_laplac))
     }
 
 }
@@ -65,23 +76,36 @@ impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> + Differentiat
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        let (matrix, _) = self.build_matrices(cfg)?;
+        let (matrix, _, _) = self.build_matrices(cfg)?;
         Ok(matrix.det()?)
     }
 }
 
+// TODO: find a way to only compute determinant and inverse once per refresh
 impl<T> Differentiate for Slater<T>
     where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type D = Ix2;
 
-    fn gradient(&self, _cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
-        unimplemented!()
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        let mat_dim = self.orbs.len();
+        let (matrix, _, _) = self.build_matrices(cfg)?;
+        let det = matrix.det()?;
+        let mat_inv = matrix.inv()?;
+        let mut result = Array2::zeros((mat_dim, 3));
+        for i in 0..mat_dim {
+            let ri = array![cfg[[i, 0]], cfg[[i, 1]], cfg[[i, 2]]];
+            let mut slice = result.slice_mut(s![i, ..]);
+            for j in 0..mat_dim {
+                slice += &(self.orbs[j].gradient(&ri)?*mat_inv[[j, i]]);
+            }
+        }
+        Ok(result*det)
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         let mat_dim = self.orbs.len();
-        let (matrix, _) = self.build_matrices(cfg)?;
+        let (matrix, _, _) = self.build_matrices(cfg)?;
         let det = matrix.det()?;
         let mat_inv = matrix.inv()?;
         let mut result = 0.;
@@ -104,6 +128,7 @@ impl<T> WaveFunction for Slater<T>
     }
 }
 
+// TODO: get rid of all unwraps
 impl<'a, T> Cache<Array2<f64>> for Slater<T>
     where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
@@ -112,7 +137,7 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
-        let (values, laplacians) = self.build_matrices(new)
+        let (values, gradients, laplacians) = self.build_matrices(new)
             .expect("Failed to construct matrix");
         let inv = values.inv()
             .expect("Failed to take matrix inverse");
@@ -120,12 +145,19 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
             .expect("Failed to take matrix determinant");
 
         *self.current_value_queue.front_mut().unwrap() = value;
+        *self.current_grad_queue.front_mut().unwrap() = value * (&gradients * &inv.t()).sum_axis(Axis(1));
         *self.current_laplac_queue.front_mut().unwrap() = value * (&laplacians * &inv.t()).scalar_sum();
+        *self.matrix_grad_queue.front_mut().unwrap()  = gradients;
 
-        for (queue, data) in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut()
+        for (queue, data) in vec![
+            &mut self.matrix_queue,
+            &mut self.matrix_laplac_queue,
+            &mut self.inv_matrix_queue]
+            .iter_mut()
             .zip(vec![values, laplacians, inv].into_iter()) {
             *queue.front_mut().expect("Attempt to retrieve data from empty queue") = data;
         }
+
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
