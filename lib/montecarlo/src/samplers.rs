@@ -14,7 +14,7 @@ use operator::Operator;
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
 pub struct Sampler<T, V>
-    where T: Function<f64, D=Ix2> + Differentiate + Cache<Array2<f64>>,
+    where T: Function<f64, D=Ix2> + Differentiate + Cache<Array2<f64>, V=(f64, f64)>,
           V: Metropolis<T>
 {
     wave_function: T,
@@ -50,14 +50,15 @@ impl<T, V> Sampler<T, V>
 }
 
 impl<T, V> MonteCarloSampler for Sampler<T, V>
-    where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, U=usize>,
+    where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Cache<Array2<f64>, U=usize, V=(f64, f64)>,
           V: Metropolis<T>
 {
     fn sample(&self) -> Result<HashMap<String, f64>, Error> {
         Ok(self.observables.iter()
             .map(|(name, operator)| {
                 (name.clone(), operator.act_on(&self.wave_function, &self.config)
-                    .expect("Failed to act on wave function with operator"))
+                    .expect("Failed to act on wave function with operator")
+                        / self.wave_function.current_value().0)
             }
         ).collect())
     }

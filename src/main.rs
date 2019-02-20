@@ -33,14 +33,14 @@ fn get_hydrogen2_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
     let ve = ElectronicPotential::new();
 
     // setup electronic structure Hamiltonian
-    let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
+    let h = ElectronicHamiltonian::new(t, v, ve);
 
     // create metropolis algorithm
     let metrop = MetropolisBox::from_rng(box_size, rng);
 
     // setup monte carlo sampler
     let mut sampler = Sampler::new( wf, metrop);
-    sampler.add_observable("Local Energy", local_e);
+    sampler.add_observable("Energy", h);
 
     // create runner
     Runner::new(sampler)
@@ -61,12 +61,12 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
     let t = KineticEnergy::new();
     let ve = ElectronicPotential::new();
 
-    let local_e = LocalEnergy::new(ElectronicHamiltonian::new(t, v, ve));
+    let h = ElectronicHamiltonian::new(t, v, ve);
 
     let metrop = MetropolisBox::from_rng(box_size, rng);
 
     let mut sampler = Sampler::new(wf, metrop);
-    sampler.add_observable("Local Energy", local_e);
+    sampler.add_observable("Energy", h);
 
     Runner::new(sampler)
 }
