@@ -8,6 +8,7 @@ use wavefunction::{Function, Differentiate, Cache, Error};
 /// Ionic potential energy operator:
 /// $\hat{V}_{\mathrm{ion}} = -\sum_{i=1}^{N_{\mathrm{ions}}\sum_{j=1}^{\mathrm{e}} \frac{Z_i}{r_{ij}}$.
 /// Ionic charges are in units of the proton charge.
+#[derive(Clone)]
 pub struct IonicPotential {
     ion_positions: Array2<f64>,
     ion_charge: Array1<i32>
@@ -50,6 +51,7 @@ impl<'a, T> Operator<T> for IonicPotential
 /// $\hat{V}_{ee} = \sum_{i=1}^{N_e} \sum_{j>i}^{N_e} \frac{1}{r_{ij}}.$
 /// This potential is only a function of the current electronic configuration, and
 /// so is not parametrized over anything.
+#[derive(Clone)]
 pub struct ElectronicPotential {}
 
 impl ElectronicPotential {
@@ -87,6 +89,7 @@ impl<'a, T> Operator<T> for ElectronicPotential
 /// $\hat{T} = -\frac{1}{2}\sum_{i=1}^{N_e}\nabla_{i}^2$.
 /// The kinetic energy is solely a function of the current electronic configuration,
 /// and so it is not parametrized over anything.
+#[derive(Clone)]
 pub struct KineticEnergy {}
 
 impl KineticEnergy {
@@ -106,6 +109,7 @@ impl<'a, T> Operator<T> for KineticEnergy
 /// Ionic Hamiltonian operator:
 /// $\hat{H} = \hat{T} + \hat{V}_{\mathrm{ion}}$.
 /// Use this for calculations neglecting electron-electron interactions.
+#[derive(Clone)]
 pub struct IonicHamiltonian {
     v: IonicPotential,
     t: KineticEnergy
@@ -130,6 +134,7 @@ impl<'a, T> Operator<T> for IonicHamiltonian
 /// Use this operator for constructing a proper local energy operator. The hamiltonian
 /// simply acts on any type implementing the WaveFunction and Function traits,
 /// but does not care about normalization.
+#[derive(Clone)]
 pub struct ElectronicHamiltonian {
     t: KineticEnergy,
     vion: IonicPotential,
@@ -150,6 +155,7 @@ impl<'a, T> Operator<T> for ElectronicHamiltonian
     }
 }
 
+#[derive(Clone)]
 pub struct HarmonicPotential1D {
     frequency: f64
 }
@@ -168,6 +174,7 @@ impl<'a, T> Operator<T> for HarmonicPotential1D
     }
 }
 
+#[derive(Clone)]
 pub struct HarmonicHamiltonian {
     t: KineticEnergy,
     v: HarmonicPotential1D,
@@ -191,6 +198,7 @@ impl<'a, T> Operator<T> for HarmonicHamiltonian
 /// $\hat{E}_{L}\psi(x) = \frac{\hat{H}\psi}{\psi(x)}$.
 /// This operator should be used in any Monte Carlo simulation
 /// trying to calculate the electronic ground state of a molecular system.
+#[derive(Clone)]
 pub struct LocalEnergy<H>
 {
     h: H

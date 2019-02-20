@@ -10,9 +10,9 @@ use crate::block::Block;
 /// Generic over Samplers
 pub struct Runner<S: MonteCarloSampler> {
     sampler: S,
-    means: Vec<f64>,
-    variances: Vec<f64>,
-    square_mean_diff: Vec<f64>,
+    means: HashMap<String, f64>,
+    variances: HashMap<String, f64>,
+    square_mean_diff: HashMap<String, f64>,
 }
 
 impl<S> Runner<S>
@@ -20,10 +20,9 @@ impl<S> Runner<S>
 {
     pub fn new(sampler: S) -> Self {
         // initialize means at a sample of the current configuration
-        let means: Vec<_> = sampler.sample()
-            .expect("Failed to sample observables").drain().map(|(_, value)| value).collect();
-        let variances = vec![0.0; means.len()];
-        let square_mean_diff = vec![0.0; means.len()];
+        let means = sampler.sample().expect("Failed to perform initial sampling");
+        let variances = means.keys().map(|key| (key.clone(), 0.0)).collect();
+        let square_mean_diff = means.keys().map(|key| (key.clone(), 0.0)).collect();
         Self{sampler, means, variances, square_mean_diff}
     }
 
@@ -32,18 +31,15 @@ impl<S> Runner<S>
         let blocks = steps / block_size;
 
         for block_nr in 0..blocks {
-            let mut block = Block::new(block_size, self.sampler.num_observables());
+            let mut block = Block::new(block_size, &self.sampler.observable_names());
 
             for b in 0..block_size {
                 self.sampler.move_state();
                 // Discard first block for equilibration
                 if block_nr > 0 {
                     let samples = self.sampler.sample()
-                        .expect("Failed to sample observables")
-                        .drain()
-                        .map(|(_, value)| value)
-                        .collect();
-                    block.set_value(b, samples);
+                        .expect("Failed to sample observables");
+                    block.set_value(b, &samples);
                 }
             }
             // compute block mean, log output
@@ -51,31 +47,36 @@ impl<S> Runner<S>
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
                 let acceptance = self.sampler.acceptance()/(block_nr*block_size) as f64;
-                println!("{:.*}    {:.*} +/- {:.*}    acc {:.*}",
-                         8, block_mean[0], 8, self.means[0], 8, self.variances[0].sqrt(), 8, acceptance);
+                //println!("{:.*}    {:.*} +/- {:.*}    acc {:.*}",
+                         //8, block_mean[0], 8, self.means[0], 8, self.variances[0].sqrt(), 8, acceptance);
             }
 
         }
     }
 
     pub fn means(&self) -> HashMap<&str, f64> {
-        self.sampler.observable_names().iter().zip(self.means.iter())
-            .map(|(key, value)| (key.as_str(), *value)).collect()
+        self.means.iter().map(|(key, value)| (key.as_str(), *value)).collect()
     }
 
     pub fn variances(&self) -> HashMap<&str, f64> {
-        self.sampler.observable_names().iter().zip(self.variances.iter())
-            .map(|(key, value)| (key.as_str(), *value)).collect()
+        self.variances.iter().map(|(key, value)| (key.as_str(), *value)).collect()
     }
 
-    fn update_means_and_variances(&mut self, idx: usize, block_mean: &Array1<f64>) {
-        // running mean algorithm
+    fn update_means_and_variances(&mut self, idx: usize, block_mean: &HashMap<String, f64>) {
         let old_mean = self.means.clone();
-        izip!(self.means.iter_mut(), block_mean.iter())
-            .for_each(|(m, x)| *m += (x - *m)/idx as f64);
-        izip!(self.square_mean_diff.iter_mut(), block_mean.iter(), old_mean.iter(), self.means.iter())
-            .for_each(|(m2, x, xbarold, xbar)| *m2 += (x - xbarold)*(x - xbar));
-        self.variances = self.square_mean_diff.iter().map(|m2| m2/idx as f64).collect();
+        for (name, current_mean) in self.means.iter_mut() {
+            let bm = block_mean.get(name).unwrap();
+            let om = old_mean.get(name).unwrap();
+            let mut smd = self.square_mean_diff.get_mut(name).unwrap();
+            let mut var = self.variances.get_mut(name).unwrap();
+
+            // update running mean
+            *current_mean += (bm - *current_mean)/idx as f64;
+            // update square mean sifference
+            *smd += (bm - om)*(bm - *current_mean);
+            // update running variance
+            *var = *smd/idx as f64;
+        }
     }
 
 }
