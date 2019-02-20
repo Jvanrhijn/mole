@@ -13,4 +13,6 @@ pub trait MonteCarloSampler {
 
     fn acceptance(&self) -> f64;
 
+    fn observable_names(&self) -> Vec<&String>;
+
 }

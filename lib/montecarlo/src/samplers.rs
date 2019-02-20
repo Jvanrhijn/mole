@@ -47,6 +47,7 @@ impl<T, V> Sampler<T, V>
     {
         self.observables.insert(name.to_string(), Box::new(operator));
     }
+
 }
 
 impl<T, V> MonteCarloSampler for Sampler<T, V>
@@ -82,6 +83,10 @@ impl<T, V> MonteCarloSampler for Sampler<T, V>
 
     fn acceptance(&self) -> f64 {
         self.acceptance
+    }
+
+    fn observable_names(&self) -> Vec<&String> {
+        self.observables.keys().collect()
     }
 
 }

@@ -1,5 +1,6 @@
 // Standard imports
 use std::vec::Vec;
+use std::collections::HashMap;
 use ndarray::Array1;
 // First party imports
 use crate::traits::*;
@@ -57,12 +58,14 @@ impl<S> Runner<S>
         }
     }
 
-    pub fn means(&self) -> &Vec<f64> {
-        &self.means
+    pub fn means(&self) -> HashMap<&str, f64> {
+        self.sampler.observable_names().iter().zip(self.means.iter())
+            .map(|(key, value)| (key.as_str(), *value)).collect()
     }
 
-    pub fn variances(&self) -> &Vec<f64> {
-        &self.variances
+    pub fn variances(&self) -> HashMap<&str, f64> {
+        self.sampler.observable_names().iter().zip(self.variances.iter())
+            .map(|(key, value)| (key.as_str(), *value)).collect()
     }
 
     fn update_means_and_variances(&mut self, idx: usize, block_mean: &Array1<f64>) {
@@ -108,9 +111,9 @@ mod tests {
         let mut runner = Runner::new(sampler);
         runner.run(100, 1);
 
-        let local_e_result = runner.means()[0];
+        let result = *runner.means().get("Local Energy").unwrap();
 
-        assert!((local_e_result - ENERGY_EXACT).abs() < 1e-15);
+        assert!((result - ENERGY_EXACT).abs() < 1e-15);
     }
 
 }
