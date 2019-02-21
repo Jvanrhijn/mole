@@ -287,7 +287,10 @@ mod tests {
         let orb = Orbital::new(array![1.0], &basis);
         let det = Slater::new(vec![orb]);
         let x = array![[1.0, -1.0, 1.0]];
-        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&array![1.0, 1.0, 1.0], 1.0).0);
+
+        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0);
+        assert!(det.gradient(&x).unwrap().slice(s![0, ..])
+            .all_close(&hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).1, EPS));
     }
 
     #[test]
@@ -305,9 +308,11 @@ mod tests {
         let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned(), 1.0).0;
         let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned(), 2.0).0;
         let value = phi11*phi22 - phi21*phi12;
+
         assert_eq!(det.value(&x).unwrap(), value);
+
         // switching electron positions should flip determinant sign
-        let x_switched = array![[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]];
+        let x_switched = x.permuted_axes([0, 1]);
         assert_eq!(det.value(&x_switched).unwrap(), -value);
     }
 
@@ -327,10 +332,13 @@ mod tests {
         // initialize cache
         cached.refresh(&x);
 
-        let (cval, _, clap) = cached.current_value();
+        let (cval, cgrad, clap) = cached.current_value();
         let val = not_cached.value(&x).unwrap();
+        let grad = not_cached.gradient(&x).unwrap();
         let lap = not_cached.laplacian(&x).unwrap();
+
         assert_eq!(cval, val);
+        assert!(grad.all_close(&cgrad, EPS));
         assert_eq!(clap,  lap);
     }
 
@@ -361,12 +369,9 @@ mod tests {
         let val = not_cached.value(&xmov).unwrap();
         let grad = not_cached.gradient(&xmov).unwrap();
         let lap = not_cached.laplacian(&xmov).unwrap();
+
         assert!((cval - val).abs() < EPS);
-        for i in 0..2 {
-            for j in 0..3 {
-                assert!((cgrad[[i, j]] - grad[[i, j]]).abs() < EPS);
-            }
-        }
+        assert!(cgrad.all_close(&grad, EPS));
         assert!((clap - lap).abs() < EPS);
     }
 
