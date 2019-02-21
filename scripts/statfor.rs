@@ -7,7 +7,7 @@ use std::fs::File;
 fn read_data() -> Result<Vec<f64>> {
     let stdin = io::stdin();
     let data = stdin.lock().lines()
-        .map(|x| x.unwrap().split_whitespace().collect::<Vec<_>>()[0]
+        .map(|x| x.unwrap().split_whitespace().collect::<Vec<_>>()[1]
              .parse::<f64>().expect("Failed to parse as float"))
         .collect::<Vec<_>>();
     Ok(data)

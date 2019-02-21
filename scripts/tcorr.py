@@ -14,7 +14,7 @@ def get_tcor_and_acceptance(box_side):
     out, err = process.communicate()
 
     lines = out.decode("ascii").split("\n")[:-1]
-    data = np.array([float(line.split()[0]) for line in lines])
+    data = np.array([float(line.split()[1]) for line in lines])
     acceptance = float(lines[-1].split()[-1])
     mean = np.mean(data)
     var = np.var(data)
@@ -32,9 +32,9 @@ for side in sides:
     acceptance.append(ac)
 
 fig, ax1 = plt.subplots()
-ax2 = ax1.twinx()
+#ax2 = ax1.twinx()
 
-ax2.plot(sides, acceptance, 'r')
+#ax2.plot(sides, acceptance, 'r')
 ax1.plot(sides, tcorr, 'b')
 
 ax1.set_xlabel("Box side (atomic units)")
@@ -42,8 +42,8 @@ ax1.set_ylabel("Tcorr", color='b')
 ax1.tick_params('y', colors='b')
 
 
-ax2.set_ylabel("Acceptance rate", color='r')
-ax2.tick_params('y', colors='r')
+#ax2.set_ylabel("Acceptance rate", color='r')
+#ax2.tick_params('y', colors='r')
 
 plt.grid(True)
 plt.show()
