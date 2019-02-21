@@ -46,14 +46,7 @@ impl<S> Runner<S>
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
                 // log output
-                // TODO: find better way to log output
-                for key in block_mean.keys() {
-                    let mean = self.means.get(key).unwrap();
-                    let var = self.variances.get(key).unwrap();
-
-                    let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
-                    println!("{}:{:>width$} {:.*} +/- {:.*}", key, "", 8, mean, 8, var, width=padding);
-                }
+                self.log_data(max_strlen);
             }
 
         }
@@ -82,6 +75,18 @@ impl<S> Runner<S>
             // update running variance
             *var = *smd/idx as f64;
         }
+    }
+
+    fn log_data(&self, max_strlen: usize) {
+        // TODO: find better way to log output
+        for key in self.means.keys() {
+            let mean = self.means.get(key).unwrap();
+            let var = self.variances.get(key).unwrap();
+
+            let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
+            println!("{}:{:>width$} {:.*} +/- {:.*}", key, "", 8, mean, 8, var, width=padding);
+        }
+
     }
 
 }
