@@ -2,6 +2,7 @@ use rand::{FromEntropy, Rng};
 use rand::rngs::StdRng;
 use rand::distributions::{Range, Normal};
 use ndarray::{Array1, Array2, Ix2};
+use ndarray_linalg::Norm;
 use ndarray_rand::RandomExt;
 
 use crate::traits::Metropolis;
@@ -103,18 +104,32 @@ impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
     fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
         let mut config_proposed = cfg.clone();
         {
+            let (wf_value, wf_grad, wf_laplac) = wf.current_value();
+            let drift_velocity = &wf_grad.slice(s![idx, ..])/wf_value;
+
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
-            mov_slice += &(&(wf.current_value().1.slice(s![idx, ..]))*self.time_step);
+            mov_slice += &(drift_velocity*self.time_step);
             mov_slice += &Array1::random_using(3, Normal::new(0.0, self.time_step.sqrt()), &mut self.rng);
         }
         wf.enqueue_update(idx, &config_proposed);
         config_proposed
     }
 
-    fn accept_move(&mut self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
-        let wf_value = wf.enqueued_value()
-            .expect("Attempted to retrieve value from empty cache").0;
-        let acceptance = (wf_value.powi(2)/wf.current_value().0.powi(2)).min(1.0);
+    fn accept_move(&mut self, wf: &mut T, cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool {
+        let (wf_value, wf_grad, wf_laplac) = wf.enqueued_value()
+            .expect("Attempted to retrieve value from empty cache");
+        let drift_velocity = &wf_grad/wf_value;
+
+        let (wf_value_old, wf_grad_old, wf_laplac_old) = wf.current_value();
+        let drift_velocity_old = &wf_grad_old/wf_value_old;
+
+        let cfg_difference = cfg - cfg_prop;
+        let drift_velocity_difference = &drift_velocity - &drift_velocity_old;
+
+        let exponent = (drift_velocity_old.norm_l2().powi(2) - drift_velocity.norm_l2().powi(2)
+            + 2.0*(&cfg_difference*&drift_velocity_difference).scalar_sum())/self.time_step;
+
+        let acceptance = (exponent.exp()*wf_value.powi(2)/wf.current_value().0.powi(2)).min(1.0);
         acceptance > self.rng.gen::<f64>()
     }
 

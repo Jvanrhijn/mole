@@ -25,7 +25,7 @@ fn main() {
     // We'll use a simple Metropolis-Hastings algorithm with
     // proposal probability described by the Green function of
     // Fokker-Planck equation, with step size 0.5
-    let metrop = MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0; 32]));
+    let metrop = MetropolisDiffuse::from_rng(0.15, StdRng::from_seed([0; 32]));
 
     // Construct kinetic energy and ionic potential operators
     let kinetic = KineticEnergy::new();
@@ -44,7 +44,7 @@ fn main() {
     let mut runner = Runner::new(sampler);
     
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(100_000, 200);
+    runner.run(100_000, 50);
 
     // Retrieve mean values of operators over MC run
     let ke = *runner.means().get("Kinetic Energy").unwrap();
@@ -58,7 +58,7 @@ fn main() {
     println!("");
     println!("Kinetic energy:    {:.*} +/- {:.*}", 8, ke, 8, var_ke.sqrt());
     println!("Potential energy: {:.*} +/- {:.*}", 8, pe, 8, var_pe.sqrt());
-    println!("Total Energy:     {:.*} +/- {:.*}", 8, energy, 8, var_energy.sqrt());
+    println!("Energy:     {:.*} +/- {:.*}", 8, energy, 8, var_energy.sqrt());
 
 }
 

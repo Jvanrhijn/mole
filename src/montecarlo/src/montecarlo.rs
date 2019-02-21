@@ -46,6 +46,8 @@ impl<S> Runner<S>
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
                 // log output
+                //let acceptance = self.sampler.acceptance()/(block_size*(block_nr + 1)) as f64;
+                //println!("{}", acceptance);
                 self.log_data(&block_mean, max_strlen);
             }
 
@@ -86,7 +88,7 @@ impl<S> Runner<S>
             let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
             let padding2 = if *mean < 0.0 {3} else {4};
             println!("{}:{:>width$} {:.*} {:>width2$}{:.*} +/- {:.*}", key, "",
-                     8, block_mean.get(key).unwrap(), "", 8, mean, 8, var.sqrt(),
+                     16, block_mean.get(key).unwrap(), "", 16, mean, 16, var.sqrt(),
                      width=padding, width2=padding2);
         }
 

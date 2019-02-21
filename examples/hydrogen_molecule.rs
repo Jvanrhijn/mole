@@ -5,7 +5,7 @@ use rand::{StdRng, SeedableRng};
 use montecarlo::{Runner, Sampler};
 use basis::{gaussian, Func};
 use wavefunction::{Orbital, SingleDeterminant};
-use metropolis::MetropolisDiffuse;
+use metropolis::{MetropolisDiffuse};
 use operator::{IonicPotential, KineticEnergy, ElectronicPotential, ElectronicHamiltonian};
 
 
@@ -21,7 +21,7 @@ fn construct_basis(ion_positions: &'static [[f64; 3]; 2]) -> Vec<Box<Func>> {
 
 
 fn main() {
-    static ION_POSITIONS: [[f64; 3]; 2] = [[-0.5, 0.0, 0.0], [0.5, 0.0, 0.0]];
+    static ION_POSITIONS: [[f64; 3]; 2] = [[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
     let basis_set: Vec<Box<Func>> = construct_basis(&ION_POSITIONS);
 
     let orbital1 = Orbital::new(array![1.0, 0.5, 0.25, 0.0, 0.0, 0.0], &basis_set);
@@ -37,7 +37,7 @@ fn main() {
     let potential_electrons = ElectronicPotential::new();
     let hamiltonian = ElectronicHamiltonian::new(kinetic.clone(), potential_ions.clone(), potential_electrons.clone());
 
-    let metrop = MetropolisDiffuse::from_rng(1.0, StdRng::from_seed([0; 32]));
+    let metrop = MetropolisDiffuse::from_rng(0.15, StdRng::from_seed([0; 32]));
 
     let mut sampler = Sampler::new(wave_func, metrop);
     sampler.add_observable("Kinetic Energy", kinetic);
