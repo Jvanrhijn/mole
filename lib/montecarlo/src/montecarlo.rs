@@ -84,8 +84,10 @@ impl<S> Runner<S>
             let var = self.variances.get(key).unwrap();
 
             let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
-            println!("{}:{:>width$} {:.*}    {:.*} +/- {:.*}", key, "",
-                     8, block_mean.get(key).unwrap(), 8, mean, 8, var, width=padding);
+            let padding2 = if *mean < 0.0 {3} else {4};
+            println!("{}:{:>width$} {:.*} {:>width2$}{:.*} +/- {:.*}", key, "",
+                     8, block_mean.get(key).unwrap(), "", 8, mean, 8, var.sqrt(),
+                     width=padding, width2=padding2);
         }
 
     }
