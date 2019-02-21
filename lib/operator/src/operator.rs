@@ -155,45 +155,6 @@ impl<'a, T> Operator<T> for ElectronicHamiltonian
     }
 }
 
-#[derive(Clone)]
-pub struct HarmonicPotential1D {
-    frequency: f64
-}
-
-impl HarmonicPotential1D {
-    pub fn new(frequency: f64) -> Self {
-        Self{frequency}
-    }
-}
-
-impl<'a, T> Operator<T> for HarmonicPotential1D
-    where T: Function<f64, D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)>+ ?Sized
-{
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(0.5*self.frequency.powi(2)*cfg.norm_l2().powi(2)*wf.current_value().0)
-    }
-}
-
-#[derive(Clone)]
-pub struct HarmonicHamiltonian {
-    t: KineticEnergy,
-    v: HarmonicPotential1D,
-}
-
-impl HarmonicHamiltonian {
-    pub fn new(frequency: f64) -> Self {
-        Self{t: KineticEnergy::new(), v: HarmonicPotential1D::new(frequency)}
-    }
-}
-
-impl<'a, T> Operator<T> for HarmonicHamiltonian
-    where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)>+ ?Sized
-{
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
-    }
-}
-
 /// Local energy operator:
 /// $\hat{E}_{L}\psi(x) = \frac{\hat{H}\psi}{\psi(x)}$.
 /// This operator should be used in any Monte Carlo simulation
