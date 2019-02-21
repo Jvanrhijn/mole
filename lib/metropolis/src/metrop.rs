@@ -7,6 +7,7 @@ use ndarray_rand::RandomExt;
 use crate::traits::Metropolis;
 use wavefunction::{Function, Differentiate, Cache};
 
+#[allow(dead_code)]
 type Vgl = (f64, Array2<f64>, f64);
 
 /// Simplest Metropolis algorithm.
@@ -111,7 +112,7 @@ mod tests {
 
     impl Cache<Array2<f64>> for WaveFunctionMock {
         type A = Array2<f64>;
-        type V = (f64, Array2<f64>, f64);
+        type V = Vgl;
         type U = usize;
         fn refresh(&mut self, _new: &Array2<f64>) {}
         fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) {}

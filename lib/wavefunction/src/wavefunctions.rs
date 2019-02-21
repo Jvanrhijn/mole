@@ -61,12 +61,11 @@ impl<'a, T> Differentiate for SingleDeterminant<'a, T>
 {
     type D = Ix2;
 
-    fn gradient(&self, _cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
-        unimplemented!()
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        self.det.gradient(cfg)
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        // TODO implement efficienctly
         self.det.laplacian(cfg)
     }
 
@@ -127,8 +126,15 @@ mod tests {
         let mut wf = SingleDeterminant::new(vec![orbital]);
         let config = array![[1.0, 0.0, 0.0]];
         let config_slice = array![1.0, 0.0, 0.0];
+
         wf.refresh(&config);
+
         let cur_value = wf.current_value().0;
+        let cur_grad = wf.current_value().1;
+        let cur_laplac = wf.current_value().2;
+
         assert_eq!(cur_value, basis::hydrogen_1s(&config_slice, 1.0).0);
+        assert_eq!(cur_grad.slice(s![0, ..]), basis::hydrogen_1s(&config_slice, 1.0).1);
+        assert_eq!(cur_laplac, basis::hydrogen_1s(&config_slice, 1.0).2);
     }
 }

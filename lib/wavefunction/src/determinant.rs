@@ -9,6 +9,8 @@ use ndarray_linalg::{solve::Determinant, Inverse};
 use crate::traits::{WaveFunction, Differentiate, Cache, Function};
 use crate::error::Error;
 
+type Vgl = (f64, Array2<f64>, f64);
+
 pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
     orbs: Vec<T>,
     matrix_queue: VecDeque<Array2<f64>>,
@@ -61,8 +63,10 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
                 let slice = cfg.slice(s![i, ..]);
                 let pos = array![slice[0], slice[1], slice[2]];
                 matrix[[i, j]] = self.orbs[j].value(&pos)?;
-                let mut grad_slice = matrix_grad.slice_mut(s![i, j, ..]);
-                grad_slice = self.orbs[j].gradient(&pos)?.view_mut();
+                let orbgrad = self.orbs[j].gradient(&pos)?;
+                for k in 0..3 {
+                    matrix_grad[[i, j, k]] = orbgrad[k];
+                }
                 matrix_laplac[[i, j]] = self.orbs[j].laplacian(&pos)?;
             }
         }
@@ -71,7 +75,9 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
 
 }
 
-impl<T> Function<f64> for Slater<T> where T: Function<f64, D=Ix1> + Differentiate<D=Ix1> {
+impl<T> Function<f64> for Slater<T>
+    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+{
 
     type D = Ix2;
 
@@ -89,15 +95,15 @@ impl<T> Differentiate for Slater<T>
 
     fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
         let mat_dim = self.orbs.len();
-        let (matrix, _, _) = self.build_matrices(cfg)?;
+        let (matrix, matrix_grad, _) = self.build_matrices(cfg)?;
         let det = matrix.det()?;
         let mat_inv = matrix.inv()?;
         let mut result = Array2::zeros((mat_dim, 3));
         for i in 0..mat_dim {
-            let ri = array![cfg[[i, 0]], cfg[[i, 1]], cfg[[i, 2]]];
-            let mut slice = result.slice_mut(s![i, ..]);
             for j in 0..mat_dim {
-                slice += &(self.orbs[j].gradient(&ri)?*mat_inv[[j, i]]);
+                for k in 0..3 {
+                    result[[i, k ]] += matrix_grad[[i, j, k]]*mat_inv[[j, i]];
+                }
             }
         }
         Ok(result*det)
@@ -105,14 +111,13 @@ impl<T> Differentiate for Slater<T>
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         let mat_dim = self.orbs.len();
-        let (matrix, _, _) = self.build_matrices(cfg)?;
+        let (matrix, _, matrix_laplac) = self.build_matrices(cfg)?;
         let det = matrix.det()?;
         let mat_inv = matrix.inv()?;
         let mut result = 0.;
         for i in 0..mat_dim {
-            let ri = array![cfg[[i, 0]], cfg[[i, 1]], cfg[[i, 2]]];
             for j in 0..mat_dim {
-                result += self.orbs[j].laplacian(&ri)?*mat_inv[[j, i]];
+                result += matrix_laplac[[i, j]]*mat_inv[[j, i]];
             }
         }
         Ok(result*det)
@@ -133,7 +138,7 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
     where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
 {
     type A = Array2<f64>;
-    type V = (f64, Array2<f64>, f64);
+    type V = Vgl;
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
@@ -161,7 +166,6 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
-        let mat_dim = self.num_electrons();
         // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
         let data: Vec<(f64, Array1<f64>, f64)> = self.orbs.iter().map(|phi| {
@@ -272,7 +276,6 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array1;
     use crate::orbitals::Orbital;
     use basis::{hydrogen_1s, hydrogen_2s, Func};
 
@@ -354,10 +357,16 @@ mod tests {
         cached.push_update();
 
         // retrieve values
-        let (cval, _, clap) = cached.current_value();
+        let (cval, cgrad, clap) = cached.current_value();
         let val = not_cached.value(&xmov).unwrap();
+        let grad = not_cached.gradient(&xmov).unwrap();
         let lap = not_cached.laplacian(&xmov).unwrap();
         assert!((cval - val).abs() < EPS);
+        for i in 0..2 {
+            for j in 0..3 {
+                assert!((cgrad[[i, j]] - grad[[i, j]]).abs() < EPS);
+            }
+        }
         assert!((clap - lap).abs() < EPS);
     }
 
