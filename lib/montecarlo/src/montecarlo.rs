@@ -46,14 +46,7 @@ impl<S> Runner<S>
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
                 // log output
-                // TODO: find better way to log output
-                for key in block_mean.keys() {
-                    let mean = self.means.get(key).unwrap();
-                    let var = self.variances.get(key).unwrap();
-
-                    let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
-                    println!("{}:{:>width$} {:.*} +/- {:.*}", key, "", 8, mean, 8, var, width=padding);
-                }
+                self.log_data(&block_mean, max_strlen);
             }
 
         }
@@ -84,12 +77,25 @@ impl<S> Runner<S>
         }
     }
 
+    fn log_data(&self, block_mean: &HashMap<String, f64>, max_strlen: usize) {
+        // TODO: find better way to log output
+        for key in self.means.keys() {
+            let mean = self.means.get(key).unwrap();
+            let var = self.variances.get(key).unwrap();
+
+            let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
+            println!("{}:{:>width$} {:.*}    {:.*} +/- {:.*}", key, "",
+                     8, block_mean.get(key).unwrap(), 8, mean, 8, var, width=padding);
+        }
+
+    }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::SmallRng;
+    use rand::rngs::StdRng;
     use basis;
     use wavefunction::{Orbital, SingleDeterminant};
     use operator::{
@@ -110,12 +116,14 @@ mod tests {
         ];
         let orbital = Orbital::new(array![1.0], &basis_set);
         let wave_func = SingleDeterminant::new(vec![orbital]);
+
         let local_e = ElectronicHamiltonian::new(
             KineticEnergy::new(),
             IonicPotential::new(array![[0., 0., 0.]], array![1]),
             ElectronicPotential::new()
         );
-        let metropolis = MetropolisBox::<SmallRng>::new(1.0);
+
+        let metropolis = MetropolisBox::<StdRng>::new(1.0);
         let mut sampler = Sampler::new(wave_func, metropolis);
         sampler.add_observable("Local Energy", local_e);
 

@@ -6,6 +6,7 @@ use crate::orbitals::Orbital;
 use crate::traits::{Function, WaveFunction, Cache, Differentiate};
 use crate::determinant::Slater;
 use crate::error::Error;
+use basis::Vgl;
 
 /// Jastrow-Slater form wave function:
 /// $\psi(x) = J(\alpha)\sum_{i=1}^{N_e}c_i D_i$.
@@ -32,13 +33,13 @@ use crate::error::Error;
 /// This wave function is currently used for testing, but will be removed once the Jastrow-Slater
 /// wave function is properly implemented.
 pub struct SingleDeterminant<'a, T>
-    where T: 'a + ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: 'a + ?Sized + Fn(&Array1<f64>) -> Vgl
 {
     det: Slater<Orbital<'a, T>>,
 }
 
 impl<'a, T> SingleDeterminant<'a, T>
-    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> Vgl
 {
     pub fn new(orbs: Vec<Orbital<'a, T>>) -> Self {
         Self{det: Slater::new(orbs)}
@@ -46,7 +47,7 @@ impl<'a, T> SingleDeterminant<'a, T>
 }
 
 impl<'a, T> Function<f64> for SingleDeterminant<'a, T>
-    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> Vgl
 {
     type D = Ix2;
 
@@ -56,23 +57,22 @@ impl<'a, T> Function<f64> for SingleDeterminant<'a, T>
 }
 
 impl<'a, T> Differentiate for SingleDeterminant<'a, T>
-    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> Vgl
 {
     type D = Ix2;
 
-    fn gradient(&self, _cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
-        unimplemented!()
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        self.det.gradient(cfg)
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        // TODO implement efficienctly
         self.det.laplacian(cfg)
     }
 
 }
 
 impl<'a, T> WaveFunction for SingleDeterminant<'a, T>
-    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> Vgl
 {
     fn num_electrons(&self) -> usize {
         self.det.num_electrons()
@@ -80,10 +80,10 @@ impl<'a, T> WaveFunction for SingleDeterminant<'a, T>
 }
 
 impl<'a, T> Cache<Array2<f64>> for SingleDeterminant<'a, T>
-    where T: ?Sized + Fn(&Array1<f64>) -> (f64, f64)
+    where T: ?Sized + Fn(&Array1<f64>) -> Vgl
 {
     type A = Array2<f64>;
-    type V = (f64, f64);
+    type V = (f64, Array2<f64>, f64);
     type U = usize;
 
     fn refresh(&mut self, new: &Self::A) {
@@ -126,8 +126,15 @@ mod tests {
         let mut wf = SingleDeterminant::new(vec![orbital]);
         let config = array![[1.0, 0.0, 0.0]];
         let config_slice = array![1.0, 0.0, 0.0];
+
         wf.refresh(&config);
+
         let cur_value = wf.current_value().0;
+        let cur_grad = wf.current_value().1;
+        let cur_laplac = wf.current_value().2;
+
         assert_eq!(cur_value, basis::hydrogen_1s(&config_slice, 1.0).0);
+        assert_eq!(cur_grad.slice(s![0, ..]), basis::hydrogen_1s(&config_slice, 1.0).1);
+        assert_eq!(cur_laplac, basis::hydrogen_1s(&config_slice, 1.0).2);
     }
 }

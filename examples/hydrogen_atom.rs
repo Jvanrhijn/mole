@@ -1,9 +1,10 @@
 #[macro_use]
 extern crate ndarray;
+use rand::{StdRng, SeedableRng};
 use montecarlo::{Runner, Sampler};
 use basis::{gaussian, Func};
 use wavefunction::{Orbital, SingleDeterminant};
-use metropolis::MetropolisBox;
+use metropolis::MetropolisDiffuse;
 use operator::{IonicPotential, KineticEnergy, IonicHamiltonian};
 
 fn main() {
@@ -22,9 +23,9 @@ fn main() {
 
     // setup metropolis algorithm/Markov chain generator
     // We'll use a simple Metropolis-Hastings algorithm with
-    // proposal probability which is uniform over a box
-    // of size 1 x 1 x 1.
-    let metrop = MetropolisBox::new(1.0);
+    // proposal probability described by the Green function of
+    // Fokker-Planck equation, with step size 0.5
+    let metrop = MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0; 32]));
 
     // Construct kinetic energy and ionic potential operators
     let kinetic = KineticEnergy::new();

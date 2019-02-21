@@ -7,7 +7,7 @@ use std::env;
 use rand::{StdRng, SeedableRng};
 
 use wavefunction::{SingleDeterminant, Orbital};
-use metropolis::MetropolisBox;
+use metropolis::{MetropolisBox, MetropolisDiffuse};
 use basis::*;
 use montecarlo::{Runner, Sampler};
 use operator::*;
@@ -48,7 +48,7 @@ fn get_hydrogen2_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
 
 
 fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64) 
-    -> Runner<Sampler<SingleDeterminant<Func>, MetropolisBox<StdRng>>>
+    -> Runner<Sampler<SingleDeterminant<Func>, MetropolisDiffuse<StdRng>>>
 {
     let seed: [u8; 32] = [0; 32];
     let rng = StdRng::from_seed(seed);
@@ -63,7 +63,7 @@ fn get_hydrogen_runner(basis_set: &Vec<Box<Func>>, box_size: f64)
 
     let h = ElectronicHamiltonian::new(t, v, ve);
 
-    let metrop = MetropolisBox::from_rng(box_size, rng);
+    let metrop = MetropolisDiffuse::from_rng(box_size, rng);
 
     let mut sampler = Sampler::new(wf, metrop);
     sampler.add_observable("Energy", h);
@@ -84,7 +84,7 @@ fn main() {
         Box::new(|x| gaussian(x, 1.0))
     ];
 
-    let num_steps = 1_000_000;
+    let num_steps = 100_000;
 
     let mut runner = get_hydrogen_runner(&gauss_basis, box_side);
     runner.run(num_steps, 1);
