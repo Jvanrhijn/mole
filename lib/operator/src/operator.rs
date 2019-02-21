@@ -1,6 +1,5 @@
 // Third party imports
 use ndarray::{Array, Array1, Array2, Ix2, Axis};
-use ndarray_linalg::Norm;
 // First party imports
 use crate::traits::Operator;
 use wavefunction::{Function, Differentiate, Cache, Error};

@@ -18,7 +18,7 @@ fn get_spherical_angles(vector: &Array1<f64>) -> (f64, f64, f64) {
 }
 
 fn radial_unit_vector(vector: &Array1<f64>) -> Array1<f64> {
-    let (r, theta, phi) = get_spherical_angles(vector);
+    let (_, theta, phi) = get_spherical_angles(vector);
     Array1::from_vec(vec![
         theta.sin()*phi.cos(),
         theta.sin()*phi.sin(),
@@ -28,7 +28,7 @@ fn radial_unit_vector(vector: &Array1<f64>) -> Array1<f64> {
 
 /// Return value and laplacian of the 1s hydrogen orbital
 pub fn hydrogen_1s(pos: &Array1<f64>, width: f64) -> Vgl {
-    let (r, theta, phi) = get_spherical_angles(pos);
+    let (r, _, _) = get_spherical_angles(pos);
     let exp = (-r/width).exp();
     let value = exp;
     // convert cartesian coordinates to spherical
