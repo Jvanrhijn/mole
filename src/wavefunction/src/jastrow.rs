@@ -90,7 +90,7 @@ impl Differentiate for ElectronElectronTerm {
                     + izip!(self.parms.slice(s![2..nparm]), 2..nparm)
                         .map(|(b, p)| b*(p*(p - 1)) as f64*rik.powi(p as i32 - 3))
                         .sum::<f64>())
-                    * (&xi - &xk).sum()/rik;
+                    * (&xi - &xk).scalar_sum()/rik;
             }
         }
         Ok(laplacian)
