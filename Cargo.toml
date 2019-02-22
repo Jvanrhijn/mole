@@ -14,16 +14,15 @@ members = [
   "src/wavefunction",
 ]
 
-[dev-dependencies]
+[dependencies]
 montecarlo = { path = "src/montecarlo" }
 wavefunction = { path = "src/wavefunction" }
 metropolis = { path = "src/metropolis" }
 operator = { path = "src/operator" }
 basis = { path = "src/basis" }
 
+
+[dev-dependencies]
+ndarray-linalg = { version = "0.10.0", features = ["openblas"] }
 rand = "0.5.0"
 ndarray = "0.12.0"
-ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
-ndarray-rand = "0.8.0"
-num-traits = "0.2"
-itertools = "0.7"
