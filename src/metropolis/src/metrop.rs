@@ -104,7 +104,7 @@ impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
     fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
         let mut config_proposed = cfg.clone();
         {
-            let (wf_value, wf_grad, wf_laplac) = wf.current_value();
+            let (wf_value, wf_grad, _) = wf.current_value();
             let drift_velocity = &wf_grad.slice(s![idx, ..])/wf_value;
 
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
@@ -116,11 +116,11 @@ impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
     }
 
     fn accept_move(&mut self, wf: &mut T, cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool {
-        let (wf_value, wf_grad, wf_laplac) = wf.enqueued_value()
+        let (wf_value, wf_grad, _) = wf.enqueued_value()
             .expect("Attempted to retrieve value from empty cache");
         let drift_velocity = &wf_grad/wf_value;
 
-        let (wf_value_old, wf_grad_old, wf_laplac_old) = wf.current_value();
+        let (wf_value_old, wf_grad_old, _) = wf.current_value();
         let drift_velocity_old = &wf_grad_old/wf_value_old;
 
         let cfg_difference = cfg - cfg_prop;

@@ -97,6 +97,39 @@ impl Differentiate for ElectronElectronTerm {
     }
 }
 
+pub struct JastrowFactor {
+    fee: ElectronElectronTerm
+}
+
+impl JastrowFactor {
+    pub fn new(parms: Array1<f64>) -> Self {
+       Self{fee: ElectronElectronTerm::new(parms)}
+    }
+}
+
+impl Function<f64> for JastrowFactor {
+    type D = Ix2;
+
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+        Ok(self.fee.value(cfg)?.exp())
+    }
+}
+
+// TODO Figure out a way to avoid computing the value and gradient repeatedly
+impl Differentiate for JastrowFactor {
+    type D = Ix2;
+
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array2<f64>, Error> {
+        let value = self.value(cfg)?;
+        Ok(self.fee.gradient(cfg)?*value)
+    }
+
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+        let value = self.value(cfg)?;
+        Ok(value*(self.fee.laplacian(cfg)? + self.fee.gradient(cfg)?.norm_l2().powi(2)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

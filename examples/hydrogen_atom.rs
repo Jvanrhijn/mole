@@ -2,21 +2,17 @@
 extern crate ndarray;
 use rand::{StdRng, SeedableRng};
 use montecarlo::{Runner, Sampler};
-use basis::{gaussian, Func};
+use basis::GaussianBasis;
 use wavefunction::{Orbital, SingleDeterminant};
 use metropolis::MetropolisDiffuse;
 use operator::{IonicPotential, KineticEnergy, IonicHamiltonian};
 
 fn main() {
     // setup basis set
-    let basis_set: Vec<Box<Func>> = vec![
-        Box::new(|x| gaussian(x, 1.0)),
-        Box::new(|x| gaussian(x, 2.0)),
-        Box::new(|x| gaussian(x, 3.0)),
-    ];
+    let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 2.0, 3.0]);
 
     // construct orbital
-    let orbital = Orbital::new(array![1.0, 0.5, 0.25], &basis_set);
+    let orbital = Orbital::new(array![[1.0, 0.5, 0.25]], basis_set);
 
     // construct Slater-determinant wave function
     let wave_function = SingleDeterminant::new(vec![orbital]);

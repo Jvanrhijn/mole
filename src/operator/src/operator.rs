@@ -184,17 +184,15 @@ impl<'a, T, H: Operator<T>> Operator<T> for LocalEnergy<H>
 mod tests {
     use super::*;
     use wavefunction::{SingleDeterminant, Orbital};
-    use basis;
+    use basis::{self, Hydrogen1sBasis, Hydrogen2sBasis};
 
     #[test]
     fn hydrogen_ground_state() {
         let kinetic = KineticEnergy::new();
         let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
         let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set: Vec<Box<basis::Func>> = vec![
-            Box::new(|x| basis::hydrogen_1s(x, 1.0))
-        ];
-        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
+        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));
         wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
@@ -207,10 +205,8 @@ mod tests {
         let kinetic = KineticEnergy::new();
         let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
         let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set: Vec<Box<basis::Func>> = vec![
-            Box::new(|x| basis::hydrogen_2s(x, 2.0))
-        ];
-        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
+        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));
         wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();

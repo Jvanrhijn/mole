@@ -144,6 +144,7 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
     fn refresh(&mut self, new: &Array2<f64>) {
         let (values, gradients, laplacians) = self.build_matrices(new)
             .expect("Failed to construct matrix");
+        // this fails for some reason
         let inv = values.inv()
             .expect("Failed to take matrix inverse");
         let value = values.det()
@@ -277,14 +278,15 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
 mod tests {
     use super::*;
     use crate::orbitals::Orbital;
-    use basis::{hydrogen_1s, hydrogen_2s, Func};
+    use basis::{hydrogen_1s, hydrogen_2s, Func, Hydrogen1sBasis};
 
     static EPS: f64 = 1e-15;
 
     #[test]
     fn value_single_electron() {
-        let basis: Vec<Box<Func>> = vec![Box::new(|x| hydrogen_1s(x, 1.0))];
-        let orb = Orbital::new(array![1.0], &basis);
+        //let basis: Vec<Box<Func>> = vec![Box::new(|x| hydrogen_1s(x, 1.0))];
+        let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
+        let orb = Orbital::new(array![[1.0]], basis);
         let det = Slater::new(vec![orb]);
         let x = array![[1.0, -1.0, 1.0]];
 
@@ -295,11 +297,11 @@ mod tests {
 
     #[test]
     fn value_multiple_electrons() {
-        let basis: Vec<Box<Func>> = vec![
-            Box::new(|x| hydrogen_1s(&x, 1.0)),
-            Box::new(|x| hydrogen_2s(&x, 2.0))
-        ];
-        let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 2.0]);
+
+        let orb1 = Orbital::new(array![[1.0, 0.0]], basis.clone());
+        let orb2 = Orbital::new(array![[0.0, 1.0]], basis);
+        let orbs = vec![orb1, orb2];
         let det = Slater::new(orbs);
         let x = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
         // manually construct orbitals
@@ -318,12 +320,10 @@ mod tests {
 
     #[test]
     fn cache() {
-        let basis: Vec<Box<Func>> = vec![
-            Box::new(|x| hydrogen_1s(&x, 1.0)),
-            Box::new(|x| hydrogen_2s(&x, 0.5))
-        ];
-        let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
-        let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 0.5]);
+
+        let orbsc = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis.clone())];
+        let orbs = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis)];
         let mut cached = Slater::new(orbsc);
         let not_cached = Slater::new(orbs);
 
@@ -348,8 +348,9 @@ mod tests {
             Box::new(|x| hydrogen_1s(&x, 1.0)),
             Box::new(|x| hydrogen_2s(&x, 0.5))
         ];
-        let orbsc = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
-        let orbs = vec![Orbital::new(array![1.0, 0.0], &basis), Orbital::new(array![0.0, 1.0], &basis)];
+        let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 0.5]);
+        let orbsc = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis.clone())];
+        let orbs = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis)];
         let mut cached = Slater::new(orbsc);
         let not_cached = Slater::new(orbs);
 

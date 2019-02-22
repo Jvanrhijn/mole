@@ -4,7 +4,7 @@ use ndarray::{Array2, Ix2};
 use ndarray_linalg::Norm;
 use rand::{StdRng, SeedableRng};
 use montecarlo::{Runner, Sampler};
-use basis::{gaussian, Func};
+use basis::{GaussianBasis};
 use wavefunction::{
     Orbital,
     SingleDeterminant,
@@ -46,14 +46,11 @@ impl<'a, T> Operator<T> for HarmonicHamiltonian
 
 fn main() {
     // Exact ground state of Harmonic oscillator
-    let basis: Vec<Box<Func>> = vec![
-        Box::new(|x| gaussian(x,  1.0))
-    ];
-
+    let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
     // the rest is the same as with other operators
 
     // Build wave function
-    let orbital = Orbital::new(array![1.0], &basis);
+    let orbital = Orbital::new(array![[1.0]], basis);
     let ansatz = SingleDeterminant::new(vec![orbital]);
 
     let metrop = MetropolisDiffuse::from_rng(1.0, StdRng::from_seed([0; 32]));
