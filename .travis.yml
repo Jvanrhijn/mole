@@ -15,6 +15,7 @@ addons:
   apt:
     packages:
       - libopenblas-dev
+      - liblapack-dev
       - libcurl4-openssl-dev
       - libelf-dev
       - libdw-dev
