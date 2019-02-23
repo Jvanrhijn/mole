@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate ndarray;
 use basis::GaussianBasis;
-use metropolis::MetropolisDiffuse;
+use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 use ndarray::{Array2, Ix2};
 use ndarray_linalg::Norm;
@@ -51,7 +51,7 @@ fn main() {
     let orbital = Orbital::new(array![[1.0]], basis);
     let ansatz = SingleDeterminant::new(vec![orbital]);
 
-    let metrop = MetropolisDiffuse::from_rng(1.0, StdRng::from_seed([0; 32]));
+    let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 
     // Construct our custom operator
     let hamiltonian = HarmonicHamiltonian::new(1.0);

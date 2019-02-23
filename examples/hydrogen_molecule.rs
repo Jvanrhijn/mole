@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate ndarray;
 use basis::{GaussianBasis};
-use metropolis::MetropolisDiffuse;
+use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 
 use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
@@ -26,7 +26,7 @@ fn main() {
         potential_electrons.clone(),
     );
 
-    let metrop = MetropolisDiffuse::from_rng(0.15, StdRng::from_seed([0; 32]));
+    let metrop = MetropolisBox::from_rng(0.15, StdRng::from_seed([0; 32]));
 
     let mut sampler = Sampler::new(wave_func, metrop);
     sampler.add_observable("Kinetic Energy", kinetic);

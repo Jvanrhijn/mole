@@ -35,14 +35,14 @@ use basis::BasisSet;
 /// wave function is properly implemented.
 pub struct SingleDeterminant<T>
 where
-    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
+    T: BasisSet
 {
     det: Slater<Orbital<T>>,
 }
 
 impl<T> SingleDeterminant<T>
 where
-    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
+    T: BasisSet
 {
     pub fn new(orbs: Vec<Orbital<T>>) -> Self {
         Self {
@@ -53,7 +53,7 @@ where
 
 impl<T> Function<f64> for SingleDeterminant<T>
 where
-    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
+    T: BasisSet
 {
     type D = Ix2;
 
@@ -64,7 +64,7 @@ where
 
 impl<T> Differentiate for SingleDeterminant<T>
 where
-    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
+    T: BasisSet
 {
     type D = Ix2;
 
@@ -79,7 +79,7 @@ where
 
 impl<T> WaveFunction for SingleDeterminant<T>
 where
-    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
+    T: BasisSet
 {
     fn num_electrons(&self) -> usize {
         self.det.num_electrons()
@@ -88,7 +88,7 @@ where
 
 impl<T> Cache<Array2<f64>> for SingleDeterminant<T>
 where
-    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
+    T: BasisSet
 {
     type A = Array2<f64>;
     type V = (f64, Array2<f64>, f64);
