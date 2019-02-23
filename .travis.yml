@@ -24,7 +24,6 @@ addons:
       - binutils-dev
       - libiberty-dev
       - gfortran
-        language: rust
 
 sudo: required
 
