@@ -6,6 +6,8 @@ pub trait Cache<T> {
     type A;
     /// value type e.g. (f64, Array2<f64>, f64) (value/grad/laplacian)
     type V;
+    // Optional Value type, for retrieving enqueued data which may not exist
+    type OV;
     /// update data e.g. usize moved-electron-index
     type U;
 
@@ -26,7 +28,7 @@ pub trait Cache<T> {
     fn current_value(&self) -> Self::V;
 
     /// Return enqueued value
-    fn enqueued_value(&self) -> Option<Self::V>;
+    fn enqueued_value(&self) -> Self::OV;
 }
 
 /// Interface for dealing with functions f: F^n -> F, where F is any field.

@@ -7,6 +7,7 @@ use basis::BasisSet;
 
 /// Parametrized orbital as a linear combination of basis functions:
 /// $\phi(x) = \sum_{i=1}^{N_{\text{basis}}} \xi_i(x)$.
+#[derive(Clone)]
 pub struct Orbital<T>
 where
     T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl

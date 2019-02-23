@@ -6,7 +6,7 @@ use montecarlo::{Runner, Sampler};
 
 use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
 use rand::{SeedableRng, StdRng};
-use wavefunction::{Orbital, SingleDeterminant};
+use wavefunction::{Orbital, SingleDeterminant, JastrowSlater, JastrowFactor};
 
 fn main() {
     let ion_positions = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
@@ -15,7 +15,10 @@ fn main() {
     let orbital1 = Orbital::new(array![[1.0, 0.5, 0.25], [0.0, 0.0, 0.0]], basis_set.clone());
     let orbital2 = Orbital::new(array![[0.0, 0.0, 0.0], [1.0, 0.5, 0.25]], basis_set);
 
-    let wave_func = SingleDeterminant::new(vec![orbital1, orbital2]);
+    let det_up = SingleDeterminant::new(vec![orbital1]);
+    let det_down = SingleDeterminant::new(vec![orbital2]);
+    let jas = JastrowFactor::new(array![0.5, 0.5, 0.0], 2);
+    let wave_func = JastrowSlater::new(det_up, det_down, jas);
 
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_positions, array![1, 1]);

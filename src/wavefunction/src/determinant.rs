@@ -11,6 +11,7 @@ use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Vgl = (f64, Array2<f64>, f64);
 
+#[derive(Clone)]
 pub struct Slater<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> {
     orbs: Vec<T>,
     matrix_queue: VecDeque<Array2<f64>>,
@@ -142,13 +143,13 @@ where
 {
     type A = Array2<f64>;
     type V = Vgl;
+    type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
         let (values, gradients, laplacians) = self
             .build_matrices(new)
             .expect("Failed to construct matrix");
-        // this fails for some reason
         let inv = values.inv().expect("Failed to take matrix inverse");
         let value = values.det().expect("Failed to take matrix determinant");
 
@@ -300,15 +301,12 @@ where
         )
     }
 
-    fn enqueued_value(&self) -> Option<Self::V> {
-        match (
-            self.current_value_queue.back(),
-            self.current_grad_queue.back(),
-            self.current_laplac_queue.back(),
-        ) {
-            (Some(&v), Some(g), Some(&l)) => Some((v, g.clone(), l)),
-            _ => None,
-        }
+    fn enqueued_value(&self) -> Self::OV {
+        (
+            self.current_value_queue.back().and(Some(*self.current_value_queue.back().unwrap())),
+            self.current_grad_queue.back().and(Some(self.current_grad_queue.back().unwrap().clone())),
+            self.current_laplac_queue.back().and(Some(*self.current_laplac_queue.back().unwrap())),
+        )
     }
 }
 
