@@ -1,6 +1,6 @@
 // Defines various wave function representations, e.g. Jastrow-Slater
 // third party imports
-use ndarray::{Array1, Array2, Ix2};
+use ndarray::{Array2, Ix2};
 // first party imports
 use crate::determinant::Slater;
 use crate::error::Error;

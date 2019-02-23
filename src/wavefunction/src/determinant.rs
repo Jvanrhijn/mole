@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn update_cache() {
-        let basis: Vec<Box<Func>> = vec![
+        let _basis: Vec<Box<Func>> = vec![
             Box::new(|x| hydrogen_1s(&x, 1.0)),
             Box::new(|x| hydrogen_2s(&x, 0.5)),
         ];

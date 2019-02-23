@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate ndarray;
-use basis::{Func, GaussianBasis};
+use basis::{GaussianBasis};
 use metropolis::MetropolisDiffuse;
 use montecarlo::{Runner, Sampler};
-use ndarray::{Array1, Array2};
+
 use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SingleDeterminant};

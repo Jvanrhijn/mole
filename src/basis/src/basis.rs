@@ -1,6 +1,6 @@
 use crate::functions::{gaussian, hydrogen_1s, hydrogen_2s};
 use crate::traits::{BasisSet, Vgl};
-use ndarray::{Array1, Array2, FoldWhile, Zip};
+use ndarray::{Array1, Array2, Zip};
 
 #[derive(Clone)]
 pub struct GaussianBasis {
