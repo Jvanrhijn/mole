@@ -1,8 +1,8 @@
 #![feature(slice_patterns)]
-mod traits;
-mod functions;
 mod basis;
+mod functions;
+mod traits;
 
-pub use crate::functions::*;
 pub use crate::basis::*;
+pub use crate::functions::*;
 pub use crate::traits::*;

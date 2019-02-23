@@ -1,25 +1,38 @@
+use crate::functions::{gaussian, hydrogen_1s, hydrogen_2s};
 use crate::traits::{BasisSet, Vgl};
-use crate::functions::{hydrogen_1s, hydrogen_2s, gaussian};
-use ndarray::{FoldWhile, Zip, Array2, Array1};
+use ndarray::{Array1, Array2, FoldWhile, Zip};
 
 #[derive(Clone)]
 pub struct GaussianBasis {
     centers: Array2<f64>,
-    widths: Vec<f64>
+    widths: Vec<f64>,
 }
 
-fn linear_combination_general(pos: &Array1<f64>, coeffs: &Array2<f64>, centers: &Array2<f64>, widths: &Vec<f64>, func: &Fn(&Array1<f64>, f64) -> Vgl) -> Vgl {
+#[inline]
+fn linear_combination_general(
+    pos: &Array1<f64>,
+    coeffs: &Array2<f64>,
+    centers: &Array2<f64>,
+    widths: &Vec<f64>,
+    func: &Fn(&Array1<f64>, f64) -> Vgl,
+) -> Vgl {
     let mut value = 0.0;
     let mut grad = Array1::<f64>::zeros(3);
     let mut laplacian = 0.0;
     Zip::from(centers.genrows())
         .and(coeffs.genrows())
         .apply(|center, coeffs| {
-            let (v, g, l) = coeffs.iter().zip(widths.iter())
-                .fold((0.0, Array1::<f64>::zeros(3), 0.0) , |acc, (&c, &w)| {
+            let (v, g, l) = coeffs.iter().zip(widths.iter()).fold(
+                (0.0, Array1::<f64>::zeros(3), 0.0),
+                |acc, (&c, &w)| {
                     let (value, gradient, laplacian) = func(&(pos - &center), w);
-                    (acc.0 + c * value, acc.1 + c * &gradient, acc.2 + c * laplacian)
-                });
+                    (
+                        acc.0 + c * value,
+                        acc.1 + c * &gradient,
+                        acc.2 + c * laplacian,
+                    )
+                },
+            );
             value += v;
             grad += &g;
             laplacian += l;
@@ -29,7 +42,7 @@ fn linear_combination_general(pos: &Array1<f64>, coeffs: &Array2<f64>, centers: 
 
 impl GaussianBasis {
     pub fn new(centers: Array2<f64>, widths: Vec<f64>) -> Self {
-        Self{centers, widths}
+        Self { centers, widths }
     }
 }
 
@@ -42,12 +55,12 @@ impl BasisSet for GaussianBasis {
 #[derive(Clone)]
 pub struct Hydrogen1sBasis {
     centers: Array2<f64>,
-    widths: Vec<f64>
+    widths: Vec<f64>,
 }
 
 impl Hydrogen1sBasis {
     pub fn new(centers: Array2<f64>, widths: Vec<f64>) -> Self {
-        Self{centers, widths}
+        Self { centers, widths }
     }
 }
 
@@ -60,12 +73,12 @@ impl BasisSet for Hydrogen1sBasis {
 #[derive(Clone)]
 pub struct Hydrogen2sBasis {
     centers: Array2<f64>,
-    widths: Vec<f64>
+    widths: Vec<f64>,
 }
 
 impl Hydrogen2sBasis {
     pub fn new(centers: Array2<f64>, widths: Vec<f64>) -> Self {
-        Self{centers, widths}
+        Self { centers, widths }
     }
 }
 

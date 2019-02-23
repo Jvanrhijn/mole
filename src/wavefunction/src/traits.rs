@@ -1,5 +1,5 @@
-use ndarray::Array;
 use crate::error::Error;
+use ndarray::Array;
 
 pub trait Cache<T> {
     /// storage type e.g. ndarray::Array2
@@ -31,7 +31,6 @@ pub trait Cache<T> {
 
 /// Interface for dealing with functions f: F^n -> F, where F is any field.
 pub trait Function<T> {
-
     type D;
 
     fn value(&self, cfg: &Array<T, Self::D>) -> Result<T, Error>;
@@ -39,17 +38,13 @@ pub trait Function<T> {
 
 /// Interface for creating once- and twice differentiable functions.
 pub trait Differentiate {
-
     type D;
 
     fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error>;
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error>;
-
 }
 
 pub trait WaveFunction {
     fn num_electrons(&self) -> usize;
 }
-
-

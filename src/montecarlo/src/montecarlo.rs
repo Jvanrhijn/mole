@@ -1,8 +1,8 @@
 // Standard imports
 use std::collections::HashMap;
 // First party imports
-use crate::traits::*;
 use crate::block::Block;
+use crate::traits::*;
 
 /// Struct for running Monte Carlo integration
 /// Generic over Samplers
@@ -14,20 +14,28 @@ pub struct Runner<S: MonteCarloSampler> {
 }
 
 impl<S> Runner<S>
-    where S: MonteCarloSampler
+where
+    S: MonteCarloSampler,
 {
     pub fn new(sampler: S) -> Self {
         // initialize means at a sample of the current configuration
-        let means = sampler.sample().expect("Failed to perform initial sampling");
+        let means = sampler
+            .sample()
+            .expect("Failed to perform initial sampling");
         let variances = means.keys().map(|key| (key.clone(), 0.0)).collect();
         let square_mean_diff = means.keys().map(|key| (key.clone(), 0.0)).collect();
-        Self{sampler, means, variances, square_mean_diff}
+        Self {
+            sampler,
+            means,
+            variances,
+            square_mean_diff,
+        }
     }
 
     pub fn run(&mut self, steps: usize, block_size: usize) {
         // needed for pretty printing output
         let max_strlen = self.means.keys().map(|key| key.len()).max().unwrap();
-        assert!(steps >= 2*block_size);
+        assert!(steps >= 2 * block_size);
         let blocks = steps / block_size;
         for block_nr in 0..blocks {
             let mut block = Block::new(block_size, &self.sampler.observable_names());
@@ -36,8 +44,7 @@ impl<S> Runner<S>
                 self.sampler.move_state();
                 // Discard first block for equilibration
                 if block_nr > 0 {
-                    let samples = self.sampler.sample()
-                        .expect("Failed to sample observables");
+                    let samples = self.sampler.sample().expect("Failed to sample observables");
                     block.set_value(b, &samples);
                 }
             }
@@ -50,16 +57,21 @@ impl<S> Runner<S>
                 //println!("{}", acceptance);
                 self.log_data(&block_mean, max_strlen);
             }
-
         }
     }
 
     pub fn means(&self) -> HashMap<&str, f64> {
-        self.means.iter().map(|(key, value)| (key.as_str(), *value)).collect()
+        self.means
+            .iter()
+            .map(|(key, value)| (key.as_str(), *value))
+            .collect()
     }
 
     pub fn variances(&self) -> HashMap<&str, f64> {
-        self.variances.iter().map(|(key, value)| (key.as_str(), *value)).collect()
+        self.variances
+            .iter()
+            .map(|(key, value)| (key.as_str(), *value))
+            .collect()
     }
 
     fn update_means_and_variances(&mut self, idx: usize, block_mean: &HashMap<String, f64>) {
@@ -71,11 +83,11 @@ impl<S> Runner<S>
             let var = self.variances.get_mut(name).unwrap();
 
             // update running mean
-            *current_mean += (bm - *current_mean)/idx as f64;
+            *current_mean += (bm - *current_mean) / idx as f64;
             // update square mean sifference
-            *smd += (bm - om)*(bm - *current_mean);
+            *smd += (bm - om) * (bm - *current_mean);
             // update running variance
-            *var = *smd/idx as f64;
+            *var = *smd / idx as f64;
         }
     }
 
@@ -86,30 +98,34 @@ impl<S> Runner<S>
             let var = self.variances.get(key).unwrap();
 
             let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
-            let padding2 = if *mean < 0.0 {3} else {4};
-            println!("{}:{:>width$} {:.*} {:>width2$}{:.*} +/- {:.*}", key, "",
-                     16, block_mean.get(key).unwrap(), "", 16, mean, 16, var.sqrt(),
-                     width=padding, width2=padding2);
+            let padding2 = if *mean < 0.0 { 3 } else { 4 };
+            println!(
+                "{}:{:>width$} {:.*} {:>width2$}{:.*} +/- {:.*}",
+                key,
+                "",
+                16,
+                block_mean.get(key).unwrap(),
+                "",
+                16,
+                mean,
+                16,
+                var.sqrt(),
+                width = padding,
+                width2 = padding2
+            );
         }
-
     }
-
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::rngs::StdRng;
-    use basis::{self, Hydrogen1sBasis};
-    use wavefunction::{Orbital, SingleDeterminant};
-    use operator::{
-        ElectronicPotential,
-        IonicPotential, 
-        KineticEnergy, 
-        ElectronicHamiltonian
-    };
-    use metropolis::MetropolisBox;
     use crate::samplers::Sampler;
+    use basis::{self, Hydrogen1sBasis};
+    use metropolis::MetropolisBox;
+    use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+    use rand::rngs::StdRng;
+    use wavefunction::{Orbital, SingleDeterminant};
 
     #[test]
     fn test_hydrogen_atom_single_det_metrop_box() {
@@ -122,7 +138,7 @@ mod tests {
         let local_e = ElectronicHamiltonian::new(
             KineticEnergy::new(),
             IonicPotential::new(array![[0., 0., 0.]], array![1]),
-            ElectronicPotential::new()
+            ElectronicPotential::new(),
         );
 
         let metropolis = MetropolisBox::<StdRng>::new(1.0);

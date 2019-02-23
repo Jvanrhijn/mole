@@ -1,13 +1,12 @@
 #[macro_use]
 extern crate ndarray;
-use ndarray::{Array1, Array2};
-use rand::{StdRng, SeedableRng};
+use basis::{Func, GaussianBasis};
+use metropolis::MetropolisDiffuse;
 use montecarlo::{Runner, Sampler};
-use basis::{GaussianBasis, Func};
+use ndarray::{Array1, Array2};
+use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SingleDeterminant};
-use metropolis::{MetropolisDiffuse};
-use operator::{IonicPotential, KineticEnergy, ElectronicPotential, ElectronicHamiltonian};
-
 
 fn main() {
     let ion_positions = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
@@ -21,7 +20,11 @@ fn main() {
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_positions, array![1, 1]);
     let potential_electrons = ElectronicPotential::new();
-    let hamiltonian = ElectronicHamiltonian::new(kinetic.clone(), potential_ions.clone(), potential_electrons.clone());
+    let hamiltonian = ElectronicHamiltonian::new(
+        kinetic.clone(),
+        potential_ions.clone(),
+        potential_electrons.clone(),
+    );
 
     let metrop = MetropolisDiffuse::from_rng(0.15, StdRng::from_seed([0; 32]));
 
@@ -37,5 +40,11 @@ fn main() {
     let total_energy = *runner.means().get("Energy").unwrap();
     let energy_variance = *runner.variances().get("Energy").unwrap();
 
-    println!("\nTotal Energy: {e:.*} +/- {s:.*}", 8, 8, e=total_energy, s=energy_variance.sqrt());
+    println!(
+        "\nTotal Energy: {e:.*} +/- {s:.*}",
+        8,
+        8,
+        e = total_energy,
+        s = energy_variance.sqrt()
+    );
 }

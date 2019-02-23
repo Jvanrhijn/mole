@@ -1,17 +1,17 @@
 // Standard imports
-use std::vec::Vec;
 use std::collections::VecDeque;
 use std::result::Result;
+use std::vec::Vec;
 // Third party imports
-use ndarray::{Ix3, Ix2, Ix1, Array, Array1, Array2, Array3, Axis};
+use ndarray::{Array, Array1, Array2, Array3, Axis, Ix1, Ix2, Ix3};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
-use crate::traits::{WaveFunction, Differentiate, Cache, Function};
 use crate::error::Error;
+use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Vgl = (f64, Array2<f64>, f64);
 
-pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
+pub struct Slater<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> {
     orbs: Vec<T>,
     matrix_queue: VecDeque<Array2<f64>>,
     matrix_grad_queue: VecDeque<Array3<f64>>,
@@ -22,8 +22,7 @@ pub struct Slater<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> {
     current_laplac_queue: VecDeque<f64>,
 }
 
-impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
-
+impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
     pub fn new(orbs: Vec<T>) -> Self {
         let mat_dim = orbs.len();
         let matrix = Array::<f64, Ix2>::eye(mat_dim);
@@ -39,7 +38,7 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
         let current_grad_queue = VecDeque::from(vec![Array2::zeros((mat_dim, 3))]);
         let current_laplac_queue = VecDeque::from(vec![0.0]);
         // construct Self
-        Self{
+        Self {
             orbs,
             matrix_queue,
             matrix_grad_queue,
@@ -47,13 +46,16 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
             inv_matrix_queue,
             current_value_queue,
             current_grad_queue,
-            current_laplac_queue
+            current_laplac_queue,
         }
     }
 
     /// Build matrix of orbitals and laplacians of orbitals
     // TODO: Build 3d-array of gradient values as well
-    fn build_matrices(&self, cfg: &Array2<f64>) -> Result<(Array2<f64>, Array3<f64>, Array2<f64>), Error> {
+    fn build_matrices(
+        &self,
+        cfg: &Array2<f64>,
+    ) -> Result<(Array2<f64>, Array3<f64>, Array2<f64>), Error> {
         let mat_dim = self.orbs.len();
         let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
         let mut matrix_grad = Array3::<f64>::zeros((mat_dim, mat_dim, 3));
@@ -72,13 +74,12 @@ impl<T: Function<f64, D=Ix1> + Differentiate<D=Ix1>> Slater<T> {
         }
         Ok((matrix, matrix_grad, matrix_laplac))
     }
-
 }
 
 impl<T> Function<f64> for Slater<T>
-    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+where
+    T: Function<f64, D = Ix1> + Differentiate<D = Ix1>,
 {
-
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
@@ -89,7 +90,8 @@ impl<T> Function<f64> for Slater<T>
 
 // TODO: find a way to only compute determinant and inverse once per refresh
 impl<T> Differentiate for Slater<T>
-    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+where
+    T: Function<f64, D = Ix1> + Differentiate<D = Ix1>,
 {
     type D = Ix2;
 
@@ -102,11 +104,11 @@ impl<T> Differentiate for Slater<T>
         for i in 0..mat_dim {
             for j in 0..mat_dim {
                 for k in 0..3 {
-                    result[[i, k ]] += matrix_grad[[i, j, k]]*mat_inv[[j, i]];
+                    result[[i, k]] += matrix_grad[[i, j, k]] * mat_inv[[j, i]];
                 }
             }
         }
-        Ok(result*det)
+        Ok(result * det)
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
@@ -117,16 +119,16 @@ impl<T> Differentiate for Slater<T>
         let mut result = 0.;
         for i in 0..mat_dim {
             for j in 0..mat_dim {
-                result += matrix_laplac[[i, j]]*mat_inv[[j, i]];
+                result += matrix_laplac[[i, j]] * mat_inv[[j, i]];
             }
         }
-        Ok(result*det)
+        Ok(result * det)
     }
-
 }
 
 impl<T> WaveFunction for Slater<T>
-    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+where
+    T: Function<f64, D = Ix1> + Differentiate<D = Ix1>,
 {
     fn num_electrons(&self) -> usize {
         self.orbs.len()
@@ -135,50 +137,59 @@ impl<T> WaveFunction for Slater<T>
 
 // TODO: get rid of all unwraps
 impl<'a, T> Cache<Array2<f64>> for Slater<T>
-    where T: Function<f64, D=Ix1> + Differentiate<D=Ix1>
+where
+    T: Function<f64, D = Ix1> + Differentiate<D = Ix1>,
 {
     type A = Array2<f64>;
     type V = Vgl;
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
-        let (values, gradients, laplacians) = self.build_matrices(new)
+        let (values, gradients, laplacians) = self
+            .build_matrices(new)
             .expect("Failed to construct matrix");
         // this fails for some reason
-        let inv = values.inv()
-            .expect("Failed to take matrix inverse");
-        let value = values.det()
-            .expect("Failed to take matrix determinant");
+        let inv = values.inv().expect("Failed to take matrix inverse");
+        let value = values.det().expect("Failed to take matrix determinant");
 
         *self.current_value_queue.front_mut().unwrap() = value;
-        *self.current_grad_queue.front_mut().unwrap() = value * (&gradients * &inv.t().insert_axis(Axis(2))).sum_axis(Axis(1));
-        *self.current_laplac_queue.front_mut().unwrap() = value * (&laplacians * &inv.t()).scalar_sum();
-        *self.matrix_grad_queue.front_mut().unwrap()  = gradients;
+        *self.current_grad_queue.front_mut().unwrap() =
+            value * (&gradients * &inv.t().insert_axis(Axis(2))).sum_axis(Axis(1));
+        *self.current_laplac_queue.front_mut().unwrap() =
+            value * (&laplacians * &inv.t()).scalar_sum();
+        *self.matrix_grad_queue.front_mut().unwrap() = gradients;
 
         for (queue, data) in vec![
             &mut self.matrix_queue,
             &mut self.matrix_laplac_queue,
-            &mut self.inv_matrix_queue]
-            .iter_mut()
-            .zip(vec![values, laplacians, inv].into_iter()) {
-            *queue.front_mut().expect("Attempt to retrieve data from empty queue") = data;
+            &mut self.inv_matrix_queue,
+        ]
+        .iter_mut()
+        .zip(vec![values, laplacians, inv].into_iter())
+        {
+            *queue
+                .front_mut()
+                .expect("Attempt to retrieve data from empty queue") = data;
         }
-
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
         // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
-        let data: Vec<(f64, Array1<f64>, f64)> = self.orbs.iter().map(|phi| {
-            (phi.value(&new.slice(s![ud, ..]).to_owned()).unwrap(),
-             phi.gradient(&new.slice(s![ud, ..]).to_owned()).unwrap(),
-             phi.laplacian(&new.slice(s![ud, ..]).to_owned()).unwrap())
-        }).collect();
+        let data: Vec<(f64, Array1<f64>, f64)> = self
+            .orbs
+            .iter()
+            .map(|phi| {
+                (
+                    phi.value(&new.slice(s![ud, ..]).to_owned()).unwrap(),
+                    phi.gradient(&new.slice(s![ud, ..]).to_owned()).unwrap(),
+                    phi.laplacian(&new.slice(s![ud, ..]).to_owned()).unwrap(),
+                )
+            })
+            .collect();
         let orbvec = Array1::<f64>::from_vec(data.iter().map(|x| x.0).collect());
         let orbvec_laplac = Array1::<f64>::from_vec(data.iter().map(|x| x.2).collect());
-        let orbvec_grad = data.into_iter()
-            .map(|x| x.1)
-            .collect::<Vec<Array1<f64>>>();
+        let orbvec_grad = data.into_iter().map(|x| x.1).collect::<Vec<Array1<f64>>>();
 
         // compute updated wave function value
         let ratio = orbvec.dot(&self.inv_matrix_queue.front().unwrap().slice(s![.., ud]));
@@ -212,7 +223,8 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
         }
 
         // calculate new gradient
-        let current_grad = value * (&matrix_grad * &inv_matrix.t().insert_axis(Axis(2))).sum_axis(Axis(1));
+        let current_grad =
+            value * (&matrix_grad * &inv_matrix.t().insert_axis(Axis(2))).sum_axis(Axis(1));
 
         // calculate new laplacian
         let current_laplac = value * (&matrix_laplac * &inv_matrix.t()).scalar_sum();
@@ -228,18 +240,35 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
     }
 
     fn push_update(&mut self) {
-        for q in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut() {
+        for q in vec![
+            &mut self.matrix_queue,
+            &mut self.matrix_laplac_queue,
+            &mut self.inv_matrix_queue,
+        ]
+        .iter_mut()
+        {
             q.pop_front();
         }
         self.matrix_grad_queue.pop_front();
-        for q in vec![&mut self.current_value_queue, &mut self.current_laplac_queue].iter_mut() {
+        for q in vec![
+            &mut self.current_value_queue,
+            &mut self.current_laplac_queue,
+        ]
+        .iter_mut()
+        {
             q.pop_front();
         }
         self.current_grad_queue.pop_front();
     }
 
     fn flush_update(&mut self) {
-        for q in vec![&mut self.matrix_queue, &mut self.matrix_laplac_queue, &mut self.inv_matrix_queue].iter_mut() {
+        for q in vec![
+            &mut self.matrix_queue,
+            &mut self.matrix_laplac_queue,
+            &mut self.inv_matrix_queue,
+        ]
+        .iter_mut()
+        {
             if q.len() == 2 {
                 q.pop_back();
             }
@@ -247,7 +276,12 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
         if self.matrix_grad_queue.len() == 2 {
             self.matrix_grad_queue.pop_back();
         }
-        for q in vec![&mut self.current_value_queue, &mut self.current_laplac_queue].iter_mut() {
+        for q in vec![
+            &mut self.current_value_queue,
+            &mut self.current_laplac_queue,
+        ]
+        .iter_mut()
+        {
             if q.len() == 2 {
                 q.pop_back();
             }
@@ -259,17 +293,21 @@ impl<'a, T> Cache<Array2<f64>> for Slater<T>
 
     fn current_value(&self) -> Self::V {
         // TODO: find a way to get rid of the call to .clone()
-        (*self.current_value_queue.front().unwrap(),
-         self.current_grad_queue.front().unwrap().clone(),
-         *self.current_laplac_queue.front().unwrap())
+        (
+            *self.current_value_queue.front().unwrap(),
+            self.current_grad_queue.front().unwrap().clone(),
+            *self.current_laplac_queue.front().unwrap(),
+        )
     }
 
     fn enqueued_value(&self) -> Option<Self::V> {
-        match (self.current_value_queue.back(),
-               self.current_grad_queue.back(),
-               self.current_laplac_queue.back()) {
+        match (
+            self.current_value_queue.back(),
+            self.current_grad_queue.back(),
+            self.current_laplac_queue.back(),
+        ) {
             (Some(&v), Some(g), Some(&l)) => Some((v, g.clone(), l)),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -290,8 +328,14 @@ mod tests {
         let det = Slater::new(vec![orb]);
         let x = array![[1.0, -1.0, 1.0]];
 
-        assert_eq!(det.value(&x).unwrap(), hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0);
-        assert!(det.gradient(&x).unwrap().slice(s![0, ..])
+        assert_eq!(
+            det.value(&x).unwrap(),
+            hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0
+        );
+        assert!(det
+            .gradient(&x)
+            .unwrap()
+            .slice(s![0, ..])
             .all_close(&hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).1, EPS));
     }
 
@@ -309,7 +353,7 @@ mod tests {
         let phi22 = hydrogen_2s(&x.slice(s![1, ..]).to_owned(), 2.0).0;
         let phi12 = hydrogen_1s(&x.slice(s![1, ..]).to_owned(), 1.0).0;
         let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned(), 2.0).0;
-        let value = phi11*phi22 - phi21*phi12;
+        let value = phi11 * phi22 - phi21 * phi12;
 
         assert_eq!(det.value(&x).unwrap(), value);
 
@@ -322,8 +366,14 @@ mod tests {
     fn cache() {
         let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 0.5]);
 
-        let orbsc = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis.clone())];
-        let orbs = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis)];
+        let orbsc = vec![
+            Orbital::new(array![[1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0]], basis.clone()),
+        ];
+        let orbs = vec![
+            Orbital::new(array![[1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0]], basis),
+        ];
         let mut cached = Slater::new(orbsc);
         let not_cached = Slater::new(orbs);
 
@@ -339,18 +389,24 @@ mod tests {
 
         assert_eq!(cval, val);
         assert!(grad.all_close(&cgrad, EPS));
-        assert_eq!(clap,  lap);
+        assert_eq!(clap, lap);
     }
 
     #[test]
     fn update_cache() {
         let basis: Vec<Box<Func>> = vec![
             Box::new(|x| hydrogen_1s(&x, 1.0)),
-            Box::new(|x| hydrogen_2s(&x, 0.5))
+            Box::new(|x| hydrogen_2s(&x, 0.5)),
         ];
         let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 0.5]);
-        let orbsc = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis.clone())];
-        let orbs = vec![Orbital::new(array![[1.0, 0.0]], basis.clone()), Orbital::new(array![[0.0, 1.0]], basis)];
+        let orbsc = vec![
+            Orbital::new(array![[1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0]], basis.clone()),
+        ];
+        let orbs = vec![
+            Orbital::new(array![[1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0]], basis),
+        ];
         let mut cached = Slater::new(orbsc);
         let not_cached = Slater::new(orbs);
 
@@ -375,6 +431,5 @@ mod tests {
         assert!(cgrad.all_close(&grad, EPS));
         assert!((clap - lap).abs() < EPS);
     }
-
 
 }

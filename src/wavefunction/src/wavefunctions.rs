@@ -1,12 +1,12 @@
 // Defines various wave function representations, e.g. Jastrow-Slater
 // third party imports
-use ndarray::{Array1, Ix2, Array2};
+use ndarray::{Array1, Array2, Ix2};
 // first party imports
-use crate::orbitals::Orbital;
-use crate::traits::{Function, WaveFunction, Cache, Differentiate};
 use crate::determinant::Slater;
 use crate::error::Error;
 use crate::jastrow::JastrowFactor;
+use crate::orbitals::Orbital;
+use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 use basis::BasisSet;
 
 /// Jastrow-Slater form wave function:
@@ -34,21 +34,26 @@ use basis::BasisSet;
 /// This wave function is currently used for testing, but will be removed once the Jastrow-Slater
 /// wave function is properly implemented.
 pub struct SingleDeterminant<T>
-    where T: BasisSet //?Sized + Fn(&Array1<f64>) -> Vgl
+where
+    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
 {
     det: Slater<Orbital<T>>,
 }
 
 impl<T> SingleDeterminant<T>
-    where T: BasisSet //?Sized + Fn(&Array1<f64>) -> Vgl
+where
+    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
 {
     pub fn new(orbs: Vec<Orbital<T>>) -> Self {
-        Self{det: Slater::new(orbs)}
+        Self {
+            det: Slater::new(orbs),
+        }
     }
 }
 
 impl<T> Function<f64> for SingleDeterminant<T>
-    where T: BasisSet //?Sized + Fn(&Array1<f64>) -> Vgl
+where
+    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
 {
     type D = Ix2;
 
@@ -58,7 +63,8 @@ impl<T> Function<f64> for SingleDeterminant<T>
 }
 
 impl<T> Differentiate for SingleDeterminant<T>
-    where T: BasisSet //?Sized + Fn(&Array1<f64>) -> Vgl
+where
+    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
 {
     type D = Ix2;
 
@@ -69,11 +75,11 @@ impl<T> Differentiate for SingleDeterminant<T>
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
         self.det.laplacian(cfg)
     }
-
 }
 
 impl<T> WaveFunction for SingleDeterminant<T>
-    where T: BasisSet //?Sized + Fn(&Array1<f64>) -> Vgl
+where
+    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
 {
     fn num_electrons(&self) -> usize {
         self.det.num_electrons()
@@ -81,7 +87,8 @@ impl<T> WaveFunction for SingleDeterminant<T>
 }
 
 impl<T> Cache<Array2<f64>> for SingleDeterminant<T>
-    where T: BasisSet //?Sized + Fn(&Array1<f64>) -> Vgl
+where
+    T: BasisSet, //?Sized + Fn(&Array1<f64>) -> Vgl
 {
     type A = Array2<f64>;
     type V = (f64, Array2<f64>, f64);
@@ -110,13 +117,12 @@ impl<T> Cache<Array2<f64>> for SingleDeterminant<T>
     fn enqueued_value(&self) -> Option<Self::V> {
         self.det.enqueued_value()
     }
-
 }
 
 pub struct JastrowSlater {
     //det_up: SingleDeterminant,
     //det_down: SingleDeterminant,
-    jastrow: JastrowFactor
+    jastrow: JastrowFactor,
 }
 
 #[cfg(test)]
@@ -140,7 +146,10 @@ mod tests {
         let cur_laplac = wf.current_value().2;
 
         assert_eq!(cur_value, basis::hydrogen_1s(&config_slice, 1.0).0);
-        assert_eq!(cur_grad.slice(s![0, ..]), basis::hydrogen_1s(&config_slice, 1.0).1);
+        assert_eq!(
+            cur_grad.slice(s![0, ..]),
+            basis::hydrogen_1s(&config_slice, 1.0).1
+        );
         assert_eq!(cur_laplac, basis::hydrogen_1s(&config_slice, 1.0).2);
     }
 }

@@ -1,24 +1,22 @@
-use ndarray::{Array1, Array2, Array, Ix2};
-use ndarray_linalg::Norm;
-use crate::traits::{Function, Differentiate};
 use crate::error::Error;
+use crate::traits::{Differentiate, Function};
+use ndarray::{Array, Array1, Array2, Ix2};
+use ndarray_linalg::Norm;
 
 // f_ee in notes
 // full Jastrow is then exp(f_ee + f_en + f_een)
 struct ElectronElectronTerm {
-    parms: Array1<f64>
+    parms: Array1<f64>,
 }
 
 #[allow(dead_code)]
 impl ElectronElectronTerm {
     pub fn new(parms: Array1<f64>) -> Self {
-        Self{parms}
+        Self { parms }
     }
-
 }
 
 impl Function<f64> for ElectronElectronTerm {
-
     type D = Ix2;
 
     fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
@@ -31,15 +29,14 @@ impl Function<f64> for ElectronElectronTerm {
                     continue;
                 }
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
-                value += self.parms[0]*rij/(1.0 + self.parms[1]*rij);
+                value += self.parms[0] * rij / (1.0 + self.parms[1] * rij);
                 value += izip!(self.parms.slice(s![2..nparms]), 2..nparms)
-                    .map(|(b, p)| b*rij.powi(p as i32))
+                    .map(|(b, p)| b * rij.powi(p as i32))
                     .sum::<f64>();
             }
         }
         Ok(value)
     }
-
 }
 
 impl Differentiate for ElectronElectronTerm {
@@ -52,18 +49,18 @@ impl Differentiate for ElectronElectronTerm {
         for k in 0..nelec {
             let slice = {
                 let mut magnitude = 0.0;
-                let mut component = Array1::<f64>::zeros( 3);
+                let mut component = Array1::<f64>::zeros(3);
                 for i in 0..nelec {
                     let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![k, ..]);
                     if i == k {
                         continue;
                     }
                     let rik: f64 = separation.norm_l2();
-                    magnitude += self.parms[0]/(1.0 + self.parms[1]*rik).powi(2);
+                    magnitude += self.parms[0] / (1.0 + self.parms[1] * rik).powi(2);
                     magnitude += izip!(self.parms.slice(s![2..nparms]), 2..nparms)
-                        .map(|(b, p)| (p as f64)*b*rik.powi(p as i32 - 1))
+                        .map(|(b, p)| (p as f64) * b * rik.powi(p as i32 - 1))
                         .sum::<f64>();
-                    component += &(separation*magnitude/rik);
+                    component += &(separation * magnitude / rik);
                 }
                 component
             };
@@ -86,11 +83,13 @@ impl Differentiate for ElectronElectronTerm {
                 }
                 let xi = cfg.slice(s![i, ..]);
                 let rik: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![k, ..])).norm_l2();
-                laplacian += (-2.0*self.parms[0]*self.parms[1]/(1.0 + self.parms[1] * rik).powi(3)
+                laplacian += (-2.0 * self.parms[0] * self.parms[1]
+                    / (1.0 + self.parms[1] * rik).powi(3)
                     + izip!(self.parms.slice(s![2..nparm]), 2..nparm)
-                        .map(|(b, p)| b*(p*(p - 1)) as f64*rik.powi(p as i32 - 3))
+                        .map(|(b, p)| b * (p * (p - 1)) as f64 * rik.powi(p as i32 - 3))
                         .sum::<f64>())
-                    * (&xi - &xk).scalar_sum()/rik;
+                    * (&xi - &xk).scalar_sum()
+                    / rik;
             }
         }
         Ok(laplacian)
@@ -98,12 +97,14 @@ impl Differentiate for ElectronElectronTerm {
 }
 
 pub struct JastrowFactor {
-    fee: ElectronElectronTerm
+    fee: ElectronElectronTerm,
 }
 
 impl JastrowFactor {
     pub fn new(parms: Array1<f64>) -> Self {
-       Self{fee: ElectronElectronTerm::new(parms)}
+        Self {
+            fee: ElectronElectronTerm::new(parms),
+        }
     }
 }
 
@@ -121,12 +122,12 @@ impl Differentiate for JastrowFactor {
 
     fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array2<f64>, Error> {
         let value = self.value(cfg)?;
-        Ok(self.fee.gradient(cfg)?*value)
+        Ok(self.fee.gradient(cfg)? * value)
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         let value = self.value(cfg)?;
-        Ok(value*(self.fee.laplacian(cfg)? + self.fee.gradient(cfg)?.norm_l2().powi(2)))
+        Ok(value * (self.fee.laplacian(cfg)? + self.fee.gradient(cfg)?.norm_l2().powi(2)))
     }
 }
 
@@ -141,11 +142,12 @@ mod tests {
         let cfg = array![[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]];
 
         let value = jas_ee.value(&cfg);
-        let value_exact = 3.0*3.0_f64.sqrt()/(1.0 + 6.0*3.0_f64.sqrt()) + 3.0*27.0;
+        let value_exact = 3.0 * 3.0_f64.sqrt() / (1.0 + 6.0 * 3.0_f64.sqrt()) + 3.0 * 27.0;
         assert_eq!(value.unwrap(), value_exact);
 
         let grad = jas_ee.gradient(&cfg).unwrap();
-        let grad_1 = (1.0/(1.0 + 6.0*3.0_f64.sqrt()).powi(2) + 18.0*3.0_f64.sqrt())/3.0_f64.sqrt();
+        let grad_1 =
+            (1.0 / (1.0 + 6.0 * 3.0_f64.sqrt()).powi(2) + 18.0 * 3.0_f64.sqrt()) / 3.0_f64.sqrt();
         let grad_exact = array![[grad_1, grad_1, grad_1], [-grad_1, -grad_1, -grad_1]];
         for i in 0..2 {
             for j in 0..3 {
@@ -155,6 +157,6 @@ mod tests {
 
         let laplac = jas_ee.laplacian(&cfg);
         let laplac_exact = 0.0; // symmetry; $\Delta_1 f_ee = - \Delta_2 f_ee
-        assert_eq!(laplac.unwrap(),  laplac_exact);
+        assert_eq!(laplac.unwrap(), laplac_exact);
     }
 }

@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate ndarray;
-use rand::{StdRng, SeedableRng};
-use montecarlo::{Runner, Sampler};
 use basis::GaussianBasis;
-use wavefunction::{Orbital, SingleDeterminant};
 use metropolis::MetropolisDiffuse;
-use operator::{IonicPotential, KineticEnergy, IonicHamiltonian};
+use montecarlo::{Runner, Sampler};
+use operator::{IonicHamiltonian, IonicPotential, KineticEnergy};
+use rand::{SeedableRng, StdRng};
+use wavefunction::{Orbital, SingleDeterminant};
 
 fn main() {
     // setup basis set
@@ -38,7 +38,7 @@ fn main() {
 
     // create MC runner
     let mut runner = Runner::new(sampler);
-    
+
     // Run Monte Carlo integration for 100000 steps, with block size 200
     runner.run(100_000, 50);
 
@@ -50,11 +50,21 @@ fn main() {
     let var_ke = *runner.variances().get("Kinetic Energy").unwrap();
     let var_pe = *runner.variances().get("Potential Energy").unwrap();
     let var_energy = *runner.variances().get("Hamiltonian").unwrap();
-    
+
     println!("");
-    println!("Kinetic energy:    {:.*} +/- {:.*}", 8, ke, 8, var_ke.sqrt());
+    println!(
+        "Kinetic energy:    {:.*} +/- {:.*}",
+        8,
+        ke,
+        8,
+        var_ke.sqrt()
+    );
     println!("Potential energy: {:.*} +/- {:.*}", 8, pe, 8, var_pe.sqrt());
-    println!("Energy:     {:.*} +/- {:.*}", 8, energy, 8, var_energy.sqrt());
-
+    println!(
+        "Energy:     {:.*} +/- {:.*}",
+        8,
+        energy,
+        8,
+        var_energy.sqrt()
+    );
 }
-
