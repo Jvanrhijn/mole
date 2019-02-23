@@ -23,6 +23,6 @@ basis = { path = "src/basis" }
 
 
 [dev-dependencies]
-ndarray-linalg = { version = "0.10.0", features = ["openblas"] }
+ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
 rand = "0.5.0"
 ndarray = "0.12.0"
