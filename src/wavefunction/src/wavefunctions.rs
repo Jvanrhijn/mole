@@ -265,8 +265,8 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
         //let laplacian = det_up_v * det_down_v * jas_l
         //    + det_down_v * (&jas_g_up * &det_up_g).scalar_sum()
         //    + det_up_v * (&jas_g_down * &det_down_g).scalar_sum();
-        let laplacian = 2.0*(det_down_v*(&det_up_g * &jas_g_down).scalar_sum()
-                + det_up_v*(&det_down_g * &jas_g_down).scalar_sum())
+        let laplacian = 2.0*(det_down_v*(&det_up_g * &jas_g_up).scalar_sum()
+            + det_up_v*(&det_down_g * &jas_g_down).scalar_sum())
                 + det_up_v*det_down_v*jas_l
                 + jas_v*(det_up_v*det_down_l + det_down_v*det_up_l);
         self.lapl_cache.push_back(laplacian);

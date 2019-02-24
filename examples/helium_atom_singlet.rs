@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate ndarray;
-use basis::GaussianBasis;
+use basis::{Hydrogen1sBasis, GaussianBasis};
 use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 use operator::{ElectronicPotential, ElectronicHamiltonian, IonicPotential, KineticEnergy};
@@ -9,7 +9,7 @@ use wavefunction::{Orbital, SingleDeterminant, JastrowFactor, JastrowSlater};
 
 fn main() {
     // setup basis set
-    let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
+    let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![3.0]);
 
     // construct orbital
     let orbital1 = Orbital::new(array![[1.0]], basis_set.clone());
@@ -18,13 +18,10 @@ fn main() {
     // construct Jastrow-Slater wave function
     let det_up = SingleDeterminant::new(vec![orbital1]);
     let det_down = SingleDeterminant::new(vec![orbital2]);
-    let jas = JastrowFactor::new(array![-0.5, 0.5], 2, 0.5);
+    let jas = JastrowFactor::new(array![0.5, 0.5, 1.0, 0.1, 0.02, 0.0002], 2, 0.1);
     let wave_function = JastrowSlater::new(det_up, det_down, jas);
 
     // setup metropolis algorithm/Markov chain generator
-    // We'll use a simple Metropolis-Hastings algorithm with
-    // proposal probability described by the Green function of
-    // Fokker-Planck equation, with step size 0.5
     let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 
     // Construct kinetic energy and ionic potential operators
@@ -47,7 +44,7 @@ fn main() {
     let mut runner = Runner::new(sampler);
 
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(100_000, 100);
+    runner.run(500_000, 100);
 
     // Retrieve mean values of operators over MC run
     let ke = *runner.means().get("Kinetic Energy").unwrap();

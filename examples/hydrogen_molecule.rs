@@ -10,14 +10,14 @@ use wavefunction::{JastrowFactor, JastrowSlater, Orbital, SingleDeterminant};
 
 fn main() {
     let ion_positions = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
-    let basis_set = GaussianBasis::new(ion_positions.clone(), vec![1.0]);
+    let basis_set = GaussianBasis::new(ion_positions.clone(), vec![3.0]);
 
-    let orbital1 = Orbital::new(array![[1.0], [0.0]], basis_set.clone());
-    let orbital2 = Orbital::new(array![[0.0], [1.0]], basis_set);
+    let orbital1 = Orbital::new(array![[1.0], [1.0]], basis_set.clone());
+    let orbital2 = Orbital::new(array![[1.0], [1.0]], basis_set);
 
     let det_up = SingleDeterminant::new(vec![orbital1]);
     let det_down = SingleDeterminant::new(vec![orbital2]);
-    let jas = JastrowFactor::new(array![0.5, 0.5], 2, 0.1);
+    let jas = JastrowFactor::new(array![0.5, 0.5, 2.0, 0.1, 0.01], 2, 0.1);
     let wave_func = JastrowSlater::new(det_up, det_down, jas);
 
     let kinetic = KineticEnergy::new();
@@ -38,7 +38,7 @@ fn main() {
     sampler.add_observable("Energy", hamiltonian);
 
     let mut runner = Runner::new(sampler);
-    runner.run(100_000, 500);
+    runner.run(500_000, 500);
 
     let total_energy = *runner.means().get("Energy").unwrap();
     let energy_variance = *runner.variances().get("Energy").unwrap();
