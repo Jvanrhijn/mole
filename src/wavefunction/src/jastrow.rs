@@ -13,6 +13,8 @@ struct ElectronElectronTerm {
 #[allow(dead_code)]
 impl ElectronElectronTerm {
     pub fn new(parms: Array1<f64>) -> Self {
+        // first two parameters are required
+        assert!(parms.len() >= 2);
         Self { parms }
     }
 }
