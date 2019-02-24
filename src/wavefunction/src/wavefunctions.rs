@@ -10,26 +10,6 @@ use crate::orbitals::Orbital;
 use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 use basis::BasisSet;
 
-/// Jastrow-Slater form wave function:
-/// $\psi(x) = J(\alpha)\sum_{i=1}^{N_e}c_i D_i$.
-/// The Jastrow-Slater wave function combines the anti-symmetrization properties of
-/// Slater determinants with a prefactor that takes care of electron-electron cusp
-/// conditions. The functional form is tailored to be easy to evaluate and differentiate
-/// with respect to its parameters.
-//#[allow(dead_code)]
-//pub struct JastrowSlater {
-//    ci_coeffs: Array1<f64>,
-//    orb_coeffs: Array1<f64>,
-//    jastrow: JastrowFactor
-//}
-//
-//impl JastrowSlater {
-//    pub fn new(cis: Array1<f64>, orbs: Array1<f64>, jas: JastrowFactor) -> Self {
-//        unimplemented!()
-//        //Self{ci_coeffs: cis, orb_coeffs: orbs, jastrow: jas}
-//    }
-//}
-
 /// Single Slater determinant wave function:
 /// $\psi(x) = \langle x | \hat{a}_{k_1}\ldots\hat{a}_{k_{N_e}} | 0 \rangle$.
 /// This wave function is currently used for testing, but will be removed once the Jastrow-Slater
@@ -123,6 +103,12 @@ where
 }
 
 // TODO: generalize to multi-determinant expansions
+/// Jastrow-Slater form wave function:
+/// $\psi(x) = J(\alpha)D^\uparrow D^\downarrow$.
+/// The Jastrow-Slater wave function combines the anti-symmetrization properties of
+/// Slater determinants with a prefactor that takes care of electron-electron cusp
+/// conditions. The functional form is tailored to be easy to evaluate and differentiate
+/// with respect to its parameters.
 pub struct JastrowSlater<T: BasisSet> {
     det_up: SingleDeterminant<T>,
     det_down: SingleDeterminant<T>,
@@ -215,14 +201,14 @@ impl<T: BasisSet> Differentiate for JastrowSlater<T> {
 
         let (grad_jas_up, grad_jas_down) = self.split_config(&grad_jas);
         // Laplacian formula for $\psi = J(r)\D^\uparrow D^\downarrow$:
-        // $\Delta = \Delta_up + \Delta_down$, and
-        // $\Delta (uv) = u\Delta v + v\Delta u + \nabla u \dot \nabla v$, so
-        // $\Delta_\uparrow \psi = D^\downarrow(D^\uparrow\Delta_\uparrow J
-        // + \nabla\uparrow J \dot \nabla_\uparrow D^\uparrow$
-        // similar for $\Delta_\downarrow$
-        let laplacian = det_down_val * det_up_val * lapl_jas
-            + det_down_val * (&grad_jas_up * &grad_det_up).scalar_sum()
-            + det_up_val * (&grad_jas_down * &grad_det_down).scalar_sum();
+        // see theory/jastrowslater.tex for derivation of formula
+        //let laplacian = det_down_val * det_up_val * lapl_jas
+        //    + det_down_val * (&grad_jas_up * &grad_det_up).scalar_sum()
+        //    + det_up_val * (&grad_jas_down * &grad_det_down).scalar_sum();
+        let laplacian = 2.0*(det_down_val*(&grad_det_up * &grad_jas_up).scalar_sum()
+            + det_up_val*(&grad_det_down * &grad_jas_down).scalar_sum())
+            + det_up_val*det_down_val*lapl_jas
+            + jas_val * (det_up_val*lapl_det_down + det_down_val*lapl_det_up);
         Ok(laplacian)
     }
 }
@@ -276,9 +262,13 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
         let grad = stack![Axis(0), grad_up, grad_down];
         self.grad_cache.push_back(grad);
         // laplacian computation
-        let laplacian = det_up_v * det_down_v * jas_l
-            + det_down_v * (&jas_g_up * &det_up_g).scalar_sum()
-            + det_up_v * (&jas_g_down * &det_down_g).scalar_sum();
+        //let laplacian = det_up_v * det_down_v * jas_l
+        //    + det_down_v * (&jas_g_up * &det_up_g).scalar_sum()
+        //    + det_up_v * (&jas_g_down * &det_down_g).scalar_sum();
+        let laplacian = 2.0*(det_down_v*(&det_up_g * &jas_g_down).scalar_sum()
+                + det_up_v*(&det_down_g * &jas_g_down).scalar_sum())
+                + det_up_v*det_down_v*jas_l
+                + jas_v*(det_up_v*det_down_l + det_down_v*det_up_l);
         self.lapl_cache.push_back(laplacian);
     }
 

@@ -9,16 +9,16 @@ use wavefunction::{Orbital, SingleDeterminant, JastrowFactor, JastrowSlater};
 
 fn main() {
     // setup basis set
-    let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 2.0, 3.0]);
+    let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
 
     // construct orbital
-    let orbital1 = Orbital::new(array![[1.0, 0.0, 0.0]], basis_set.clone());
-    let orbital2 = Orbital::new(array![[1.0, 0.0, 0.0]], basis_set);
+    let orbital1 = Orbital::new(array![[1.0]], basis_set.clone());
+    let orbital2 = Orbital::new(array![[1.0]], basis_set);
 
     // construct Jastrow-Slater wave function
     let det_up = SingleDeterminant::new(vec![orbital1]);
     let det_down = SingleDeterminant::new(vec![orbital2]);
-    let jas = JastrowFactor::new(array![0.5, 0.1], 2, 1.0);
+    let jas = JastrowFactor::new(array![-0.5, 0.5], 2, 0.5);
     let wave_function = JastrowSlater::new(det_up, det_down, jas);
 
     // setup metropolis algorithm/Markov chain generator
@@ -47,7 +47,7 @@ fn main() {
     let mut runner = Runner::new(sampler);
 
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(100_00, 100);
+    runner.run(100_000, 100);
 
     // Retrieve mean values of operators over MC run
     let ke = *runner.means().get("Kinetic Energy").unwrap();
@@ -62,16 +62,16 @@ fn main() {
 
     println!("");
     println!(
-        "Kinetic energy:    {:.*} +/- {:.*}",
+        "Kinetic energy:      {:.*} +/- {:.*}",
         8,
         ke,
         8,
         var_ke.sqrt()
     );
-    println!("Potential energy: {:.*} +/- {:.*}", 8, pe, 8, var_pe.sqrt());
-    println!("Interaction Energy: {:.*} +/- {:.*}", 8, pe_ee, 8, var_pe_ee.sqrt());
+    println!("Potential energy:   {:.*} +/- {:.*}", 8, pe, 8, var_pe.sqrt());
+    println!("Interaction Energy:  {:.*} +/- {:.*}", 8, pe_ee, 8, var_pe_ee.sqrt());
     println!(
-        "Energy:     {:.*} +/- {:.*}",
+        "Energy:             {:.*} +/- {:.*}",
         8,
         energy,
         8,
