@@ -1,12 +1,12 @@
 #[macro_use]
 extern crate ndarray;
-use basis::{GaussianBasis};
+use basis::GaussianBasis;
 use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 
 use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
 use rand::{SeedableRng, StdRng};
-use wavefunction::{Orbital, SingleDeterminant, JastrowSlater, JastrowFactor};
+use wavefunction::{JastrowFactor, JastrowSlater, Orbital, SingleDeterminant};
 
 fn main() {
     let ion_positions = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];

@@ -1,8 +1,8 @@
-use std::collections::VecDeque;
 use crate::error::Error;
-use crate::traits::{Differentiate, Function, Cache};
+use crate::traits::{Cache, Differentiate, Function};
 use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
+use std::collections::VecDeque;
 
 // f_ee in notes
 // full Jastrow is then exp(f_ee + f_en + f_een)
@@ -101,7 +101,7 @@ pub struct JastrowFactor {
     fee: ElectronElectronTerm,
     value_queue: VecDeque<f64>,
     grad_queue: VecDeque<Array2<f64>>,
-    laplac_queue: VecDeque<f64>
+    laplac_queue: VecDeque<f64>,
 }
 
 impl JastrowFactor {
@@ -113,7 +113,7 @@ impl JastrowFactor {
             fee: ElectronElectronTerm::new(parms),
             value_queue,
             grad_queue,
-            laplac_queue
+            laplac_queue,
         }
     }
 }
@@ -142,25 +142,30 @@ impl Differentiate for JastrowFactor {
 }
 
 impl Cache<Array2<f64>> for JastrowFactor {
-
     type A = Array2<f64>;
     type V = (f64, Array2<f64>, f64);
     type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
     type U = usize;
 
     fn refresh(&mut self, cfg: &Array2<f64>) {
-        *self.value_queue.front_mut().unwrap() = self.value(cfg)
-            .expect("Failed to compute Jastrow value");
-        *self.grad_queue.front_mut().unwrap() = self.gradient(cfg)
-            .expect("Failed to take Jastrow gradient");
-        *self.laplac_queue.front_mut().unwrap() = self.laplacian(cfg)
+        *self.value_queue.front_mut().unwrap() =
+            self.value(cfg).expect("Failed to compute Jastrow value");
+        *self.grad_queue.front_mut().unwrap() =
+            self.gradient(cfg).expect("Failed to take Jastrow gradient");
+        *self.laplac_queue.front_mut().unwrap() = self
+            .laplacian(cfg)
             .expect("Failed to compute Jastrow Laplacian");
     }
 
     fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
-        self.value_queue.push_back(self.value(cfg).expect("Failed to store Jastrow value"));
-        self.grad_queue.push_back(self.gradient(cfg).expect("Failed to store Jastrow gradient"));
-        self.laplac_queue.push_back(self.laplacian(cfg).expect("Failed to store Laplacian"));
+        self.value_queue
+            .push_back(self.value(cfg).expect("Failed to store Jastrow value"));
+        self.grad_queue.push_back(
+            self.gradient(cfg)
+                .expect("Failed to store Jastrow gradient"),
+        );
+        self.laplac_queue
+            .push_back(self.laplacian(cfg).expect("Failed to store Laplacian"));
     }
 
     fn push_update(&mut self) {
@@ -176,20 +181,29 @@ impl Cache<Array2<f64>> for JastrowFactor {
     }
 
     fn current_value(&self) -> Self::V {
-        match (self.value_queue.front(), self.grad_queue.front(), self.laplac_queue.front()) {
+        match (
+            self.value_queue.front(),
+            self.grad_queue.front(),
+            self.laplac_queue.front(),
+        ) {
             (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
-            _ => panic!("Attempt to retrieve value from empty queue")
+            _ => panic!("Attempt to retrieve value from empty queue"),
         }
     }
 
     fn enqueued_value(&self) -> Self::OV {
         (
-            self.value_queue.back().and(Some(*self.value_queue.back().unwrap())),
-            self.grad_queue.back().and(Some(self.grad_queue.back().unwrap().clone())),
-            self.laplac_queue.back().and(Some(*self.laplac_queue.back().unwrap()))
+            self.value_queue
+                .back()
+                .and(Some(*self.value_queue.back().unwrap())),
+            self.grad_queue
+                .back()
+                .and(Some(self.grad_queue.back().unwrap().clone())),
+            self.laplac_queue
+                .back()
+                .and(Some(*self.laplac_queue.back().unwrap())),
         )
     }
-
 }
 
 #[cfg(test)]

@@ -45,7 +45,7 @@ impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
     T: Differentiate
         + Function<f64, D = Ix2>
-        + Cache<Array2<f64>, U = usize, V = Vgl, OV=(Option<f64>, Option<Array2<f64>>, Option<f64>)>,
+        + Cache<Array2<f64>, U = usize, V = Vgl, OV = (Option<f64>, Option<Array2<f64>>, Option<f64>)>,
     R: Rng,
 {
     type R = R;
@@ -70,8 +70,8 @@ where
 
     fn accept_move(&mut self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
         let wf_value = match wf.enqueued_value() {
-            (Some(v), _, _)  => v,
-            _ => wf.current_value().0
+            (Some(v), _, _) => v,
+            _ => wf.current_value().0,
         };
         let acceptance = (wf_value.powi(2) / wf.current_value().0.powi(2)).min(1.0);
         acceptance > self.rng.gen::<f64>()
@@ -141,7 +141,7 @@ where
     fn accept_move(&mut self, wf: &mut T, cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool {
         let (wf_value, wf_grad) = match wf.enqueued_value() {
             (Some(v), Some(g), _) => (v, g),
-            _ => (wf.current_value().0, wf.current_value().1)
+            _ => (wf.current_value().0, wf.current_value().1),
         };
         let drift_velocity = &wf_grad / wf_value;
 
@@ -220,7 +220,11 @@ mod tests {
             (self.value, Array2::ones((1, 1)) * self.value, self.value)
         }
         fn enqueued_value(&self) -> Self::OV {
-            (Some(self.value), Some(Array2::ones((1, 1)) * self.value), Some(self.value))
+            (
+                Some(self.value),
+                Some(Array2::ones((1, 1)) * self.value),
+                Some(self.value),
+            )
         }
     }
 

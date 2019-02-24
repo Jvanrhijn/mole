@@ -1,7 +1,7 @@
 // Defines various wave function representations, e.g. Jastrow-Slater
 use std::collections::VecDeque;
 // third party imports
-use ndarray::{Axis, Array2, Ix2};
+use ndarray::{Array2, Axis, Ix2};
 // first party imports
 use crate::determinant::Slater;
 use crate::error::Error;
@@ -37,14 +37,14 @@ use basis::BasisSet;
 #[derive(Clone)]
 pub struct SingleDeterminant<T>
 where
-    T: BasisSet
+    T: BasisSet,
 {
     det: Slater<Orbital<T>>,
 }
 
 impl<T> SingleDeterminant<T>
 where
-    T: BasisSet
+    T: BasisSet,
 {
     pub fn new(orbs: Vec<Orbital<T>>) -> Self {
         Self {
@@ -55,7 +55,7 @@ where
 
 impl<T> Function<f64> for SingleDeterminant<T>
 where
-    T: BasisSet
+    T: BasisSet,
 {
     type D = Ix2;
 
@@ -66,7 +66,7 @@ where
 
 impl<T> Differentiate for SingleDeterminant<T>
 where
-    T: BasisSet
+    T: BasisSet,
 {
     type D = Ix2;
 
@@ -81,7 +81,7 @@ where
 
 impl<T> WaveFunction for SingleDeterminant<T>
 where
-    T: BasisSet
+    T: BasisSet,
 {
     fn num_electrons(&self) -> usize {
         self.det.num_electrons()
@@ -90,7 +90,7 @@ where
 
 impl<T> Cache<Array2<f64>> for SingleDeterminant<T>
 where
-    T: BasisSet
+    T: BasisSet,
 {
     type A = Array2<f64>;
     type V = (f64, Array2<f64>, f64);
@@ -131,17 +131,30 @@ pub struct JastrowSlater<T: BasisSet> {
     num_down: usize,
     value_cache: VecDeque<f64>,
     grad_cache: VecDeque<Array2<f64>>,
-    lapl_cache: VecDeque<f64>
+    lapl_cache: VecDeque<f64>,
 }
 
 impl<T: BasisSet> JastrowSlater<T> {
-    pub fn new(det_up: SingleDeterminant<T>, det_down: SingleDeterminant<T>, jastrow: JastrowFactor) -> Self {
+    pub fn new(
+        det_up: SingleDeterminant<T>,
+        det_down: SingleDeterminant<T>,
+        jastrow: JastrowFactor,
+    ) -> Self {
         let num_up = det_up.num_electrons();
         let num_down = det_down.num_electrons();
         let value_cache = VecDeque::from(vec![1.0]);
         let grad_cache = VecDeque::from(vec![Array2::<f64>::ones((num_up + num_down, 3))]);
         let lapl_cache = VecDeque::from(vec![0.0]);
-        Self{det_up, det_down, jastrow, num_up, num_down, value_cache, grad_cache, lapl_cache}
+        Self {
+            det_up,
+            det_down,
+            jastrow,
+            num_up,
+            num_down,
+            value_cache,
+            grad_cache,
+            lapl_cache,
+        }
     }
 
     fn split_config(&self, cfg: &Array2<f64>) -> (Array2<f64>, Array2<f64>) {
@@ -151,13 +164,14 @@ impl<T: BasisSet> JastrowSlater<T> {
     }
 }
 
-
 impl<T: BasisSet> Function<f64> for JastrowSlater<T> {
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
-        Ok(self.jastrow.value(cfg)? * self.det_up.value(&cfg_up)? * self.det_down.value(&cfg_down)?)
+        Ok(self.jastrow.value(cfg)?
+            * self.det_up.value(&cfg_up)?
+            * self.det_down.value(&cfg_down)?)
     }
 }
 
@@ -178,8 +192,8 @@ impl<T: BasisSet> Differentiate for JastrowSlater<T> {
         // $\nabla_\uparrow \psi = D^\downarrow(D^\uparrow\nabla_\uparrow J + J\nabla_\uparrow D^\uparrow$
         // and similar for $\nabla_\downarrow \psi$
         // then $\nabla \psi = (\nabla_\uparrow \psi, \nabla_\downarrow \psi)$.
-        let grad_up = det_down_val*(det_up_val*&grad_jas_up + jas_val*&grad_det_up);
-        let grad_down = det_up_val*(det_down_val*&grad_jas_down + jas_val*&grad_det_down);
+        let grad_up = det_down_val * (det_up_val * &grad_jas_up + jas_val * &grad_det_up);
+        let grad_down = det_up_val * (det_down_val * &grad_jas_down + jas_val * &grad_det_down);
 
         // concatenate gradients
         Ok(stack![Axis(0), grad_up, grad_down])
@@ -206,8 +220,8 @@ impl<T: BasisSet> Differentiate for JastrowSlater<T> {
         // $\Delta_\uparrow \psi = D^\downarrow(D^\uparrow\Delta_\uparrow J
         // + \nabla\uparrow J \dot \nabla_\uparrow D^\uparrow$
         // similar for $\Delta_\downarrow$
-        let laplacian = det_down_val*det_up_val*lapl_jas
-            + det_down_val*(&grad_jas_up * &grad_det_up).scalar_sum()
+        let laplacian = det_down_val * det_up_val * lapl_jas
+            + det_down_val * (&grad_jas_up * &grad_det_up).scalar_sum()
             + det_up_val * (&grad_jas_down * &grad_det_down).scalar_sum();
         Ok(laplacian)
     }
@@ -220,7 +234,6 @@ impl<T: BasisSet> WaveFunction for JastrowSlater<T> {
 }
 
 impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
-
     type A = Array2<f64>;
     type V = (f64, Array2<f64>, f64);
     type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
@@ -241,31 +254,31 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
         self.jastrow.enqueue_update(ud, cfg);
         let (det_up_v, det_up_g, det_up_l) = match self.det_up.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.det_up.current_value()
+            _ => self.det_up.current_value(),
         };
         let (det_down_v, det_down_g, det_down_l) = match self.det_down.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.det_down.current_value()
+            _ => self.det_down.current_value(),
         };
         let (jas_v, jas_g, jas_l) = match self.jastrow.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.jastrow.current_value()
+            _ => self.jastrow.current_value(),
         };
         // Cache wave function value
-        self.value_cache.push_back(det_up_v*det_down_v*jas_v);
+        self.value_cache.push_back(det_up_v * det_down_v * jas_v);
         // gradient w.r.t. spin-up electron coordinates
         let (jas_g_up, jas_g_down) = self.split_config(&jas_g);
         // gradient w.r.t. spin-up electron coordinates
-        let grad_up = det_up_v*det_down_v*&jas_g_up + det_down_v*jas_v*&det_up_g;
+        let grad_up = det_up_v * det_down_v * &jas_g_up + det_down_v * jas_v * &det_up_g;
         // gradient w.r.t. spin-down electron coordinates
-        let grad_down = det_down_v*det_up_v*&jas_g_down + det_up_v*jas_v*&det_down_g;
+        let grad_down = det_down_v * det_up_v * &jas_g_down + det_up_v * jas_v * &det_down_g;
         // full gradient
         let grad = stack![Axis(0), grad_up, grad_down];
         self.grad_cache.push_back(grad);
         // laplacian computation
-        let laplacian = det_up_v*det_down_v*jas_l
-            + det_down_v*(&jas_g_up * &det_up_g).scalar_sum()
-            + det_up_v*(&jas_g_down * &det_down_g).scalar_sum();
+        let laplacian = det_up_v * det_down_v * jas_l
+            + det_down_v * (&jas_g_up * &det_up_g).scalar_sum()
+            + det_up_v * (&jas_g_down * &det_down_g).scalar_sum();
         self.lapl_cache.push_back(laplacian);
     }
 
@@ -288,27 +301,35 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
     }
 
     fn current_value(&self) -> Self::V {
-        match (self.value_cache.front(), self.grad_cache.front(), self.lapl_cache.front()) {
+        match (
+            self.value_cache.front(),
+            self.grad_cache.front(),
+            self.lapl_cache.front(),
+        ) {
             (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
-            _ => panic!("No value stored in JastrowSlater cache")
+            _ => panic!("No value stored in JastrowSlater cache"),
         }
     }
 
     fn enqueued_value(&self) -> Self::OV {
         (
-            self.value_cache.back().and(Some(*self.value_cache.back().unwrap())),
-            self.grad_cache.back().and(Some(self.grad_cache.back().unwrap().clone())),
-            self.lapl_cache.back().and(Some(*self.lapl_cache.back().unwrap()))
+            self.value_cache
+                .back()
+                .and(Some(*self.value_cache.back().unwrap())),
+            self.grad_cache
+                .back()
+                .and(Some(self.grad_cache.back().unwrap().clone())),
+            self.lapl_cache
+                .back()
+                .and(Some(*self.lapl_cache.back().unwrap())),
         )
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use basis::{Hydrogen1sBasis, GaussianBasis, gaussian};
+    use basis::{gaussian, GaussianBasis, Hydrogen1sBasis};
     const EPS: f64 = 1e-15;
 
     #[test]
@@ -336,8 +357,8 @@ mod tests {
 
     #[test]
     fn jastrow_slater_single_det() {
+        use ndarray::{arr2, Zip};
         use ndarray_linalg::Norm;
-        use ndarray::{Zip, arr2};
         let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
         let orbital = Orbital::new(array![[1.0]], basis);
 
@@ -357,20 +378,26 @@ mod tests {
         let (value_orb_1, grad_orb_1, lapl_orb_1) = gaussian(&x1, 1.0);
         let (value_orb_2, grad_orb_2, lapl_orb_2) = gaussian(&x2, 1.0);
 
-        let value_jastr = (0.5*r12/(1.0 + 0.5*r12)).exp();
-        let grad_f_1 = (-2.0/(2.0 + r12).powi(2)/r12 * &x12).into_shape((1, 3)).unwrap();
-        let grad_f_2 = (2.0/(2.0 + r12).powi(2)/r12 * &x12).into_shape((1, 3)).unwrap();
+        let value_jastr = (0.5 * r12 / (1.0 + 0.5 * r12)).exp();
+        let grad_f_1 = (-2.0 / (2.0 + r12).powi(2) / r12 * &x12)
+            .into_shape((1, 3))
+            .unwrap();
+        let grad_f_2 = (2.0 / (2.0 + r12).powi(2) / r12 * &x12)
+            .into_shape((1, 3))
+            .unwrap();
         let grad_f = stack![Axis(0), grad_f_1, grad_f_2];
         let grad_jastr = value_jastr * grad_f;
 
-        let test_value = value_jastr * value_orb_1 *value_orb_2;
+        let test_value = value_jastr * value_orb_1 * value_orb_2;
         let value = wf.value(&cfg).unwrap();
         assert_eq!(test_value, value);
 
-        let test_grad_1 = (value_orb_2*value_jastr*(value_orb_1*&grad_f_1 + &grad_orb_1))
-            .into_shape((1, 3)).unwrap();
-        let test_grad_2 = (value_orb_1*value_jastr*(value_orb_2*&grad_f_2 + &grad_orb_2))
-            .into_shape((1, 3)).unwrap();
+        let test_grad_1 = (value_orb_2 * value_jastr * (value_orb_1 * &grad_f_1 + &grad_orb_1))
+            .into_shape((1, 3))
+            .unwrap();
+        let test_grad_2 = (value_orb_1 * value_jastr * (value_orb_2 * &grad_f_2 + &grad_orb_2))
+            .into_shape((1, 3))
+            .unwrap();
 
         let test_grad = stack![Axis(0), test_grad_1, test_grad_2];
         let grad = wf.gradient(&cfg).unwrap();
