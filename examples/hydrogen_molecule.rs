@@ -17,7 +17,7 @@ fn main() {
 
     let det_up = SingleDeterminant::new(vec![orbital1]);
     let det_down = SingleDeterminant::new(vec![orbital2]);
-    let jas = JastrowFactor::new(array![0.5, 0.5, 0.0], 2);
+    let jas = JastrowFactor::new(array![0.5, 0.5, 0.0], 2, 1.0);
     let wave_func = JastrowSlater::new(det_up, det_down, jas);
 
     let kinetic = KineticEnergy::new();

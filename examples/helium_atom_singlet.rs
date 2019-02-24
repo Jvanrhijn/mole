@@ -18,7 +18,7 @@ fn main() {
     // construct Jastrow-Slater wave function
     let det_up = SingleDeterminant::new(vec![orbital1]);
     let det_down = SingleDeterminant::new(vec![orbital2]);
-    let jas = JastrowFactor::new(array![0.5, 0.1], 2);
+    let jas = JastrowFactor::new(array![0.5, 0.1], 2, 1.0);
     let wave_function = JastrowSlater::new(det_up, det_down, jas);
 
     // setup metropolis algorithm/Markov chain generator
