@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_jastrow_ee() {
-        let jas_ee = ElectronElectronTerm::new(array![1.0, 1.0, 1.0], 1.0);
+        let jas_ee = ElectronElectronTerm::new(array![1.0, 1.0], 1.0);
         let x1 = array![[1.0, 2.0, 3.0]];
         let x2 = array![[4.0, 5.0, 6.0]];
         let cfg = stack!(Axis(0), x1, x2);
@@ -233,12 +233,12 @@ mod tests {
         let r12_scal = 1.0 - (-r12).exp();
 
         let value = jas_ee.value(&cfg);
-        let value_exact = r12_scal / (1.0 + r12_scal) + r12_scal.powi(2);
+        let value_exact = r12_scal / (1.0 + r12_scal);
         assert_eq!(value.unwrap(), value_exact);
 
         let grad = jas_ee.gradient(&cfg).unwrap();
         let grad_1 =
-            -0.5 * (1.0 / (1.0 + r12_scal).powi(2) + 2.0 * r12_scal) * (&x12 / r12) * (-r12).exp();
+            -0.5 * (1.0 / (1.0 + r12_scal).powi(2)) * (&x12 / r12) * (-r12).exp();
         let grad_exact = stack![Axis(0), grad_1, -grad_1.clone()];
         assert!(grad.all_close(&grad_exact, EPS));
 
@@ -246,9 +246,9 @@ mod tests {
         let laplac_exact = 0.5
             * (2.0
                 * ((-r12).exp()
-                    * (1.0 / (1.0 + r12_scal).powi(2) + 2.0 * r12_scal)
+                    * (1.0 / (1.0 + r12_scal).powi(2) )
                     * (2.0 / r12 - 1.0)
-                    + (-2.0 * r12).exp() * (2.0 - 2.0 / (1.0 + r12_scal).powi(3))));
+                    + (-2.0 * r12).exp() * (- 2.0 / (1.0 + r12_scal).powi(3))));
         assert!((laplac.unwrap() - laplac_exact).abs() < 1e-4);
     }
 }
