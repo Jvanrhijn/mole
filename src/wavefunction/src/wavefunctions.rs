@@ -205,10 +205,11 @@ impl<T: BasisSet> Differentiate for JastrowSlater<T> {
         //let laplacian = det_down_val * det_up_val * lapl_jas
         //    + det_down_val * (&grad_jas_up * &grad_det_up).scalar_sum()
         //    + det_up_val * (&grad_jas_down * &grad_det_down).scalar_sum();
-        let laplacian = 2.0*(det_down_val*(&grad_det_up * &grad_jas_up).scalar_sum()
-            + det_up_val*(&grad_det_down * &grad_jas_down).scalar_sum())
-            + det_up_val*det_down_val*lapl_jas
-            + jas_val * (det_up_val*lapl_det_down + det_down_val*lapl_det_up);
+        let laplacian = 2.0
+            * (det_down_val * (&grad_det_up * &grad_jas_up).scalar_sum()
+                + det_up_val * (&grad_det_down * &grad_jas_down).scalar_sum())
+            + det_up_val * det_down_val * lapl_jas
+            + jas_val * (det_up_val * lapl_det_down + det_down_val * lapl_det_up);
         Ok(laplacian)
     }
 }
@@ -226,16 +227,18 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
     type U = usize;
 
     fn refresh(&mut self, cfg: &Self::A) {
-        self.det_up.refresh(cfg);
-        self.det_down.refresh(cfg);
+        let (cfg_up, cfg_down) = self.split_config(cfg);
+        self.det_up.refresh(&cfg_up);
+        self.det_down.refresh(&cfg_down);
         self.jastrow.refresh(cfg);
     }
 
     fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
+        let (cfg_up, cfg_down) = self.split_config(cfg);
         if ud < self.num_up {
-            self.det_up.enqueue_update(ud, cfg);
+            self.det_up.enqueue_update(ud, &cfg_up);
         } else {
-            self.det_down.enqueue_update(ud - self.num_up, cfg);
+            self.det_down.enqueue_update(ud - self.num_up, &cfg_down);
         }
         self.jastrow.enqueue_update(ud, cfg);
         let (det_up_v, det_up_g, det_up_l) = match self.det_up.enqueued_value() {
@@ -262,13 +265,11 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
         let grad = stack![Axis(0), grad_up, grad_down];
         self.grad_cache.push_back(grad);
         // laplacian computation
-        //let laplacian = det_up_v * det_down_v * jas_l
-        //    + det_down_v * (&jas_g_up * &det_up_g).scalar_sum()
-        //    + det_up_v * (&jas_g_down * &det_down_g).scalar_sum();
-        let laplacian = 2.0*(det_down_v*(&det_up_g * &jas_g_up).scalar_sum()
-            + det_up_v*(&det_down_g * &jas_g_down).scalar_sum())
-                + det_up_v*det_down_v*jas_l
-                + jas_v*(det_up_v*det_down_l + det_down_v*det_up_l);
+        let laplacian = 2.0
+            * (det_down_v * (&det_up_g * &jas_g_up).scalar_sum()
+                + det_up_v * (&det_down_g * &jas_g_down).scalar_sum())
+            + det_up_v * det_down_v * jas_l
+            + jas_v * (det_up_v * det_down_l + det_down_v * det_up_l);
         self.lapl_cache.push_back(laplacian);
     }
 
@@ -346,53 +347,53 @@ mod tests {
     }
 
     // TODO: rewrite test for JastrowSlater
-//    #[test]
-//    fn jastrow_slater_single_det() {
-//        use ndarray::{arr2, Zip};
-//        use ndarray_linalg::Norm;
-//        let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
-//        let orbital = Orbital::new(array![[1.0]], basis);
-//
-//        let det_up = SingleDeterminant::new(vec![orbital]);
-//        let det_down = det_up.clone();
-//
-//        let jastrow = JastrowFactor::new(array![0.5, 0.5, 0.0], 2, 1.0);
-//
-//        let wf = JastrowSlater::new(det_up, det_down, jastrow);
-//
-//        let cfg = array![[0.0, 1.0, 0.0], [1.0, 0.0, 0.0]];
-//        let x1 = cfg.slice(s![0, ..]).to_owned();
-//        let x2 = cfg.slice(s![1, ..]).to_owned();
-//        let x12 = &x1 - &x2;
-//        let r12 = x12.norm_l2();
-//
-//        let (value_orb_1, grad_orb_1, lapl_orb_1) = gaussian(&x1, 1.0);
-//        let (value_orb_2, grad_orb_2, lapl_orb_2) = gaussian(&x2, 1.0);
-//
-//        let value_jastr = (0.5 * r12 / (1.0 + 0.5 * r12)).exp();
-//        let grad_f_1 = (-2.0 / (2.0 + r12).powi(2) / r12 * &x12)
-//            .into_shape((1, 3))
-//            .unwrap();
-//        let grad_f_2 = (2.0 / (2.0 + r12).powi(2) / r12 * &x12)
-//            .into_shape((1, 3))
-//            .unwrap();
-//        let grad_f = stack![Axis(0), grad_f_1, grad_f_2];
-//        let grad_jastr = value_jastr * grad_f;
-//
-//        let test_value = value_jastr * value_orb_1 * value_orb_2;
-//        let value = wf.value(&cfg).unwrap();
-//        assert_eq!(test_value, value);
-//
-//        let test_grad_1 = (value_orb_2 * value_jastr * (value_orb_1 * &grad_f_1 + &grad_orb_1))
-//            .into_shape((1, 3))
-//            .unwrap();
-//        let test_grad_2 = (value_orb_1 * value_jastr * (value_orb_2 * &grad_f_2 + &grad_orb_2))
-//            .into_shape((1, 3))
-//            .unwrap();
-//
-//        let test_grad = stack![Axis(0), test_grad_1, test_grad_2];
-//        let grad = wf.gradient(&cfg).unwrap();
-//        assert!(test_grad.all_close(&grad, EPS));
-//
-//    }
+    //    #[test]
+    //    fn jastrow_slater_single_det() {
+    //        use ndarray::{arr2, Zip};
+    //        use ndarray_linalg::Norm;
+    //        let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
+    //        let orbital = Orbital::new(array![[1.0]], basis);
+    //
+    //        let det_up = SingleDeterminant::new(vec![orbital]);
+    //        let det_down = det_up.clone();
+    //
+    //        let jastrow = JastrowFactor::new(array![0.5, 0.5, 0.0], 2, 1.0);
+    //
+    //        let wf = JastrowSlater::new(det_up, det_down, jastrow);
+    //
+    //        let cfg = array![[0.0, 1.0, 0.0], [1.0, 0.0, 0.0]];
+    //        let x1 = cfg.slice(s![0, ..]).to_owned();
+    //        let x2 = cfg.slice(s![1, ..]).to_owned();
+    //        let x12 = &x1 - &x2;
+    //        let r12 = x12.norm_l2();
+    //
+    //        let (value_orb_1, grad_orb_1, lapl_orb_1) = gaussian(&x1, 1.0);
+    //        let (value_orb_2, grad_orb_2, lapl_orb_2) = gaussian(&x2, 1.0);
+    //
+    //        let value_jastr = (0.5 * r12 / (1.0 + 0.5 * r12)).exp();
+    //        let grad_f_1 = (-2.0 / (2.0 + r12).powi(2) / r12 * &x12)
+    //            .into_shape((1, 3))
+    //            .unwrap();
+    //        let grad_f_2 = (2.0 / (2.0 + r12).powi(2) / r12 * &x12)
+    //            .into_shape((1, 3))
+    //            .unwrap();
+    //        let grad_f = stack![Axis(0), grad_f_1, grad_f_2];
+    //        let grad_jastr = value_jastr * grad_f;
+    //
+    //        let test_value = value_jastr * value_orb_1 * value_orb_2;
+    //        let value = wf.value(&cfg).unwrap();
+    //        assert_eq!(test_value, value);
+    //
+    //        let test_grad_1 = (value_orb_2 * value_jastr * (value_orb_1 * &grad_f_1 + &grad_orb_1))
+    //            .into_shape((1, 3))
+    //            .unwrap();
+    //        let test_grad_2 = (value_orb_1 * value_jastr * (value_orb_2 * &grad_f_2 + &grad_orb_2))
+    //            .into_shape((1, 3))
+    //            .unwrap();
+    //
+    //        let test_grad = stack![Axis(0), test_grad_1, test_grad_2];
+    //        let grad = wf.gradient(&cfg).unwrap();
+    //        assert!(test_grad.all_close(&grad, EPS));
+    //
+    //    }
 }

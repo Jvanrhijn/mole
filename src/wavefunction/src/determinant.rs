@@ -51,8 +51,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
         }
     }
 
-    /// Build matrix of orbitals and laplacians of orbitals
-    // TODO: Build 3d-array of gradient values as well
+    /// Build matrix of orbital values, gradients and laplacians
     fn build_matrices(
         &self,
         cfg: &Array2<f64>,
@@ -63,8 +62,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
         let mut matrix_laplac = Array2::<f64>::zeros((mat_dim, mat_dim));
         for i in 0..mat_dim {
             for j in 0..mat_dim {
-                let slice = cfg.slice(s![i, ..]);
-                let pos = array![slice[0], slice[1], slice[2]];
+                let pos = cfg.slice(s![i, ..]).to_owned();
                 matrix[[i, j]] = self.orbs[j].value(&pos)?;
                 let orbgrad = self.orbs[j].gradient(&pos)?;
                 for k in 0..3 {

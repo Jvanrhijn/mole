@@ -8,7 +8,7 @@ use std::collections::VecDeque;
 // full Jastrow is then exp(f_ee + f_en + f_een)
 struct ElectronElectronTerm {
     parms: Array1<f64>,
-    scal: f64
+    scal: f64,
 }
 
 #[allow(dead_code)]
@@ -16,6 +16,9 @@ impl ElectronElectronTerm {
     pub fn new(parms: Array1<f64>, scal: f64) -> Self {
         // first two parameters are required
         assert!(parms.len() >= 2);
+        if parms.len() > 2 {
+            unimplemented!("Polynomial coefficients in fee are not yet implemented");
+        }
         Self { parms, scal }
     }
 }
@@ -28,15 +31,12 @@ impl Function<f64> for ElectronElectronTerm {
         let nparms = self.parms.len();
         let mut value = 0.0;
         for i in 0..num_elec {
-            for j in i..num_elec {
-                if i == j {
-                    continue;
-                }
+            for j in i + 1..num_elec {
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
-                let Rij = (1.0 - (-self.scal*rij).exp())/self.scal;
-                value += self.parms[0] * Rij / (1.0 + self.parms[1] * Rij);
+                let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
+                value += self.parms[0] * rij_scal / (1.0 + self.parms[1] * rij_scal);
                 value += izip!(self.parms.slice(s![2..nparms]), 2..nparms)
-                    .map(|(b, p)| b * Rij.powi(p as i32))
+                    .map(|(b, p)| b * rij_scal.powi(p as i32))
                     .sum::<f64>();
             }
         }
@@ -53,27 +53,27 @@ impl Differentiate for ElectronElectronTerm {
         let mut grad = Array2::<f64>::zeros((nelec, 3));
         for k in 0..nelec {
             let xk = cfg.slice(s![k, ..]);
-            let mut grad_k= Array1::<f64>::zeros(3);
+            let mut grad_k = Array1::<f64>::zeros(3);
             for l in 0..nelec {
-                if k == l {
+                if l == k {
                     continue;
                 }
                 let xl = cfg.slice(s![l, ..]);
                 let xkl = (&xk - &xl);
                 let rkl = xkl.norm_l2();
-                let rkl_scal = (1.0 - (-self.scal*rkl).exp())/self.scal;
-                let magnitude = -(self.parms[0]/(1.0 + self.parms[1]*rkl_scal).powi(2)
+                let rkl_scal = (1.0 - (-self.scal * rkl).exp()) / self.scal;
+                let magnitude = -(self.parms[0] / (1.0 + self.parms[1] * rkl_scal).powi(2)
                     + izip!(2..nparms, self.parms.slice(s![2..nparms]))
-                    .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
-                    .sum::<f64>())
-                    * (-self.scal*rkl).exp();
-                grad_k += &(magnitude*&xkl/rkl);
+                        .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
+                        .sum::<f64>())
+                    * (-self.scal * rkl).exp();
+                grad_k += &(magnitude * &xkl / rkl);
             }
             for i in 0..3 {
                 grad[[k, i]] = grad_k[i];
             }
         }
-        Ok(grad)
+        Ok(0.5 * grad)
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
@@ -83,25 +83,26 @@ impl Differentiate for ElectronElectronTerm {
         for k in 0..nelec {
             let xk = cfg.slice(s![k, ..]);
             for l in 0..nelec {
-                if l == k {
+                if k == l {
                     continue;
                 }
                 let xl = cfg.slice(s![l, ..]);
                 let rkl: f64 = (&cfg.slice(s![k, ..]) - &cfg.slice(s![l, ..])).norm_l2();
-                let exp = (-self.scal*rkl).exp();
-                let rkl_scal = (1.0 - exp)/self.scal;
-                let g = exp*(self.parms[0]/(1.0 + self.parms[1]*rkl_scal).powi(2)
+                let exp = (-self.scal * rkl).exp();
+                let rkl_scal = (1.0 - exp) / self.scal;
+                let g = exp
+                    * (self.parms[0] / (1.0 + self.parms[1] * rkl_scal).powi(2)
+                        + izip!(2..nparm, self.parms.slice(s![2..]))
+                            .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
+                            .sum::<f64>());
+                let inner_lapl = -2.0 * self.parms[0] / (1.0 + self.parms[1]).powi(3)
                     + izip!(2..nparm, self.parms.slice(s![2..]))
-                    .map(|(p, b)| (p as f64)*b*rkl_scal.powi(p as i32 - 1))
-                    .sum::<f64>());
-                let inner_lapl = -2.0*self.parms[0]/(1.0 + self.parms[1]).powi(3)
-                    + izip!(2..nparm, self.parms.slice(s![2..]))
-                    .map(|(p, b)| (p*(p - 1)) as f64 * b * rkl_scal.powi(p as i32 - 2))
-                    .sum::<f64>();
-                laplacian += g*(2.0/rkl - self.scal) + self.scal*exp.powi(2)*inner_lapl;
+                        .map(|(p, b)| (p * (p - 1)) as f64 * b * rkl_scal.powi(p as i32 - 2))
+                        .sum::<f64>();
+                laplacian += g * (2.0 / rkl - self.scal) + self.scal * exp.powi(2) * inner_lapl;
             }
         }
-        Ok(laplacian)
+        Ok(0.5 * laplacian)
     }
 }
 
@@ -232,17 +233,22 @@ mod tests {
         let r12_scal = 1.0 - (-r12).exp();
 
         let value = jas_ee.value(&cfg);
-        let value_exact = r12_scal/(1.0 + r12_scal) + r12_scal.powi(2);
+        let value_exact = r12_scal / (1.0 + r12_scal) + r12_scal.powi(2);
         assert_eq!(value.unwrap(), value_exact);
 
         let grad = jas_ee.gradient(&cfg).unwrap();
-        let grad_1 = -(1.0/(1.0 + r12_scal).powi(2) + 2.0*r12_scal) * (&x12/r12)*(-r12).exp();
+        let grad_1 =
+            -0.5 * (1.0 / (1.0 + r12_scal).powi(2) + 2.0 * r12_scal) * (&x12 / r12) * (-r12).exp();
         let grad_exact = stack![Axis(0), grad_1, -grad_1.clone()];
         assert!(grad.all_close(&grad_exact, EPS));
 
         let laplac = jas_ee.laplacian(&cfg);
-        let laplac_exact = 2.0*((-r12).exp()*(1.0/(1.0 + r12_scal).powi(2) + 2.0*r12_scal)
-            *(2.0/r12 - 1.0) + (-2.0*r12).exp()*(2.0 - 2.0/(1.0 + r12_scal).powi(3)));
+        let laplac_exact = 0.5
+            * (2.0
+                * ((-r12).exp()
+                    * (1.0 / (1.0 + r12_scal).powi(2) + 2.0 * r12_scal)
+                    * (2.0 / r12 - 1.0)
+                    + (-2.0 * r12).exp() * (2.0 - 2.0 / (1.0 + r12_scal).powi(3))));
         assert!((laplac.unwrap() - laplac_exact).abs() < 1e-4);
     }
 }

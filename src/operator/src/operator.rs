@@ -1,5 +1,6 @@
 // Third party imports
 use ndarray::{Array, Array1, Array2, Axis, Ix2};
+use ndarray_linalg::Norm;
 // First party imports
 use crate::traits::Operator;
 use wavefunction::{Cache, Differentiate, Error, Function};
@@ -23,7 +24,7 @@ impl Function<f64> for IonicPotential {
         for i in 0..num_ions {
             for j in 0..num_elec {
                 let separation = &cfg.slice(s![j, ..]) - &self.ion_positions.slice(s![i, ..]);
-                let distance = separation.dot(&separation).sqrt();
+                let distance = separation.norm_l2();
                 pot -= self.ion_charge[i] as f64 / distance;
             }
         }
@@ -71,7 +72,7 @@ impl Function<f64> for ElectronicPotential {
         for i in 0..num_elec {
             for j in i + 1..num_elec {
                 let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..]);
-                pot += 1. / separation.dot(&separation).sqrt();
+                pot += 1. / separation.norm_l2();
             }
         }
         Ok(pot)

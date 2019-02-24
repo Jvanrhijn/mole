@@ -41,7 +41,22 @@ where
             wave_function,
             config: cfg,
             metropolis: metrop,
-            observables: HashMap::<String, Box<Operator<T>>>::new(),
+            observables: HashMap::new(),
+            acceptance: 0.0,
+        }
+    }
+
+    pub fn with_initial_configuration(
+        mut wave_function: T,
+        mut metrop: V,
+        cfg: Array2<f64>,
+    ) -> Self {
+        wave_function.refresh(&cfg);
+        Self {
+            wave_function,
+            config: cfg,
+            metropolis: metrop,
+            observables: HashMap::new(),
             acceptance: 0.0,
         }
     }
