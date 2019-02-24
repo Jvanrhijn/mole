@@ -236,7 +236,7 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
         if ud < self.num_up {
             self.det_up.enqueue_update(ud, cfg);
         } else {
-            self.det_down.enqueue_update(ud, cfg);
+            self.det_down.enqueue_update(ud - self.num_up, cfg);
         }
         self.jastrow.enqueue_update(ud, cfg);
         let (det_up_v, det_up_g, det_up_l) = match self.det_up.enqueued_value() {

@@ -193,14 +193,20 @@ where
         let orbvec_grad = data.into_iter().map(|x| x.1).collect::<Vec<Array1<f64>>>();
 
         // compute updated wave function value
-        let ratio = orbvec.dot(&self.inv_matrix_queue.front().unwrap().slice(s![.., ud]));
-        let value = self.current_value_queue.front().unwrap() * ratio;
+        let ratio = orbvec.dot(&self.inv_matrix_queue.front()
+            .expect("Matrix inverse queue empty").slice(s![.., ud]));
+        let value = self.current_value_queue.front()
+            .expect("Determinant value queue empty") * ratio;
 
         // calculate updated matrix, gradient matrix, laplacian matrix, and inverse matrix; only need to update column `ud`
-        let mut matrix = self.matrix_queue.front().unwrap().clone();
-        let mut matrix_grad = self.matrix_grad_queue.front().unwrap().clone();
-        let mut matrix_laplac = self.matrix_laplac_queue.front().unwrap().clone();
-        let mut inv_matrix = self.inv_matrix_queue.front().unwrap().clone();
+        let mut matrix = self.matrix_queue.front()
+            .expect("Matrix queue empty").clone();
+        let mut matrix_grad = self.matrix_grad_queue.front()
+            .expect("Matrix grad queue empty").clone();
+        let mut matrix_laplac = self.matrix_laplac_queue.front()
+            .expect("Matrix laplacian queue empty").clone();
+        let mut inv_matrix = self.inv_matrix_queue.front()
+            .expect("Matrix inverse queue empty").clone();
         for j in 0..self.num_electrons() {
             matrix[[ud, j]] = orbvec[j];
             for k in 0..3 {
@@ -248,18 +254,26 @@ where
         ]
         .iter_mut()
         {
-            q.pop_front();
+            if q.len() == 2 {
+                q.pop_front();
+            }
         }
-        self.matrix_grad_queue.pop_front();
+        if self.matrix_grad_queue.len() == 2 {
+            self.matrix_grad_queue.pop_front();
+        }
         for q in vec![
             &mut self.current_value_queue,
             &mut self.current_laplac_queue,
         ]
         .iter_mut()
         {
-            q.pop_front();
+            if q.len() == 2 {
+                q.pop_front();
+            }
         }
-        self.current_grad_queue.pop_front();
+        if self.current_grad_queue.len() == 2 {
+            self.current_grad_queue.pop_front();
+        }
     }
 
     fn flush_update(&mut self) {
