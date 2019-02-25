@@ -12,8 +12,8 @@ fn main() {
     let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
 
     // construct orbitals
-    let orbital1 = Orbital::new(array![[1.0, 0.5, 0.25]], basis_set.clone());
-    let orbital2 = Orbital::new(array![[1.0, 0.5, 0.25]], basis_set);
+    let orbital1 = Orbital::new(array![[1.0]], basis_set.clone());
+    let orbital2 = Orbital::new(array![[1.0]], basis_set.clone());
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
