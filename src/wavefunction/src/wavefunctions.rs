@@ -121,7 +121,12 @@ pub struct JastrowSlater<T: BasisSet> {
 }
 
 impl<T: BasisSet> JastrowSlater<T> {
-    pub fn new(parms: Array1<f64>, mut orbitals: Vec<Orbital<T>>, scal: f64, num_up: usize) -> Self {
+    pub fn new(
+        parms: Array1<f64>,
+        mut orbitals: Vec<Orbital<T>>,
+        scal: f64,
+        num_up: usize,
+    ) -> Self {
         let num_elec = orbitals.len();
         let down_orbs = orbitals.drain(num_up..).collect();
         let up_orbs = orbitals;
@@ -139,7 +144,7 @@ impl<T: BasisSet> JastrowSlater<T> {
             num_down: num_elec - num_up,
             value_cache,
             grad_cache,
-            lapl_cache
+            lapl_cache,
         }
     }
 

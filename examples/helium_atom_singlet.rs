@@ -17,10 +17,10 @@ fn main() {
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        array![1.0],  // Jastrow factor parameters
+        array![1.0],              // Jastrow factor parameters
         vec![orbital1, orbital2], // orbitals
-        0.1, // scale distance
-        1, // number of electrons
+        0.1,                      // scale distance
+        1,                        // number of electrons
     );
 
     // setup metropolis algorithm/Markov chain generator

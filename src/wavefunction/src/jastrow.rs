@@ -23,7 +23,11 @@ impl ElectronElectronTerm {
         if parms.len() > 1 {
             unimplemented!("Polynomial coefficients in fee are not yet implemented");
         }
-        Self { parms, scal, num_up }
+        Self {
+            parms,
+            scal,
+            num_up,
+        }
     }
 }
 
@@ -36,7 +40,9 @@ impl Function<f64> for ElectronElectronTerm {
         let mut value = 0.0;
         for i in 0..num_elec {
             for j in i + 1..num_elec {
-                let b2 = if (i < self.num_up && j >= self.num_up) || (i >= self.num_up && j < self.num_up) {
+                let b2 = if (i < self.num_up && j >= self.num_up)
+                    || (i >= self.num_up && j < self.num_up)
+                {
                     0.5
                 } else {
                     0.25
@@ -67,7 +73,9 @@ impl Differentiate for ElectronElectronTerm {
                 if l == k {
                     continue;
                 }
-                let b2 = if (k < self.num_up && l >= self.num_up) || (k >= self.num_up && l < self.num_up) {
+                let b2 = if (k < self.num_up && l >= self.num_up)
+                    || (k >= self.num_up && l < self.num_up)
+                {
                     0.5
                 } else {
                     0.25
@@ -95,8 +103,10 @@ impl Differentiate for ElectronElectronTerm {
         let nelec = cfg.shape()[0];
         let nparm = self.parms.len();
         for k in 0..nelec {
-            for l in k+1..nelec {
-                let b2 = if (k < self.num_up && l >= self.num_up) || (k >= self.num_up && l < self.num_up) {
+            for l in k + 1..nelec {
+                let b2 = if (k < self.num_up && l >= self.num_up)
+                    || (k >= self.num_up && l < self.num_up)
+                {
                     0.5
                 } else {
                     0.25

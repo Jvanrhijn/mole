@@ -43,9 +43,7 @@ impl MetropolisBox<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
-    T: Differentiate
-        + Function<f64, D = Ix2>
-        + Cache<U = usize>,
+    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize>,
     R: Rng,
 {
     type R = R;
@@ -112,9 +110,7 @@ impl MetropolisDiffuse<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
 where
-    T: Differentiate
-        + Function<f64, D = Ix2>
-        + Cache<U = usize>,
+    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize>,
     R: Rng,
 {
     type R = R;

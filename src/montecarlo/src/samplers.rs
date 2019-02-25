@@ -44,11 +44,7 @@ where
         }
     }
 
-    pub fn with_initial_configuration(
-        mut wave_function: T,
-        metrop: V,
-        cfg: Array2<f64>,
-    ) -> Self {
+    pub fn with_initial_configuration(mut wave_function: T, metrop: V, cfg: Array2<f64>) -> Self {
         wave_function.refresh(&cfg);
         Self {
             wave_function,
@@ -70,10 +66,7 @@ where
 
 impl<T, V> MonteCarloSampler for Sampler<T, V>
 where
-    T: Function<f64, D = Ix2>
-        + Differentiate
-        + WaveFunction
-        + Cache,
+    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache,
     V: Metropolis<T>,
 {
     fn sample(&self) -> Result<HashMap<String, f64>, Error> {
