@@ -7,7 +7,7 @@ use ndarray::{Array2, Ix2};
 use ndarray_linalg::Norm;
 use operator::{KineticEnergy, Operator};
 use rand::{SeedableRng, StdRng};
-use wavefunction::{Cache, Differentiate, Error, Function, Orbital, SingleDeterminant};
+use wavefunction::{Cache, Differentiate, Error, Orbital, SingleDeterminant};
 
 // Create a struct to hold Hamiltonian parameters
 struct HarmonicHamiltonian {
@@ -27,10 +27,11 @@ impl HarmonicHamiltonian {
 }
 
 // All observables must implement the Operator<T> trait
+// T is the type parameter of the wave function.
+//
 impl<T> Operator<T> for HarmonicHamiltonian
 where
-    T: Function<f64, D = Ix2>
-        + Differentiate<D = Ix2>
+    T: Differentiate<D = Ix2>
         + Cache
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {

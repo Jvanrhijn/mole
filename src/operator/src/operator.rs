@@ -41,10 +41,7 @@ impl IonicPotential {
     }
 }
 
-impl<T> Operator<T> for IonicPotential
-where
-    T: Function<f64, D = Ix2> + Cache
-{
+impl<T: Cache> Operator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.value(cfg)? * wf.current_value().0)
     }
@@ -79,10 +76,7 @@ impl Function<f64> for ElectronicPotential {
     }
 }
 
-impl<T> Operator<T> for ElectronicPotential
-where
-    T: Function<f64, D = Ix2> + Cache
-{
+impl<T: Cache> Operator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.value(cfg)? * wf.current_value().0)
     }
@@ -103,9 +97,7 @@ impl KineticEnergy {
 
 impl<T> Operator<T> for KineticEnergy
 where
-    T: Function<f64, D = Ix2>
-        + Differentiate<D = Ix2>
-        + Cache
+    T: Differentiate<D = Ix2> + Cache
 {
     fn act_on(&self, wf: &T, _cfg: &Array<f64, Ix2>) -> Result<f64, Error> {
         Ok(-0.5 * wf.current_value().2)
@@ -129,9 +121,7 @@ impl IonicHamiltonian {
 
 impl<T> Operator<T> for IonicHamiltonian
 where
-    T: Function<f64, D = Ix2>
-        + Differentiate<D = Ix2>
-        + Cache
+    T: Differentiate<D = Ix2> + Cache
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
@@ -158,9 +148,7 @@ impl ElectronicHamiltonian {
 
 impl<T> Operator<T> for ElectronicHamiltonian
 where
-    T: Function<f64, D = Ix2>
-        + Differentiate<D = Ix2>
-        + Cache
+    T: Differentiate<D = Ix2> + Cache
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
@@ -184,9 +172,7 @@ impl<H> LocalEnergy<H> {
 
 impl<T, H: Operator<T>> Operator<T> for LocalEnergy<H>
 where
-    T: Function<f64, D = Ix2>
-        + Differentiate<D = Ix2>
-        + Cache
+    T: Differentiate<D = Ix2> + Cache
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.h.act_on(wf, cfg)? / wf.current_value().0)
