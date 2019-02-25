@@ -5,21 +5,23 @@ use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
 use rand::{SeedableRng, StdRng};
-use wavefunction::{JastrowFactor, JastrowSlater, Orbital, SingleDeterminant};
+use wavefunction::{JastrowSlater, Orbital};
 
 fn main() {
     // setup basis set
     let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
 
-    // construct orbital
+    // construct orbitals
     let orbital1 = Orbital::new(array![[1.0, 0.5, 0.25]], basis_set.clone());
     let orbital2 = Orbital::new(array![[1.0, 0.5, 0.25]], basis_set);
 
     // construct Jastrow-Slater wave function
-    let det_up = SingleDeterminant::new(vec![orbital1]);
-    let det_down = SingleDeterminant::new(vec![orbital2]);
-    let jas = JastrowFactor::new(array![0.5, 0.5], 2, 0.1);
-    let wave_function = JastrowSlater::new(det_up, det_down, jas);
+    let wave_function = JastrowSlater::new(
+        array![1.0],  // Jastrow factor parameters
+        vec![orbital1, orbital2], // orbitals
+        0.1, // scale distance
+        1, // number of electrons
+    );
 
     // setup metropolis algorithm/Markov chain generator
     let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));

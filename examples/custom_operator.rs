@@ -28,11 +28,9 @@ impl HarmonicHamiltonian {
 
 // All observables must implement the Operator<T> trait
 // T is the type parameter of the wave function.
-//
 impl<T> Operator<T> for HarmonicHamiltonian
 where
-    T: Differentiate<D = Ix2>
-        + Cache
+    T: Differentiate<D = Ix2> + Cache
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         // Kinetic energy
@@ -66,6 +64,9 @@ fn main() {
 
     let energy = *runner.means().get("Energy").unwrap();
     let stdev = (*runner.variances().get("Energy").unwrap()).sqrt();
+
+    assert_eq!(energy, 1.5);
+    assert!(stdev < 1e-15);
 
     println!("\nEnergy:     {} +/- {:.*}", energy, 8, stdev);
 }

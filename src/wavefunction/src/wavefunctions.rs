@@ -1,7 +1,7 @@
 // Defines various wave function representations, e.g. Jastrow-Slater
 use std::collections::VecDeque;
 // third party imports
-use ndarray::{Array2, Axis, Ix2};
+use ndarray::{Array1, Array2, Axis, Ix2};
 // first party imports
 use crate::determinant::Slater;
 use crate::error::Error;
@@ -121,7 +121,29 @@ pub struct JastrowSlater<T: BasisSet> {
 }
 
 impl<T: BasisSet> JastrowSlater<T> {
-    pub fn new(
+    pub fn new(parms: Array1<f64>, mut orbitals: Vec<Orbital<T>>, scal: f64, num_up: usize) -> Self {
+        let num_elec = orbitals.len();
+        let down_orbs = orbitals.drain(num_up..).collect();
+        let up_orbs = orbitals;
+        let det_up = SingleDeterminant::new(up_orbs);
+        let det_down = SingleDeterminant::new(down_orbs);
+        let jastrow = JastrowFactor::new(parms, num_elec, scal, num_up);
+        let value_cache = VecDeque::from(vec![1.0]);
+        let grad_cache = VecDeque::from(vec![Array2::<f64>::ones((num_elec, 3))]);
+        let lapl_cache = VecDeque::from(vec![0.0]);
+        Self {
+            det_up,
+            det_down,
+            jastrow,
+            num_up,
+            num_down: num_elec - num_up,
+            value_cache,
+            grad_cache,
+            lapl_cache
+        }
+    }
+
+    pub fn from_components(
         det_up: SingleDeterminant<T>,
         det_down: SingleDeterminant<T>,
         jastrow: JastrowFactor,
