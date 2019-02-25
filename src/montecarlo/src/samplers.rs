@@ -48,7 +48,7 @@ where
 
     pub fn with_initial_configuration(
         mut wave_function: T,
-        mut metrop: V,
+        metrop: V,
         cfg: Array2<f64>,
     ) -> Self {
         wave_function.refresh(&cfg);

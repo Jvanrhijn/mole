@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate ndarray;
-use ndarray::arr2;
 use rand::{SeedableRng, StdRng};
 
 use basis::GaussianBasis;

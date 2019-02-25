@@ -59,7 +59,7 @@ impl Differentiate for ElectronElectronTerm {
                     continue;
                 }
                 let xl = cfg.slice(s![l, ..]);
-                let xkl = (&xk - &xl);
+                let xkl = &xk - &xl;
                 let rkl = xkl.norm_l2();
                 let rkl_scal = (1.0 - (-self.scal * rkl).exp()) / self.scal;
                 let magnitude = -(self.parms[0] / (1.0 + self.parms[1] * rkl_scal).powi(2)
@@ -81,12 +81,10 @@ impl Differentiate for ElectronElectronTerm {
         let nelec = cfg.shape()[0];
         let nparm = self.parms.len();
         for k in 0..nelec {
-            let xk = cfg.slice(s![k, ..]);
             for l in 0..nelec {
                 if k == l {
                     continue;
                 }
-                let xl = cfg.slice(s![l, ..]);
                 let rkl: f64 = (&cfg.slice(s![k, ..]) - &cfg.slice(s![l, ..])).norm_l2();
                 let exp = (-self.scal * rkl).exp();
                 let rkl_scal = (1.0 - exp) / self.scal;
@@ -166,7 +164,7 @@ impl Cache<Array2<f64>> for JastrowFactor {
             .expect("Failed to compute Jastrow Laplacian");
     }
 
-    fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
+    fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) {
         self.value_queue
             .push_back(self.value(cfg).expect("Failed to store Jastrow value"));
         self.grad_queue.push_back(

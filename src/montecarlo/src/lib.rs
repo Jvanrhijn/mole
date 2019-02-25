@@ -1,4 +1,3 @@
-#![feature(uniform_paths)]
 extern crate itertools;
 #[allow(unused_imports)]
 #[macro_use]
