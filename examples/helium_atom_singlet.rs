@@ -17,7 +17,7 @@ fn main() {
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        array![1.0],              // Jastrow factor parameters
+        array![10.0],              // Jastrow factor parameters
         vec![orbital1, orbital2], // orbitals
         0.1,                      // scale distance
         1,                        // number of electrons
@@ -39,6 +39,7 @@ fn main() {
     // construct sampler
     let mut sampler = Sampler::new(wave_function, metrop);
     sampler.add_observable("Hamiltonian", hamiltonian);
+    sampler.add_observable("Kinetic Energy", kinetic);
 
     // create MC runner
     let mut runner = Runner::new(sampler);
