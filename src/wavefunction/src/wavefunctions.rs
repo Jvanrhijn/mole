@@ -10,6 +10,9 @@ use crate::orbitals::Orbital;
 use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 use basis::BasisSet;
 
+type Vgl = (f64, Array2<f64>, f64);
+type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+
 /// Single Slater determinant wave function:
 /// $\psi(x) = \langle x | \hat{a}_{k_1}\ldots\hat{a}_{k_{N_e}} | 0 \rangle$.
 /// This wave function is currently used for testing, but will be removed once the Jastrow-Slater
@@ -68,20 +71,17 @@ where
     }
 }
 
-impl<T> Cache<Array2<f64>> for SingleDeterminant<T>
+impl<T> Cache for SingleDeterminant<T>
 where
     T: BasisSet,
 {
-    type A = Array2<f64>;
-    type V = (f64, Array2<f64>, f64);
-    type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
     type U = usize;
 
-    fn refresh(&mut self, new: &Self::A) {
+    fn refresh(&mut self, new: &Array2<f64>) {
         self.det.refresh(new);
     }
 
-    fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
+    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
         self.det.enqueue_update(ud, new);
     }
 
@@ -93,11 +93,11 @@ where
         self.det.flush_update();
     }
 
-    fn current_value(&self) -> Self::V {
+    fn current_value(&self) -> Vgl {
         self.det.current_value()
     }
 
-    fn enqueued_value(&self) -> Self::OV {
+    fn enqueued_value(&self) -> Ovgl {
         self.det.enqueued_value()
     }
 }
@@ -220,13 +220,10 @@ impl<T: BasisSet> WaveFunction for JastrowSlater<T> {
     }
 }
 
-impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
-    type A = Array2<f64>;
-    type V = (f64, Array2<f64>, f64);
-    type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+impl<T: BasisSet> Cache for JastrowSlater<T> {
     type U = usize;
 
-    fn refresh(&mut self, cfg: &Self::A) {
+    fn refresh(&mut self, cfg: &Array2<f64>) {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         self.det_up.refresh(&cfg_up);
         self.det_down.refresh(&cfg_down);
@@ -291,7 +288,7 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
         self.lapl_cache.pop_back();
     }
 
-    fn current_value(&self) -> Self::V {
+    fn current_value(&self) -> Vgl {
         match (
             self.value_cache.front(),
             self.grad_cache.front(),
@@ -302,7 +299,7 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
         }
     }
 
-    fn enqueued_value(&self) -> Self::OV {
+    fn enqueued_value(&self) -> Ovgl {
         (
             self.value_cache
                 .back()
@@ -320,8 +317,7 @@ impl<T: BasisSet> Cache<Array2<f64>> for JastrowSlater<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use basis::{gaussian, GaussianBasis, Hydrogen1sBasis};
-    const EPS: f64 = 1e-15;
+    use basis::Hydrogen1sBasis;
 
     #[test]
     fn single_det_one_basis_function() {

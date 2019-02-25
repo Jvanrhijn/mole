@@ -10,6 +10,7 @@ use crate::error::Error;
 use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Vgl = (f64, Array2<f64>, f64);
+type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
 
 #[derive(Clone)]
 pub struct Slater<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> {
@@ -135,13 +136,10 @@ where
 }
 
 // TODO: get rid of all unwraps
-impl<'a, T> Cache<Array2<f64>> for Slater<T>
+impl<T> Cache for Slater<T>
 where
     T: Function<f64, D = Ix1> + Differentiate<D = Ix1>,
 {
-    type A = Array2<f64>;
-    type V = Vgl;
-    type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) {
@@ -172,7 +170,7 @@ where
         }
     }
 
-    fn enqueue_update(&mut self, ud: Self::U, new: &Self::A) {
+    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
         // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
         let data: Vec<(f64, Array1<f64>, f64)> = self
@@ -324,7 +322,7 @@ where
         }
     }
 
-    fn current_value(&self) -> Self::V {
+    fn current_value(&self) -> Vgl {
         // TODO: find a way to get rid of the call to .clone()
         (
             *self.current_value_queue.front().unwrap(),
@@ -333,7 +331,7 @@ where
         )
     }
 
-    fn enqueued_value(&self) -> Self::OV {
+    fn enqueued_value(&self) -> Ovgl {
         (
             self.current_value_queue
                 .back()

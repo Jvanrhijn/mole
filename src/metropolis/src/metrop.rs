@@ -45,7 +45,7 @@ impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
     T: Differentiate
         + Function<f64, D = Ix2>
-        + Cache<Array2<f64>, U = usize, V = Vgl, OV = (Option<f64>, Option<Array2<f64>>, Option<f64>)>,
+        + Cache<U = usize>,
     R: Rng,
 {
     type R = R;
@@ -114,7 +114,7 @@ impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
 where
     T: Differentiate
         + Function<f64, D = Ix2>
-        + Cache<Array2<f64>, U = usize, V = Vgl, OV = (Option<f64>, Option<Array2<f64>>, Option<f64>)>,
+        + Cache<U = usize>,
     R: Rng,
 {
     type R = R;
@@ -207,19 +207,18 @@ mod tests {
         }
     }
 
-    impl Cache<Array2<f64>> for WaveFunctionMock {
-        type A = Array2<f64>;
-        type V = Vgl;
-        type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+    type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+
+    impl Cache for WaveFunctionMock {
         type U = usize;
         fn refresh(&mut self, _new: &Array2<f64>) {}
         fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) {}
         fn push_update(&mut self) {}
         fn flush_update(&mut self) {}
-        fn current_value(&self) -> Self::V {
+        fn current_value(&self) -> Vgl {
             (self.value, Array2::ones((1, 1)) * self.value, self.value)
         }
-        fn enqueued_value(&self) -> Self::OV {
+        fn enqueued_value(&self) -> Ovgl {
             (
                 Some(self.value),
                 Some(Array2::ones((1, 1)) * self.value),

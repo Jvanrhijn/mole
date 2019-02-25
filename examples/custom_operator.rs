@@ -31,7 +31,7 @@ impl<T> Operator<T> for HarmonicHamiltonian
 where
     T: Function<f64, D = Ix2>
         + Differentiate<D = Ix2>
-        + Cache<Array2<f64>, V = (f64, Array2<f64>, f64)>,
+        + Cache
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         // Kinetic energy

@@ -4,6 +4,9 @@ use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use std::collections::VecDeque;
 
+type Vgl = (f64, Array2<f64>, f64);
+type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+
 // f_ee in notes
 // full Jastrow is then exp(f_ee + f_en + f_een)
 struct ElectronElectronTerm {
@@ -148,10 +151,7 @@ impl Differentiate for JastrowFactor {
     }
 }
 
-impl Cache<Array2<f64>> for JastrowFactor {
-    type A = Array2<f64>;
-    type V = (f64, Array2<f64>, f64);
-    type OV = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+impl Cache for JastrowFactor {
     type U = usize;
 
     fn refresh(&mut self, cfg: &Array2<f64>) {
@@ -187,7 +187,7 @@ impl Cache<Array2<f64>> for JastrowFactor {
         self.laplac_queue.pop_back();
     }
 
-    fn current_value(&self) -> Self::V {
+    fn current_value(&self) -> Vgl {
         match (
             self.value_queue.front(),
             self.grad_queue.front(),
@@ -198,7 +198,7 @@ impl Cache<Array2<f64>> for JastrowFactor {
         }
     }
 
-    fn enqueued_value(&self) -> Self::OV {
+    fn enqueued_value(&self) -> Ovgl {
         (
             self.value_queue
                 .back()
