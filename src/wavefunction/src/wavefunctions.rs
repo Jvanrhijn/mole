@@ -128,7 +128,7 @@ impl<T: BasisSet> JastrowSlater<T> {
         num_up: usize,
     ) -> Self {
         let num_elec = orbitals.len();
-        let down_orbs = orbitals.drain(num_up..).collect();
+        let down_orbs: Vec<_> = orbitals.drain(num_up..).collect();
         let up_orbs = orbitals;
         let det_up = SingleDeterminant::new(up_orbs);
         let det_down = SingleDeterminant::new(down_orbs);
@@ -220,23 +220,21 @@ impl<T: BasisSet> Differentiate for JastrowSlater<T> {
 
         let lapl_det_up = self.det_up.laplacian(&cfg_up)?;
         let lapl_det_down = self.det_down.laplacian(&cfg_down)?;
-        let lapl_jas = self.jastrow.laplacian(&cfg_down)?;
+        let lapl_jas = self.jastrow.laplacian(cfg)?;
 
         let grad_det_up = self.det_up.gradient(&cfg_up)?;
         let grad_det_down = self.det_down.gradient(&cfg_down)?;
         let grad_jas = self.jastrow.gradient(cfg)?;
 
         let (grad_jas_up, grad_jas_down) = self.split_config(&grad_jas);
+
         // Laplacian formula for $\psi = J(r)\D^\uparrow D^\downarrow$:
         // see theory/jastrowslater.tex for derivation of formula
-        //let laplacian = det_down_val * det_up_val * lapl_jas
-        //    + det_down_val * (&grad_jas_up * &grad_det_up).scalar_sum()
-        //    + det_up_val * (&grad_jas_down * &grad_det_down).scalar_sum();
-        let laplacian = 2.0
-            * (det_down_val * (&grad_det_up * &grad_jas_up).scalar_sum()
-                + det_up_val * (&grad_det_down * &grad_jas_down).scalar_sum())
+        let laplacian = 2.0 * det_down_val * (&grad_det_up * &grad_jas_up).scalar_sum()
+            + 2.0 * det_up_val * (&grad_det_down * &grad_jas_down).scalar_sum()
             + det_up_val * det_down_val * lapl_jas
             + jas_val * (det_up_val * lapl_det_down + det_down_val * lapl_det_up);
+
         Ok(laplacian)
     }
 }
@@ -289,9 +287,8 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         let grad = stack![Axis(0), grad_up, grad_down];
         self.grad_cache.push_back(grad);
         // laplacian computation
-        let laplacian = 2.0
-            * (det_down_v * (&det_up_g * &jas_g_up).scalar_sum()
-                + det_up_v * (&det_down_g * &jas_g_down).scalar_sum())
+        let laplacian = 2.0 * det_down_v * (&det_up_g * &jas_g_up).scalar_sum()
+            + 2.0 * det_up_v * (&det_down_g * &jas_g_down).scalar_sum()
             + det_up_v * det_down_v * jas_l
             + jas_v * (det_up_v * det_down_l + det_down_v * det_up_l);
         self.lapl_cache.push_back(laplacian);
@@ -344,7 +341,7 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use basis::Hydrogen1sBasis;
+    use basis::{GaussianBasis, Hydrogen1sBasis};
 
     #[test]
     fn single_det_one_basis_function() {
@@ -369,54 +366,21 @@ mod tests {
         assert_eq!(cur_laplac, basis::hydrogen_1s(&config_slice, 1.0).2);
     }
 
-    // TODO: rewrite test for JastrowSlater
-    //    #[test]
-    //    fn jastrow_slater_single_det() {
-    //        use ndarray::{arr2, Zip};
-    //        use ndarray_linalg::Norm;
-    //        let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
-    //        let orbital = Orbital::new(array![[1.0]], basis);
-    //
-    //        let det_up = SingleDeterminant::new(vec![orbital]);
-    //        let det_down = det_up.clone();
-    //
-    //        let jastrow = JastrowFactor::new(array![0.5, 0.5, 0.0], 2, 1.0);
-    //
-    //        let wf = JastrowSlater::new(det_up, det_down, jastrow);
-    //
-    //        let cfg = array![[0.0, 1.0, 0.0], [1.0, 0.0, 0.0]];
-    //        let x1 = cfg.slice(s![0, ..]).to_owned();
-    //        let x2 = cfg.slice(s![1, ..]).to_owned();
-    //        let x12 = &x1 - &x2;
-    //        let r12 = x12.norm_l2();
-    //
-    //        let (value_orb_1, grad_orb_1, lapl_orb_1) = gaussian(&x1, 1.0);
-    //        let (value_orb_2, grad_orb_2, lapl_orb_2) = gaussian(&x2, 1.0);
-    //
-    //        let value_jastr = (0.5 * r12 / (1.0 + 0.5 * r12)).exp();
-    //        let grad_f_1 = (-2.0 / (2.0 + r12).powi(2) / r12 * &x12)
-    //            .into_shape((1, 3))
-    //            .unwrap();
-    //        let grad_f_2 = (2.0 / (2.0 + r12).powi(2) / r12 * &x12)
-    //            .into_shape((1, 3))
-    //            .unwrap();
-    //        let grad_f = stack![Axis(0), grad_f_1, grad_f_2];
-    //        let grad_jastr = value_jastr * grad_f;
-    //
-    //        let test_value = value_jastr * value_orb_1 * value_orb_2;
-    //        let value = wf.value(&cfg).unwrap();
-    //        assert_eq!(test_value, value);
-    //
-    //        let test_grad_1 = (value_orb_2 * value_jastr * (value_orb_1 * &grad_f_1 + &grad_orb_1))
-    //            .into_shape((1, 3))
-    //            .unwrap();
-    //        let test_grad_2 = (value_orb_1 * value_jastr * (value_orb_2 * &grad_f_2 + &grad_orb_2))
-    //            .into_shape((1, 3))
-    //            .unwrap();
-    //
-    //        let test_grad = stack![Axis(0), test_grad_1, test_grad_2];
-    //        let grad = wf.gradient(&cfg).unwrap();
-    //        assert!(test_grad.all_close(&grad, EPS));
-    //
-    //    }
+    #[test]
+    fn jastrow_slater_grad_laplacian() {
+        use crate::util::grad_laplacian_finite_difference;
+        let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 2.0, 3.0]);
+        let orbitals = vec![
+            Orbital::new(array![[1.0, 0.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
+        ];
+        let wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2);
+
+        let cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
+        let (grad_fd, laplac_fd) =
+            grad_laplacian_finite_difference(&wave_function, &cfg, 1e-4).unwrap();
+        assert!(grad_fd.all_close(&wave_function.gradient(&cfg).unwrap(), 1e-5));
+        assert!((laplac_fd - wave_function.laplacian(&cfg).unwrap()).abs() < 1e-5);
+    }
 }

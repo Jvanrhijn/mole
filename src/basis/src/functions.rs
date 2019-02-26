@@ -12,7 +12,7 @@ fn get_spherical_angles(vector: &Array1<f64>) -> (f64, f64, f64) {
     };
     let r = (vector * vector).scalar_sum().sqrt();
     let polar_angle = (z / r).acos();
-    let azithmutal_angle = (y / x).atan();
+    let azithmutal_angle = y.atan2(*x);
     (r, polar_angle, azithmutal_angle)
 }
 
@@ -52,7 +52,7 @@ pub fn gaussian(pos: &Array1<f64>, width: f64) -> Vgl {
     let width2 = width.powi(2);
     let exp = (-(r).powi(2) / (2.0 * width2)).exp();
     let value = exp;
-    let gradient = -r / width * exp * radial_unit_vector(pos);
+    let gradient = -exp / width2 * pos;
     let laplacian = exp / width2 * (r.powi(2) / width2 - 3.0);
     (value, gradient, laplacian)
 }

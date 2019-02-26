@@ -88,7 +88,6 @@ where
     }
 }
 
-// TODO: find a way to only compute determinant and inverse once per refresh
 impl<T> Differentiate for Slater<T>
 where
     T: Function<f64, D = Ix1> + Differentiate<D = Ix1>,
@@ -350,7 +349,7 @@ where
 mod tests {
     use super::*;
     use crate::orbitals::Orbital;
-    use basis::{hydrogen_1s, hydrogen_2s, Func, Hydrogen1sBasis};
+    use basis::{hydrogen_1s, hydrogen_2s, Func, GaussianBasis, Hydrogen1sBasis};
 
     static EPS: f64 = 1e-15;
 
@@ -394,6 +393,23 @@ mod tests {
         // switching electron positions should flip determinant sign
         let x_switched = x.permuted_axes([0, 1]);
         assert_eq!(det.value(&x_switched).unwrap(), -value);
+    }
+
+    #[test]
+    fn gradient_and_laplacian() {
+        use crate::util::grad_laplacian_finite_difference;
+        let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 2.0, 3.0]);
+        let orbitals = vec![
+            Orbital::new(array![[1.0, 0.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
+        ];
+        let det = Slater::new(orbitals);
+        let cfg = array![[1.0, 1.0, 3.0], [0.5, 0.02, -0.8], [1.1, -0.5, 0.2]];
+        let (grad_fd, laplac_fd) = grad_laplacian_finite_difference(&det, &cfg, 1e-5).unwrap();
+
+        assert!(det.gradient(&cfg).unwrap().all_close(&grad_fd, 1e-5));
+        assert!((det.laplacian(&cfg).unwrap() - laplac_fd).abs() < 1e-5);
     }
 
     #[test]

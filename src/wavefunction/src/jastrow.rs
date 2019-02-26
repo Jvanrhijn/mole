@@ -63,7 +63,6 @@ impl Differentiate for ElectronElectronTerm {
     type D = Ix2;
 
     fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
-        let nparms = self.parms.len();
         let nelec = cfg.shape()[0];
         let mut grad = Array2::<f64>::zeros((nelec, 3));
         for k in 0..nelec {
@@ -84,26 +83,30 @@ impl Differentiate for ElectronElectronTerm {
                 let xkl = &xk - &xl;
                 let rkl = xkl.norm_l2();
                 let rkl_scal = (1.0 - (-self.scal * rkl).exp()) / self.scal;
-                let magnitude = -(self.parms[0] / (1.0 + b2 * rkl_scal).powi(2)
-                    + izip!(1..nparms, self.parms.slice(s![1..nparms]))
-                        .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
-                        .sum::<f64>())
-                    * (-self.scal * rkl).exp();
+                let magnitude =
+                    self.parms[0] / (1.0 + b2 * rkl_scal).powi(2) * (-self.scal * rkl).exp();
+                //let magnitude = (self.parms[0] / (1.0 + b2 * rkl_scal).powi(2)
+                //    + izip!(1..nparms, self.parms.slice(s![1..nparms]))
+                //        .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
+                //        .sum::<f64>())
+                //    * (-self.scal * rkl).exp();
                 grad_k += &(magnitude * &xkl / rkl);
             }
             for i in 0..3 {
                 grad[[k, i]] = grad_k[i];
             }
         }
-        Ok(0.5 * grad)
+        Ok(grad)
     }
 
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         let mut laplacian = 0.0;
         let nelec = cfg.shape()[0];
-        let nparm = self.parms.len();
         for k in 0..nelec {
-            for l in k + 1..nelec {
+            for l in 0..nelec {
+                if k == l {
+                    continue;
+                }
                 let b2 = if (k < self.num_up && l >= self.num_up)
                     || (k >= self.num_up && l < self.num_up)
                 {
@@ -114,19 +117,13 @@ impl Differentiate for ElectronElectronTerm {
                 let rkl: f64 = (&cfg.slice(s![k, ..]) - &cfg.slice(s![l, ..])).norm_l2();
                 let exp = (-self.scal * rkl).exp();
                 let rkl_scal = (1.0 - exp) / self.scal;
-                let g = exp
-                    * (self.parms[0] / (1.0 + b2 * rkl_scal).powi(2)
-                        + izip!(1..nparm, self.parms.slice(s![1..]))
-                            .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
-                            .sum::<f64>());
-                let inner_lapl = -2.0 * self.parms[0] / (1.0 + b2).powi(3)
-                    + izip!(1..nparm, self.parms.slice(s![1..]))
-                        .map(|(p, b)| (p * (p - 1)) as f64 * b * rkl_scal.powi(p as i32 - 2))
-                        .sum::<f64>();
-                laplacian += g * (2.0 / rkl - self.scal) + self.scal * exp.powi(2) * inner_lapl;
+
+                let frac = self.parms[0] / (1.0 + b2 * rkl_scal).powi(2);
+                let frac_2 = 2.0 * self.parms[0] * b2 / (1.0 + b2 * rkl_scal).powi(3);
+                laplacian += 2.0 / rkl * frac * exp - exp.powi(2) * frac_2 - self.scal * exp * frac;
             }
         }
-        Ok(0.5 * laplacian)
+        Ok(laplacian)
     }
 }
 
@@ -238,39 +235,17 @@ impl Cache for JastrowFactor {
 
 #[cfg(test)]
 mod tests {
-    //use super::*;
-    //use ndarray::Axis;
-    //use ndarray_linalg::Norm;
-    //const EPS: f64 = 1e-13;
+    use super::*;
+    use crate::util::grad_laplacian_finite_difference;
 
-    // TODO: fix this test for spin-determined b2
-    //#[test]
-    //fn test_jastrow_ee() {
-    //    let jas_ee = ElectronElectronTerm::new(array![1.0, 1.0], 1.0, 1);
-    //    let x1 = array![[1.0, 2.0, 3.0]];
-    //    let x2 = array![[4.0, 5.0, 6.0]];
-    //    let cfg = stack!(Axis(0), x1, x2);
-    //    let x12 = &x1 - &x2;
-    //    let r12: f64 = x12.norm_l2();
-    //    let r12_scal = 1.0 - (-r12).exp();
+    #[test]
+    fn test_jastrow_factor() {
+        let jas_ee = JastrowFactor::new(array![1.0], 1, 0.1, 1);
+        let cfg = array![[1., -2., 3.], [4., 5., 6.], [-5., 8., -3.]];
 
-    //    let value = jas_ee.value(&cfg);
-    //    let value_exact = r12_scal / (1.0 + r12_scal);
-    //    assert_eq!(value.unwrap(), value_exact);
+        let (grad_fd, laplac_fd) = grad_laplacian_finite_difference(&jas_ee, &cfg, 1e-4).unwrap();
+        assert!(grad_fd.all_close(&jas_ee.gradient(&cfg).unwrap(), 1e-8));
+        assert!((laplac_fd - jas_ee.laplacian(&cfg).unwrap()).abs() < 1e-4);
+    }
 
-    //    let grad = jas_ee.gradient(&cfg).unwrap();
-    //    let grad_1 =
-    //        -0.5 * (1.0 / (1.0 + r12_scal).powi(2)) * (&x12 / r12) * (-r12).exp();
-    //    let grad_exact = stack![Axis(0), grad_1, -grad_1.clone()];
-    //    assert!(grad.all_close(&grad_exact, EPS));
-
-    //    let laplac = jas_ee.laplacian(&cfg);
-    //    let laplac_exact = 0.5
-    //        * (2.0
-    //            * ((-r12).exp()
-    //                * (1.0 / (1.0 + r12_scal).powi(2) )
-    //                * (2.0 / r12 - 1.0)
-    //                + (-2.0 * r12).exp() * (- 2.0 / (1.0 + r12_scal).powi(3))));
-    //    assert!((laplac.unwrap() - laplac_exact).abs() < 1e-4);
-    //}
 }

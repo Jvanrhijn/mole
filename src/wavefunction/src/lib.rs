@@ -9,6 +9,7 @@ mod error;
 mod jastrow;
 mod orbitals;
 mod traits;
+mod util;
 mod wavefunctions;
 
 pub use crate::error::*;

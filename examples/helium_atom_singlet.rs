@@ -12,15 +12,17 @@ fn main() {
     let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
 
     // construct orbitals
-    let orbital1 = Orbital::new(array![[1.0]], basis_set.clone());
-    let orbital2 = Orbital::new(array![[1.0]], basis_set.clone());
+    let orbitals = vec![
+        Orbital::new(array![[1.0]], basis_set.clone()),
+        Orbital::new(array![[1.0]], basis_set.clone()),
+    ];
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        array![10.0],              // Jastrow factor parameters
-        vec![orbital1, orbital2], // orbitals
-        0.1,                      // scale distance
-        1,                        // number of electrons
+        array![-0.5], // Jastrow factor parameters
+        orbitals,
+        0.001, // scale distance
+        1,     // number of electrons with spin up
     );
 
     // setup metropolis algorithm/Markov chain generator
@@ -39,24 +41,24 @@ fn main() {
     // construct sampler
     let mut sampler = Sampler::new(wave_function, metrop);
     sampler.add_observable("Hamiltonian", hamiltonian);
-    sampler.add_observable("Kinetic Energy", kinetic);
+    //sampler.add_observable("Kinetic Energy", kinetic);
 
     // create MC runner
     let mut runner = Runner::new(sampler);
 
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(100_000, 500);
+    runner.run(100_000, 200);
 
     // Retrieve mean values of energy over run
     let energy = *runner.means().get("Hamiltonian").unwrap();
     let var_energy = *runner.variances().get("Hamiltonian").unwrap();
 
-    println!(
-        "\nEnergy:         {:.*} +/- {:.*}",
-        8,
-        energy,
-        8,
-        var_energy.sqrt()
-    );
-    println!("Exact ground state energy: -2.903")
+    //println!(
+    //    "\nEnergy:         {:.*} +/- {:.*}",
+    //    8,
+    //    energy,
+    //    8,
+    //    var_energy.sqrt()
+    //);
+    //println!("Exact ground state energy: -2.903")
 }
