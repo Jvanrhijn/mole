@@ -24,8 +24,7 @@ impl Function<f64> for IonicPotential {
         for i in 0..num_ions {
             for j in 0..num_elec {
                 let separation = &cfg.slice(s![j, ..]) - &self.ion_positions.slice(s![i, ..]);
-                let distance = separation.norm_l2();
-                pot -= self.ion_charge[i] as f64 / distance;
+                pot -= self.ion_charge[i] as f64 / separation.norm_l2();
             }
         }
         Ok(pot)
@@ -52,7 +51,7 @@ impl<T: Cache> Operator<T> for IonicPotential {
 /// This potential is only a function of the current electronic configuration, and
 /// so is not parametrized over anything.
 #[derive(Clone)]
-pub struct ElectronicPotential {}
+pub struct ElectronicPotential;
 
 impl ElectronicPotential {
     pub fn new() -> Self {
@@ -67,7 +66,7 @@ impl Function<f64> for ElectronicPotential {
         let num_elec = cfg.len_of(Axis(0));
         let mut pot = 0.;
         for i in 0..num_elec {
-            for j in i + 1..num_elec {
+            for j in i+1..num_elec {
                 let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..]);
                 pot += 1. / separation.norm_l2();
             }

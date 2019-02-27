@@ -2,7 +2,7 @@ use ndarray::{Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use ndarray_rand::RandomExt;
 use rand::distributions::{Normal, Range};
-use rand::rngs::StdRng;
+use rand::{rngs::StdRng};
 use rand::{FromEntropy, Rng};
 
 use crate::traits::Metropolis;

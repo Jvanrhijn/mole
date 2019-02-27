@@ -19,9 +19,9 @@ fn main() {
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        array![-0.5], // Jastrow factor parameters
+        array![1.0], // Jastrow factor parameters
         orbitals,
-        0.001, // scale distance
+        0.1, // scale distance
         1,     // number of electrons with spin up
     );
 
@@ -53,12 +53,12 @@ fn main() {
     let energy = *runner.means().get("Hamiltonian").unwrap();
     let var_energy = *runner.variances().get("Hamiltonian").unwrap();
 
-    //println!(
-    //    "\nEnergy:         {:.*} +/- {:.*}",
-    //    8,
-    //    energy,
-    //    8,
-    //    var_energy.sqrt()
-    //);
-    //println!("Exact ground state energy: -2.903")
+    println!(
+        "\nEnergy:         {:.*} +/- {:.*}",
+        8,
+        energy,
+        8,
+        var_energy.sqrt()
+    );
+    println!("Exact ground state energy: -2.903")
 }
