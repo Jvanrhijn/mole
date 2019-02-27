@@ -20,6 +20,7 @@ wavefunction = { path = "src/wavefunction" }
 metropolis = { path = "src/metropolis" }
 operator = { path = "src/operator" }
 basis = { path = "src/basis" }
+optimizers = { path = "src/optimizers" }
 
 
 [dev-dependencies]
