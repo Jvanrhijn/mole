@@ -253,6 +253,13 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         self.det_up.refresh(&cfg_up);
         self.det_down.refresh(&cfg_down);
         self.jastrow.refresh(cfg);
+        // TODO get rid of calls to self.value/gradient/laplacian
+        *self.value_cache.front_mut().expect("Value cache empty")
+            = self.value(cfg).expect("Failed to take Jastrow Slater value");
+        *self.grad_cache.front_mut().expect("Gradient cache empty")
+            = self.gradient(cfg).expect("Failed to take Jastrow Slater gradient");
+        *self.lapl_cache.front_mut().expect("Laplacian cache empty")
+            = self.laplacian(cfg).expect("Failed to take Jastrow Slater laplacian");
     }
 
     fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
@@ -382,5 +389,40 @@ mod tests {
             grad_laplacian_finite_difference(&wave_function, &cfg, 1e-4).unwrap();
         assert!(grad_fd.all_close(&wave_function.gradient(&cfg).unwrap(), 1e-5));
         assert!((laplac_fd - wave_function.laplacian(&cfg).unwrap()).abs() < 1e-5);
+    }
+
+    #[test]
+    fn jastrow_slater_cache() {
+        let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 2.0, 3.0]);
+        let orbitals = vec![
+            Orbital::new(array![[1.0, 0.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
+        ];
+        let mut wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2);
+
+        let mut cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
+
+        let value = wave_function.value(&cfg).unwrap();
+        let grad = wave_function.gradient(&cfg).unwrap();
+        let laplacian = wave_function.laplacian(&cfg).unwrap();
+        wave_function.refresh(&cfg);
+
+        assert_eq!(wave_function.current_value().0, value);
+        assert_eq!(wave_function.current_value().1, grad);
+        assert_eq!(wave_function.current_value().2, laplacian);
+
+        // change cfg
+        cfg[[0, 0]] = 2.0;
+        
+        let value = wave_function.value(&cfg).unwrap();
+        let grad = wave_function.gradient(&cfg).unwrap();
+        let laplacian = wave_function.laplacian(&cfg).unwrap();
+        wave_function.enqueue_update(0, &cfg);
+        wave_function.push_update();
+
+        assert_eq!(wave_function.current_value().0, value);
+        assert!(wave_function.current_value().1.all_close(&grad, 1e-14));
+        assert_eq!(wave_function.current_value().2, laplacian);
     }
 }

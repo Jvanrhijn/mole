@@ -47,7 +47,7 @@ fn main() {
     let mut runner = Runner::new(sampler);
 
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(100_000, 200);
+    runner.run(100_000, 1);
 
     // Retrieve mean values of energy over run
     let energy = *runner.means().get("Hamiltonian").unwrap();
