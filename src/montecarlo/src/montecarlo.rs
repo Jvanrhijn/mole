@@ -9,7 +9,7 @@ use crate::traits::*;
 pub struct Runner<S: MonteCarloSampler> {
     sampler: S,
     means: HashMap<String, f64>,
-    variances: HashMap<String, f64>,
+    errors: HashMap<String, f64>,
     square_mean_diff: HashMap<String, f64>,
 }
 
@@ -22,12 +22,12 @@ where
         let means = sampler
             .sample()
             .expect("Failed to perform initial sampling");
-        let variances = means.keys().map(|key| (key.clone(), 0.0)).collect();
+        let errors = means.keys().map(|key| (key.clone(), 0.0)).collect();
         let square_mean_diff = means.keys().map(|key| (key.clone(), 0.0)).collect();
         Self {
             sampler,
             means,
-            variances,
+            errors,
             square_mean_diff,
         }
     }
@@ -53,8 +53,6 @@ where
                 let block_mean = block.mean();
                 self.update_means_and_variances(block_nr, &block_mean);
                 // log output
-                //let acceptance = self.sampler.acceptance()/(block_size*(block_nr + 1)) as f64;
-                //println!("{}", acceptance);
                 self.log_data(&block_mean, max_strlen);
             }
         }
@@ -67,8 +65,8 @@ where
             .collect()
     }
 
-    pub fn variances(&self) -> HashMap<&str, f64> {
-        self.variances
+    pub fn errors(&self) -> HashMap<&str, f64> {
+        self.errors
             .iter()
             .map(|(key, value)| (key.as_str(), *value))
             .collect()
@@ -80,14 +78,14 @@ where
             let bm = block_mean.get(name).unwrap();
             let om = old_mean.get(name).unwrap();
             let smd = self.square_mean_diff.get_mut(name).unwrap();
-            let var = self.variances.get_mut(name).unwrap();
+            let err = self.errors.get_mut(name).unwrap();
 
             // update running mean
             *current_mean += (bm - *current_mean) / idx as f64;
             // update square mean sifference
             *smd += (bm - om) * (bm - *current_mean);
             // update running variance
-            *var = *smd / idx as f64;
+            *err = (*smd / idx as f64) / (idx as f64).sqrt();
         }
     }
 
@@ -95,12 +93,12 @@ where
         // TODO: find better way to log output
         for key in self.means.keys() {
             let mean = self.means.get(key).unwrap();
-            let var = self.variances.get(key).unwrap();
+            let error= self.errors.get(key).unwrap();
 
             let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
             let padding2 = if *mean < 0.0 { 3 } else { 4 };
             println!(
-                "{}:{:>width$} {:.*} {:>width2$}{:.*} +/- {:.*}",
+                "{}:{:>width$} {:.*} {:>width2$}{:.*} error {:.*}",
                 key,
                 "",
                 16,
@@ -109,7 +107,7 @@ where
                 16,
                 mean,
                 16,
-                var.sqrt(),
+                error,
                 width = padding,
                 width2 = padding2
             );

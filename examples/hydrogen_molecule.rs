@@ -46,13 +46,13 @@ fn main() {
     runner.run(100_000, 400);
 
     let total_energy = *runner.means().get("Energy").unwrap();
-    let energy_variance = *runner.variances().get("Energy").unwrap();
+    let error_energy = *runner.errors().get("Energy").unwrap();
 
     println!(
         "\nTotal Energy: {e:.*} +/- {s:.*}",
         8,
         8,
         e = total_energy,
-        s = energy_variance.sqrt()
+        s = error_energy
     );
 }

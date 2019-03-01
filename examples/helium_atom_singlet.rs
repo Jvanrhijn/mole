@@ -51,14 +51,14 @@ fn main() {
 
     // Retrieve mean values of energy over run
     let energy = *runner.means().get("Hamiltonian").unwrap();
-    let var_energy = *runner.variances().get("Hamiltonian").unwrap();
+    let error_energy = *runner.errors().get("Hamiltonian").unwrap();
 
     println!(
         "\nEnergy:         {:.*} +/- {:.*}",
         8,
         energy,
         8,
-        var_energy.sqrt()
+        error_energy
     );
     println!("Exact ground state energy: -2.903")
 }
