@@ -72,7 +72,7 @@ impl Differentiate for ElectronElectronTerm {
                 if l == k {
                     continue;
                 }
-                let b2 = if (k < self.num_up && l >= self.num_up)
+                let b1 = if (k < self.num_up && l >= self.num_up)
                     || (k >= self.num_up && l < self.num_up)
                 {
                     0.5
@@ -84,7 +84,7 @@ impl Differentiate for ElectronElectronTerm {
                 let rkl = xkl.norm_l2();
                 let rkl_scal = (1.0 - (-self.scal * rkl).exp()) / self.scal;
                 let magnitude =
-                    self.parms[0] / (1.0 + b2 * rkl_scal).powi(2) * (-self.scal * rkl).exp();
+                    b1 / (1.0 + self.parms[0] * rkl_scal).powi(2) * (-self.scal * rkl).exp();
                 //let magnitude = (self.parms[0] / (1.0 + b2 * rkl_scal).powi(2)
                 //    + izip!(1..nparms, self.parms.slice(s![1..nparms]))
                 //        .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
@@ -107,7 +107,7 @@ impl Differentiate for ElectronElectronTerm {
                 if k == l {
                     continue;
                 }
-                let b2 = if (k < self.num_up && l >= self.num_up)
+                let b1 = if (k < self.num_up && l >= self.num_up)
                     || (k >= self.num_up && l < self.num_up)
                 {
                     0.5
@@ -118,8 +118,8 @@ impl Differentiate for ElectronElectronTerm {
                 let exp = (-self.scal * rkl).exp();
                 let rkl_scal = (1.0 - exp) / self.scal;
 
-                let frac = self.parms[0] / (1.0 + b2 * rkl_scal).powi(2);
-                let frac_2 = 2.0 * self.parms[0] * b2 / (1.0 + b2 * rkl_scal).powi(3);
+                let frac = b1 / (1.0 + self.parms[0] * rkl_scal).powi(2);
+                let frac_2 = 2.0 * b1 * self.parms[0] / (1.0 + self.parms[0] * rkl_scal).powi(3);
                 laplacian += 2.0 / rkl * frac * exp - exp.powi(2) * frac_2 - self.scal * exp * frac;
             }
         }
@@ -236,16 +236,25 @@ impl Cache for JastrowFactor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray_rand::RandomExt;
+    use rand::distributions::Range;
     use crate::util::grad_laplacian_finite_difference;
 
     #[test]
     fn test_jastrow_factor() {
-        let jas_ee = JastrowFactor::new(array![1.0], 1, 0.1, 1);
-        let cfg = array![[1., -2., 3.], [4., 5., 6.], [-5., 8., -3.]];
+        let jas_ee = JastrowFactor::new(array![0.5], 1, 0.01, 1);
 
-        let (grad_fd, laplac_fd) = grad_laplacian_finite_difference(&jas_ee, &cfg, 1e-4).unwrap();
-        assert!(grad_fd.all_close(&jas_ee.gradient(&cfg).unwrap(), 1e-8));
-        assert!((laplac_fd - jas_ee.laplacian(&cfg).unwrap()).abs() < 1e-4);
+        const NUM_ELECTRONS: usize = 4;
+        const NUM_TESTS: usize = 100;
+
+        for _ in 0..NUM_TESTS {
+            // generate random configuration
+            let cfg = Array2::<f64>::random((NUM_ELECTRONS, 3), Range::new(-1.0_f64, 1.0_f64));
+            let (grad_fd, laplac_fd) = grad_laplacian_finite_difference(&jas_ee, &cfg, 1e-4).unwrap();
+            assert!(grad_fd.all_close(&jas_ee.gradient(&cfg).unwrap(), 1e-4));
+            //assert_eq!(grad_fd, jas_ee.gradient(&cfg).unwrap());
+            assert!((laplac_fd - jas_ee.laplacian(&cfg).unwrap()).abs() < 1e-4);
+        }
     }
 
 }

@@ -63,10 +63,10 @@ fn main() {
     runner.run(1000, 1);
 
     let energy = *runner.means().get("Energy").unwrap();
-    let stdev = (*runner.variances().get("Energy").unwrap()).sqrt();
+    let error = *runner.errors().get("Energy").unwrap();
 
     assert_eq!(energy, 1.5);
-    assert!(stdev < 1e-15);
+    assert!(error < 1e-15);
 
-    println!("\nEnergy:     {} +/- {:.*}", energy, 8, stdev);
+    println!("\nEnergy:     {} +/- {:.*}", energy, 8, error);
 }

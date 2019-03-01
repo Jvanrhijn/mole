@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate ndarray;
-use basis::GaussianBasis;
+use basis::Hydrogen1sBasis;
 use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
@@ -9,7 +9,7 @@ use wavefunction::{JastrowSlater, Orbital};
 
 fn main() {
     // setup basis set
-    let basis_set = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
+    let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![0.5]);
 
     // construct orbitals
     let orbitals = vec![
@@ -19,7 +19,7 @@ fn main() {
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        array![1.0], // Jastrow factor parameters
+        array![0.0], // Jastrow factor parameters
         orbitals,
         0.1, // scale distance
         1,     // number of electrons with spin up
@@ -47,7 +47,7 @@ fn main() {
     let mut runner = Runner::new(sampler);
 
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(100_000, 1);
+    runner.run(1_00_000, 100);
 
     // Retrieve mean values of energy over run
     let energy = *runner.means().get("Hamiltonian").unwrap();

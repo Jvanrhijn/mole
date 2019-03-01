@@ -12,3 +12,4 @@ itertools = "0.7"
 
 [dev-dependencies]
 ndarray-rand = "0.8.0"
+rand = "0.5.0"

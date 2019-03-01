@@ -78,14 +78,14 @@ where
             let bm = block_mean.get(name).unwrap();
             let om = old_mean.get(name).unwrap();
             let smd = self.square_mean_diff.get_mut(name).unwrap();
-            let err = self.errors.get_mut(name).unwrap();
+            let error = self.errors.get_mut(name).unwrap();
 
             // update running mean
             *current_mean += (bm - *current_mean) / idx as f64;
             // update square mean sifference
             *smd += (bm - om) * (bm - *current_mean);
             // update running variance
-            *err = (*smd / idx as f64) / (idx as f64).sqrt();
+            *error = (*smd / idx as f64).sqrt()/(idx as f64).sqrt();
         }
     }
 
