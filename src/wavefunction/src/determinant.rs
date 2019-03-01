@@ -167,6 +167,7 @@ where
                 .front_mut()
                 .expect("Attempt to retrieve data from empty queue") = data;
         }
+        self.flush_update();
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {

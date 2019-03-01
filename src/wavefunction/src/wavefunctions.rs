@@ -260,6 +260,7 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
             = self.gradient(cfg).expect("Failed to take Jastrow Slater gradient");
         *self.lapl_cache.front_mut().expect("Laplacian cache empty")
             = self.laplacian(cfg).expect("Failed to take Jastrow Slater laplacian");
+        self.flush_update();
     }
 
     fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
@@ -314,9 +315,15 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         self.det_up.flush_update();
         self.det_down.flush_update();
         self.jastrow.flush_update();
-        self.value_cache.pop_back();
-        self.grad_cache.pop_back();
-        self.lapl_cache.pop_back();
+        if self.value_cache.len() == 2 {
+            self.value_cache.pop_back();
+        }
+        if self.grad_cache.len() == 2 {
+            self.grad_cache.pop_back();
+        }
+        if self.lapl_cache.len() == 2 {
+            self.lapl_cache.pop_back();
+        }
     }
 
     fn current_value(&self) -> Vgl {
@@ -387,8 +394,9 @@ mod tests {
         let cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
         let (grad_fd, laplac_fd) =
             grad_laplacian_finite_difference(&wave_function, &cfg, 1e-4).unwrap();
-        assert!(grad_fd.all_close(&wave_function.gradient(&cfg).unwrap(), 1e-5));
-        assert!((laplac_fd - wave_function.laplacian(&cfg).unwrap()).abs() < 1e-5);
+
+        assert!(grad_fd.all_close(&wave_function.gradient(&cfg).unwrap(), 1e-6));
+        assert!((laplac_fd - wave_function.laplacian(&cfg).unwrap()).abs() < 1e-6);
     }
 
     #[test]
@@ -421,8 +429,38 @@ mod tests {
         wave_function.enqueue_update(0, &cfg);
         wave_function.push_update();
 
-        assert_eq!(wave_function.current_value().0, value);
+        assert!((wave_function.current_value().0 - value).abs() < 1e-14);
         assert!(wave_function.current_value().1.all_close(&grad, 1e-14));
-        assert_eq!(wave_function.current_value().2, laplacian);
+        assert!((wave_function.current_value().2 - laplacian).abs() < 1e-14);
+    }
+
+    #[test]
+    fn jastrow_slater_enqueue_test_fd() {
+        use crate::util::grad_laplacian_finite_difference;
+
+        let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 2.0, 3.0]);
+        let orbitals = vec![
+            Orbital::new(array![[1.0, 0.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
+            Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
+        ];
+
+        let mut wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2);
+
+        let mut cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
+
+        wave_function.refresh(&cfg);
+
+        cfg[[0, 1]] = -1.0;
+
+        let (grad, laplacian) = grad_laplacian_finite_difference(&wave_function, &cfg, 1e-3).unwrap();
+
+        wave_function.enqueue_update(0, &cfg);
+
+        assert!(wave_function.enqueued_value().1.unwrap().all_close(&grad, 1e-10));
+        assert!((wave_function.enqueued_value().2.unwrap() - laplacian).abs() < 1e-8);
+
+        assert!(!(wave_function.current_value().1.all_close(&grad, 1e-10)));
+        assert!(!((wave_function.current_value().2 - laplacian).abs() < 1e-8));
     }
 }

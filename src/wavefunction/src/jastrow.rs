@@ -36,11 +36,10 @@ impl Function<f64> for ElectronElectronTerm {
 
     fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         let num_elec = cfg.shape()[0];
-        let nparms = self.parms.len();
         let mut value = 0.0;
         for i in 0..num_elec {
             for j in i + 1..num_elec {
-                let b2 = if (i < self.num_up && j >= self.num_up)
+                let b1 = if (i < self.num_up && j >= self.num_up)
                     || (i >= self.num_up && j < self.num_up)
                 {
                     0.5
@@ -49,10 +48,7 @@ impl Function<f64> for ElectronElectronTerm {
                 };
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
-                value += self.parms[0] * rij_scal / (1.0 + b2 * rij_scal);
-                value += izip!(self.parms.slice(s![1..nparms]), 1..nparms)
-                    .map(|(b, p)| b * rij_scal.powi(p as i32))
-                    .sum::<f64>();
+                value += b1 * rij_scal / (1.0 + self.parms[0] * rij_scal);
             }
         }
         Ok(value)
@@ -85,16 +81,10 @@ impl Differentiate for ElectronElectronTerm {
                 let rkl_scal = (1.0 - (-self.scal * rkl).exp()) / self.scal;
                 let magnitude =
                     b1 / (1.0 + self.parms[0] * rkl_scal).powi(2) * (-self.scal * rkl).exp();
-                //let magnitude = (self.parms[0] / (1.0 + b2 * rkl_scal).powi(2)
-                //    + izip!(1..nparms, self.parms.slice(s![1..nparms]))
-                //        .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
-                //        .sum::<f64>())
-                //    * (-self.scal * rkl).exp();
                 grad_k += &(magnitude * &xkl / rkl);
             }
-            for i in 0..3 {
-                grad[[k, i]] = grad_k[i];
-            }
+            let mut slice = grad.slice_mut(s![k, ..]);
+            slice += &grad_k;
         }
         Ok(grad)
     }
@@ -182,6 +172,7 @@ impl Cache for JastrowFactor {
         *self.laplac_queue.front_mut().unwrap() = self
             .laplacian(cfg)
             .expect("Failed to compute Jastrow Laplacian");
+        self.flush_update();
     }
 
     fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) {
@@ -202,9 +193,15 @@ impl Cache for JastrowFactor {
     }
 
     fn flush_update(&mut self) {
-        self.value_queue.pop_back();
-        self.grad_queue.pop_back();
-        self.laplac_queue.pop_back();
+        if self.value_queue.len() == 2 {
+            self.value_queue.pop_back();
+        }
+        if self.grad_queue.len() == 2 {
+            self.grad_queue.pop_back();
+        }
+        if self.laplac_queue.len() == 2 {
+            self.laplac_queue.pop_back();
+        }
     }
 
     fn current_value(&self) -> Vgl {
@@ -242,18 +239,19 @@ mod tests {
 
     #[test]
     fn test_jastrow_factor() {
-        let jas_ee = JastrowFactor::new(array![0.5], 1, 0.01, 1);
 
         const NUM_ELECTRONS: usize = 4;
         const NUM_TESTS: usize = 100;
+
+        let jas_ee = JastrowFactor::new(array![0.5], NUM_ELECTRONS, 0.1, NUM_ELECTRONS/2);
 
         for _ in 0..NUM_TESTS {
             // generate random configuration
             let cfg = Array2::<f64>::random((NUM_ELECTRONS, 3), Range::new(-1.0_f64, 1.0_f64));
             let (grad_fd, laplac_fd) = grad_laplacian_finite_difference(&jas_ee, &cfg, 1e-4).unwrap();
             assert!(grad_fd.all_close(&jas_ee.gradient(&cfg).unwrap(), 1e-4));
-            //assert_eq!(grad_fd, jas_ee.gradient(&cfg).unwrap());
             assert!((laplac_fd - jas_ee.laplacian(&cfg).unwrap()).abs() < 1e-4);
+            //assert_eq!(laplac_fd, jas_ee.laplacian(&cfg).unwrap());
         }
     }
 
