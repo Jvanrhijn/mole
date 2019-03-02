@@ -70,9 +70,10 @@ mod tests {
         const NUM_TESTS: usize = 100;
 
         for _ in 0..NUM_TESTS {
+            let center = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
             let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
             let width = rand::random::<f64>();
-            let func = |x: &Array1<f64>| hydrogen_1s(x, width);
+            let func = |x: &Array1<f64>| hydrogen_1s(&(x - &center), width);
             let (v, g, l) = func(&cfg);
             let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
             assert!(g.all_close(&g_fd, 1e-5));
@@ -86,9 +87,10 @@ mod tests {
         const NUM_TESTS: usize = 100;
 
         for _ in 0..NUM_TESTS {
+            let center = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
             let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
             let width = rand::random::<f64>();
-            let func = |x: &Array1<f64>| hydrogen_2s(x, width);
+            let func = |x: &Array1<f64>| hydrogen_2s(&(x - &center), width);
             let (v, g, l) = func(&cfg);
             let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
             assert!(g.all_close(&g_fd, 1e-5));
@@ -102,9 +104,10 @@ mod tests {
         const NUM_TESTS: usize = 100;
 
         for _ in 0..NUM_TESTS {
+            let center = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
             let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
             let width = rand::random::<f64>();
-            let func = |x: &Array1<f64>| gaussian(x, width);
+            let func = |x: &Array1<f64>| gaussian(&(x - &center), width);
             let (v, g, l) = func(&cfg);
             let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
             assert!(g.all_close(&g_fd, 1e-5));

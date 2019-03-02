@@ -20,9 +20,9 @@ fn main() {
     ];
 
     let wave_func = JastrowSlater::new(
-        array![1e100],  // parameters
+        array![5.0],  // parameters
         orbitals,
-        0.1, // scale distance
+        0.001, // scale distance
         1 // number of up electrons
     );
 
@@ -40,11 +40,11 @@ fn main() {
 
     let mut sampler = Sampler::new(wave_func, metrop);
     sampler.add_observable("Energy", hamiltonian);
-    //sampler.add_observable("Electron potential", potential_electrons);
-    //sampler.add_observable("Kinetic", kinetic);
+    sampler.add_observable("Electron potential", potential_electrons);
+    sampler.add_observable("Kinetic", kinetic);
 
     let mut runner = Runner::new(sampler);
-    runner.run(100_000, 200);
+    runner.run(1_000_000, 200);
 
     let total_energy = *runner.means().get("Energy").unwrap();
     let error_energy = *runner.errors().get("Energy").unwrap();

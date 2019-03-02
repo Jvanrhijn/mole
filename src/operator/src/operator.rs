@@ -27,6 +27,13 @@ impl Function<f64> for IonicPotential {
                 pot -= self.ion_charge[i] as f64 / separation.norm_l2();
             }
         }
+        // proton-proton repulsion energy
+        for i in 0..num_ions {
+            for j in i + 1..num_ions {
+                let separation = &self.ion_positions.slice(s![j, ..]) - &self.ion_positions.slice(s![i, ..]);
+                pot += (self.ion_charge[i]*self.ion_charge[j]) as f64 / separation.norm_l2();
+            }
+        }
         Ok(pot)
     }
 }

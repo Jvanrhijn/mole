@@ -10,7 +10,8 @@ use wavefunction::{JastrowSlater, Orbital};
 fn main() {
     let optimal_width = 1.0/1.69;
     // setup basis set
-    let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![optimal_width]);
+    let ion_pos = array![[1.0, 0.0, 0.0]];
+    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width]);
 
     // construct orbitals
     let orbitals = vec![
@@ -32,7 +33,7 @@ fn main() {
     // Construct kinetic energy and ionic potential operators
     let kinetic = KineticEnergy::new();
     // One ion located at r = (0, 0, 0) with Z = 1
-    let potential = IonicPotential::new(array![[0.0, 0.0, 0.0]], array![2]);
+    let potential = IonicPotential::new(ion_pos, array![2]);
     // electron-electron interaction potential
     let potential_ee = ElectronicPotential::new();
     //  Full hamiltonian
