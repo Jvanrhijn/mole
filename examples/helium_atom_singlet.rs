@@ -21,7 +21,7 @@ fn main() {
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        array![0.75], // Jastrow factor parameters
+        array![0.7, -0.01, -0.15], // Jastrow factor parameters
         orbitals,
         0.001, // scale distance
         1,     // number of electrons with spin up
@@ -48,7 +48,7 @@ fn main() {
     let mut runner = Runner::new(sampler);
 
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(1_00_000, 250);
+    runner.run(1_000_000, 250);
 
     //// Retrieve mean values of energy over run
     let energy = *runner.means().get("Hamiltonian").unwrap();

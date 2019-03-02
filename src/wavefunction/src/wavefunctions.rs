@@ -389,14 +389,15 @@ mod tests {
             Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
             Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
         ];
-        let wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2);
+        let wave_function = JastrowSlater::new(array![1.0, 0.01, 0.01], orbitals, 0.1, 2);
 
         let cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
         let (grad_fd, laplac_fd) =
-            grad_laplacian_finite_difference(&wave_function, &cfg, 1e-4).unwrap();
+            grad_laplacian_finite_difference(&wave_function, &cfg, 1e-3).unwrap();
 
-        assert!(grad_fd.all_close(&wave_function.gradient(&cfg).unwrap(), 1e-6));
-        assert!((laplac_fd - wave_function.laplacian(&cfg).unwrap()).abs() < 1e-6);
+        assert!(grad_fd.all_close(&wave_function.gradient(&cfg).unwrap(), 1e-4));
+        //assert_eq!(grad_fd, wave_function.gradient(&cfg).unwrap());
+        assert!((laplac_fd - wave_function.laplacian(&cfg).unwrap()).abs() < 1e-4);
     }
 
     #[test]
