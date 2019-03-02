@@ -44,7 +44,7 @@ fn main() {
     sampler.add_observable("Kinetic", kinetic);
 
     let mut runner = Runner::new(sampler);
-    runner.run(1_000_000, 200);
+    runner.run(1_00_000, 200);
 
     let total_energy = *runner.means().get("Energy").unwrap();
     let error_energy = *runner.errors().get("Energy").unwrap();
