@@ -5,7 +5,7 @@ use rand::{SeedableRng, StdRng};
 use basis::GaussianBasis;
 use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
-use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, IonicHamiltonian};
 use wavefunction::{JastrowSlater, Orbital};
 
 fn main() {
@@ -20,7 +20,7 @@ fn main() {
     ];
 
     let wave_func = JastrowSlater::new(
-        array![0.5],  // parameters
+        array![1e100],  // parameters
         orbitals,
         0.1, // scale distance
         1 // number of up electrons
@@ -29,6 +29,7 @@ fn main() {
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_positions, array![1, 1]);
     let potential_electrons = ElectronicPotential::new();
+
     let hamiltonian = ElectronicHamiltonian::new(
         kinetic.clone(),
         potential_ions.clone(),
@@ -39,9 +40,11 @@ fn main() {
 
     let mut sampler = Sampler::new(wave_func, metrop);
     sampler.add_observable("Energy", hamiltonian);
+    //sampler.add_observable("Electron potential", potential_electrons);
+    //sampler.add_observable("Kinetic", kinetic);
 
     let mut runner = Runner::new(sampler);
-    runner.run(100_000, 400);
+    runner.run(100_000, 200);
 
     let total_energy = *runner.means().get("Energy").unwrap();
     let error_energy = *runner.errors().get("Energy").unwrap();
