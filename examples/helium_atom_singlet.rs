@@ -8,8 +8,9 @@ use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
 
 fn main() {
+    let optimal_width = 1.0/1.69;
     // setup basis set
-    let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![0.5]);
+    let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![optimal_width]);
 
     // construct orbitals
     let orbitals = vec![
@@ -19,9 +20,9 @@ fn main() {
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        array![0.0], // Jastrow factor parameters
+        array![0.75], // Jastrow factor parameters
         orbitals,
-        0.1, // scale distance
+        0.001, // scale distance
         1,     // number of electrons with spin up
     );
 
@@ -41,15 +42,14 @@ fn main() {
     // construct sampler
     let mut sampler = Sampler::new(wave_function, metrop);
     sampler.add_observable("Hamiltonian", hamiltonian);
-    //sampler.add_observable("Kinetic Energy", kinetic);
 
     // create MC runner
     let mut runner = Runner::new(sampler);
 
     // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(1_00_000, 100);
+    runner.run(1_000_000, 100);
 
-    // Retrieve mean values of energy over run
+    //// Retrieve mean values of energy over run
     let energy = *runner.means().get("Hamiltonian").unwrap();
     let error_energy = *runner.errors().get("Hamiltonian").unwrap();
 

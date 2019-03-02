@@ -27,11 +27,12 @@ fn radial_unit_vector(vector: &Array1<f64>) -> Array1<f64> {
 
 /// Return value and laplacian of the 1s hydrogen orbital
 pub fn hydrogen_1s(pos: &Array1<f64>, width: f64) -> Vgl {
-    let (r, _, _) = get_spherical_angles(pos);
+    let r = (pos * pos).scalar_sum().sqrt();
     let exp = (-r / width).exp();
     let value = exp;
     // convert cartesian coordinates to spherical
-    let gradient = -1.0 * exp / (width * 3.0_f64.sqrt()) * radial_unit_vector(pos);
+    //let gradient = -1.0 * exp / (width * 3.0_f64.sqrt()) * pos/r;
+    let gradient = -exp/width * pos/r;
     let laplacian = (1. / width.powi(2) - 2. / (r * width)) * exp;
     (value, gradient, laplacian)
 }
