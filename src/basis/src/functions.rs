@@ -63,12 +63,54 @@ mod tests {
     use super::*;
     use ndarray_rand::RandomExt;
     use rand::distributions::Range;
+    use crate::util::grad_laplacian_finite_difference;
 
     #[test]
-    fn hydrogen_ground_state() {
-        let r = Array1::<f64>::random(3, Range::new(-1., 1.));
-        let wf_val = hydrogen_1s(&r, 1.0).0;
-        assert!(wf_val > 0.);
+    fn hydrogen_1s_vgl() {
+        const NUM_TESTS: usize = 100;
+
+        for _ in 0..NUM_TESTS {
+            let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
+            let width = rand::random::<f64>();
+            let func = |x: &Array1<f64>| hydrogen_1s(x, width);
+            let (v, g, l) = func(&cfg);
+            let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
+            assert!(g.all_close(&g_fd, 1e-5));
+            //assert_eq!(g, g_fd);
+            assert!((l - l_fd).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn hydrogen_2s_vgl() {
+        const NUM_TESTS: usize = 100;
+
+        for _ in 0..NUM_TESTS {
+            let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
+            let width = rand::random::<f64>();
+            let func = |x: &Array1<f64>| hydrogen_2s(x, width);
+            let (v, g, l) = func(&cfg);
+            let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
+            assert!(g.all_close(&g_fd, 1e-5));
+            //assert_eq!(g, g_fd);
+            assert!((l - l_fd).abs() < 1e-5);
+        }
+    }
+
+    #[test]
+    fn gaussian_vgl() {
+        const NUM_TESTS: usize = 100;
+
+        for _ in 0..NUM_TESTS {
+            let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
+            let width = rand::random::<f64>();
+            let func = |x: &Array1<f64>| gaussian(x, width);
+            let (v, g, l) = func(&cfg);
+            let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
+            assert!(g.all_close(&g_fd, 1e-5));
+            //assert_eq!(g, g_fd);
+            assert!((l - l_fd).abs() < 1e-5);
+        }
     }
 
 }

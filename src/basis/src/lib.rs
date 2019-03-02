@@ -2,6 +2,7 @@
 mod basis;
 mod functions;
 mod traits;
+mod util;
 
 pub use crate::basis::*;
 pub use crate::functions::*;

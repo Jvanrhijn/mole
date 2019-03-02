@@ -11,7 +11,8 @@ use wavefunction::{JastrowSlater, Orbital};
 fn main() {
     let ion_positions = array![[-0.7, 0.0, 0.0], [0.7, 0.0, 0.0]];
 
-    let basis_set = GaussianBasis::new(ion_positions.clone(), vec![1.0]);
+    use basis::Hydrogen1sBasis;
+    let basis_set = Hydrogen1sBasis::new(ion_positions.clone(), vec![1.0]);
 
     let orbitals = vec![
         Orbital::new(array![[1.0], [1.0]], basis_set.clone()),
@@ -19,10 +20,10 @@ fn main() {
     ];
 
     let wave_func = JastrowSlater::new(
-        array![1.0],  // parameters
+        array![0.5],  // parameters
         orbitals,
         0.1, // scale distance
-        1 // number o fup electrons
+        1 // number of up electrons
     );
 
     let kinetic = KineticEnergy::new();
@@ -34,12 +35,9 @@ fn main() {
         potential_electrons.clone(),
     );
 
-    let metrop = MetropolisBox::from_rng(2.0, StdRng::from_seed([0; 32]));
+    let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 
     let mut sampler = Sampler::new(wave_func, metrop);
-    sampler.add_observable("Kinetic Energy", kinetic);
-    sampler.add_observable("Ion Potential", potential_ions);
-    sampler.add_observable("Electron Potential", potential_electrons);
     sampler.add_observable("Energy", hamiltonian);
 
     let mut runner = Runner::new(sampler);
