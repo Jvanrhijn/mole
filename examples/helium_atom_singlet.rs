@@ -27,8 +27,9 @@ fn main() {
         1,     // number of electrons with spin up
     );
 
-    // setup metropolis algorithm/Markov chain generator
-    let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
+    // setup metropolis algorithm/markov chain generator
+    use metropolis::MetropolisDiffuse;
+    let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0; 32]));
 
     // Construct kinetic energy and ionic potential operators
     let kinetic = KineticEnergy::new();
@@ -47,8 +48,8 @@ fn main() {
     // create MC runner
     let mut runner = Runner::new(sampler);
 
-    // Run Monte Carlo integration for 100000 steps, with block size 200
-    runner.run(1_000_000, 250);
+    // Run Monte Carlo integration for 100000 steps, with block size 50
+    runner.run(1_00_000, 100);
 
     //// Retrieve mean values of energy over run
     let energy = *runner.means().get("Hamiltonian").unwrap();

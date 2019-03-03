@@ -47,7 +47,7 @@ impl Function<f64> for ElectronElectronTerm {
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
                 value += b1 * rij_scal / (1.0 + self.parms[0] * rij_scal);
                 if nparm > 1 {
-                    value += izip!(2..nparm, self.parms.slice(s![1..]))
+                    value += izip!(2..nparm+1, self.parms.slice(s![1..]))
                         .map(|(p, b)| b * rij_scal.powi(p as i32))
                         .sum::<f64>();
                 }
@@ -85,7 +85,7 @@ impl Differentiate for ElectronElectronTerm {
                 let rkl_scal = (1.0 - exp) / self.scal;
                 let magnitude = b1 / (1.0 + self.parms[0] * rkl_scal).powi(2) * exp
                     + if nparm > 1 {
-                        izip!(2..nparm, self.parms.slice(s![1..]))
+                        izip!(2..nparm+1, self.parms.slice(s![1..]))
                             .map(|(p, b)| b * p as f64 * exp * rkl_scal.powi(p as i32 - 1))
                             .sum::<f64>()
                     } else {
@@ -123,12 +123,12 @@ impl Differentiate for ElectronElectronTerm {
                 let frac_2 = 2.0 * b1 * self.parms[0] / (1.0 + self.parms[0] * rkl_scal).powi(3);
                 laplacian += 2.0 / rkl * frac * exp - exp.powi(2) * frac_2 - self.scal * exp * frac;
                 laplacian += exp.powi(2)
-                    * izip!(2..nparm, self.parms.slice(s![1..]))
+                    * izip!(2..nparm+1, self.parms.slice(s![1..]))
                         .map(|(p, b)| (p * (p - 1)) as f64 * b * rkl_scal.powi(p as i32 - 2))
                         .sum::<f64>();
                 laplacian += (2.0 / rkl - self.scal)
                     * exp
-                    * izip!(2..nparm, self.parms.slice(s![1..]))
+                    * izip!(2..nparm+1, self.parms.slice(s![1..]))
                         .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
                         .sum::<f64>();
             }

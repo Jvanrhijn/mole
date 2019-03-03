@@ -102,6 +102,158 @@ where
     }
 }
 
+pub struct SpinDeterminantProduct<T>
+    where T: BasisSet
+{
+    det_up: Slater<Orbital<T>>,
+    det_down: Slater<Orbital<T>>,
+    num_up: usize,
+    value_cache: VecDeque<f64>,
+    grad_cache: VecDeque<Array2<f64>>,
+    laplacian_cache: VecDeque<f64>
+}
+
+impl<T: BasisSet> SpinDeterminantProduct<T> {
+    pub fn new(mut orbitals: Vec<Orbital<T>>, num_up: usize) -> Self {
+        let nelec = orbitals.len();
+        let orb_down = orbitals.drain(0..num_up).collect();
+        Self {
+            det_up: Slater::new(orbitals),
+            det_down: Slater::new(orb_down),
+            num_up,
+            value_cache: VecDeque::from(vec![1.0]),
+            grad_cache: VecDeque::from(vec![Array2::zeros((nelec, 3))]),
+            laplacian_cache: VecDeque::from(vec![1.0])
+        }
+    }
+
+    fn split_config(&self, cfg: &Array2<f64>) -> (Array2<f64>, Array2<f64>) {
+        let cfg_up = cfg.slice(s![..self.num_up, ..]).to_owned();
+        let cfg_down = cfg.slice(s![self.num_up.., ..]).to_owned();
+        (cfg_up, cfg_down)
+    }
+}
+
+impl<T: BasisSet> WaveFunction for SpinDeterminantProduct<T> {
+    fn num_electrons(&self) -> usize {
+        self.det_up.num_electrons() + self.det_down.num_electrons()
+    }
+}
+
+impl<T: BasisSet> Function<f64> for SpinDeterminantProduct<T> {
+    type D = Ix2;
+
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+        let (cfg_up, cfg_down) = self.split_config(cfg);
+        Ok(self.det_up.value(&cfg_up)? * self.det_down.value(&cfg_down)?)
+    }
+}
+
+impl<T: BasisSet> Differentiate for SpinDeterminantProduct<T> {
+    type D = Ix2;
+
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        let (cfg_up, cfg_down) = self.split_config(cfg);
+        let det_up_v = self.det_up.value(&cfg_up)?;
+        let det_down_v = self.det_down.value(&cfg_down)?;
+        Ok(stack![Axis(0),
+            det_down_v * self.det_up.gradient(&cfg_up)?,
+            det_up_v * self.det_down.gradient(&cfg_down)?])
+    }
+
+    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+        let (cfg_up, cfg_down) = self.split_config(cfg);
+        let det_up_v = self.det_up.value(&cfg_up)?;
+        let det_down_v = self.det_down.value(&cfg_down)?;
+        Ok(det_down_v * self.det_up.laplacian(&cfg_up)?
+            + det_up_v * self.det_down.laplacian(&cfg_down)?)
+    }
+}
+
+impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
+    type U = usize;
+
+    fn refresh(&mut self, cfg: &Array2<f64>) {
+        let (cfg_up, cfg_down) = self.split_config(cfg);
+        self.det_up.refresh(&cfg_up);
+        self.det_down.refresh(&cfg_down);
+        let (det_up_v, det_up_g, det_up_l) = self.det_up.current_value();
+        let (det_down_v, det_down_g, det_down_l) = self.det_down.current_value();
+        *self.value_cache.front_mut().expect("Value cache empty")
+            = det_up_v * det_down_v;
+        *self.grad_cache.front_mut().expect("Gradient cache empty")
+            = stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
+        *self.laplacian_cache.front_mut().expect("Laplacian cache empty")
+            = det_up_v * det_down_l + det_down_v * det_up_l;
+        self.flush_update();
+    }
+
+    fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
+        let (cfg_up, cfg_down) = self.split_config(cfg);
+        if ud < self.num_up {
+            self.det_up.enqueue_update(ud, &cfg_up);
+        } else {
+            self.det_down.enqueue_update(ud - self.num_up, &cfg_down);
+        }
+        let (det_up_v, det_up_g, det_up_l) = match self.det_up.enqueued_value() {
+            (Some(v), Some(g), Some(l)) => (v, g, l),
+            _ => self.det_up.current_value(),
+        };
+        let (det_down_v, det_down_g, det_down_l) = match self.det_down.enqueued_value() {
+            (Some(v), Some(g), Some(l)) => (v, g, l),
+            _ => self.det_down.current_value(),
+        };
+        self.value_cache.push_back(det_up_v * det_down_v);
+        self.grad_cache.push_back(stack![Axis(0),
+            det_down_v * &det_up_g,
+            det_up_v * &det_down_g]);
+        self.laplacian_cache.push_back(det_up_v * det_down_l + det_down_v * det_up_l);
+    }
+
+    fn push_update(&mut self) {
+        self.det_up.push_update();
+        self.det_down.push_update();
+        self.value_cache.pop_front();
+        self.grad_cache.pop_front();
+        self.laplacian_cache.pop_front();
+    }
+
+    fn flush_update(&mut self) {
+        self.det_up.flush_update();
+        self.det_down.flush_update();
+        if self.value_cache.len() == 2 {
+            self.value_cache.pop_back();
+        }
+        if self.grad_cache.len() == 2 {
+            self.grad_cache.pop_back();
+        }
+        if self.laplacian_cache.len() == 2 {
+            self.laplacian_cache.pop_back();
+        }
+    }
+
+    fn current_value(&self) -> Vgl {
+        match (self.value_cache.front(), self.grad_cache.front(), self.laplacian_cache.front()) {
+            (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
+            _ => panic!("Attempt to retrieve value from empty cache")
+        }
+    }
+
+    fn enqueued_value(&self) -> Ovgl {
+        (
+            self.value_cache
+                .back()
+                .and(Some(*self.value_cache.back().unwrap())),
+            self.grad_cache
+                .back()
+                .and(Some(self.grad_cache.back().unwrap().clone())),
+            self.laplacian_cache
+                .back()
+                .and(Some(*self.laplacian_cache.back().unwrap())),
+        )
+    }
+}
+
 // TODO: generalize to multi-determinant expansions
 /// Jastrow-Slater form wave function:
 /// $\psi(x) = J(\alpha)D^\uparrow D^\downarrow$.

@@ -84,36 +84,35 @@ if __name__ == "__main__":
     MEAN = SERIES.mean()
     VAR = SERIES.var(ddof=1)
 
-    TCORR, NEFF, SIGMA = correlation(SERIES, MEAN, VAR)
+    #TCORR, NEFF, SIGMA = correlation(SERIES, MEAN, VAR)
 
     ERRORS, SIZES = blocking(SERIES)
 
-    hist, bin_edges = histogram(SERIES)
+    #hist, bin_edges = histogram(SERIES)
     
-    if "-p" in sys.argv:
-        fig = plt.figure()
-        ax = [fig.add_subplot(121), fig.add_subplot(122)]
+    fig = plt.figure()
+    ax = [fig.add_subplot(121), fig.add_subplot(122)]
 
-        ax[0].plot(SIZES, ERRORS, '.')
-        ax[0].set_ylabel("Error")
-        ax[0].set_xlabel("Block size")
-        ax[0].grid()
-        
-        blksize = 1
-        blocks = np.array_split(SERIES, len(SERIES)//blksize)
-        means = np.array([b.mean() for b in blocks])
+    ax[0].plot(SIZES, ERRORS, '.')
+    ax[0].set_ylabel("Error")
+    ax[0].set_xlabel("Block size")
+    ax[0].grid()
+    
+    blksize = 1
+    blocks = np.array_split(SERIES, len(SERIES)//blksize)
+    means = np.array([b.mean() for b in blocks])
 
-        n, bins = ax[1].hist(means, density=True, bins=len(means)//10)[:2]
-        gaussian = mlab.normpdf(bins, means.mean(), np.sqrt(means.var()))
-        ax[1].plot(bins, gaussian)
-        ax[1].grid()
-        ax[1].set_title("Block average histogram")
+    n, bins = ax[1].hist(means, density=True, bins=len(means)//10)[:2]
+    gaussian = mlab.normpdf(bins, means.mean(), np.sqrt(means.var()))
+    ax[1].plot(bins, gaussian)
+    ax[1].grid()
+    ax[1].set_title("Block average histogram")
 
-        plt.show()
+    plt.show()
 
-    # Print output
-    print(f"average\t\t{MEAN:.10f}")
-    print(f"variance\t{VAR:.10f}")
-    print(f"t corr\t\t{TCORR:.10f}")
-    print(f"n eff\t\t{NEFF:.10f}")
-    print(f"sigma\t\t{SIGMA:.10f}")
+    ## Print output
+    #print(f"average\t\t{MEAN:.10f}")
+    #print(f"variance\t{VAR:.10f}")
+    #print(f"t corr\t\t{TCORR:.10f}")
+    #print(f"n eff\t\t{NEFF:.10f}")
+    #print(f"sigma\t\t{SIGMA:.10f}")
