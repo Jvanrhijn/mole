@@ -48,8 +48,8 @@ impl Function<f64> for ElectronElectronTerm {
                 value += b1 * rij_scal / (1.0 + self.parms[0] * rij_scal);
                 if nparm > 1 {
                     value += izip!(2..nparm, self.parms.slice(s![1..]))
-                    .map(|(p, b)| b * rij_scal.powi(p as i32))
-                    .sum::<f64>();
+                        .map(|(p, b)| b * rij_scal.powi(p as i32))
+                        .sum::<f64>();
                 }
             }
         }
@@ -81,13 +81,12 @@ impl Differentiate for ElectronElectronTerm {
                 let xl = cfg.slice(s![l, ..]);
                 let xkl = &xk - &xl;
                 let rkl = xkl.norm_l2();
-                let exp = (-self.scal*rkl).exp();
+                let exp = (-self.scal * rkl).exp();
                 let rkl_scal = (1.0 - exp) / self.scal;
-                let magnitude =
-                    b1 / (1.0 + self.parms[0] * rkl_scal).powi(2) * exp
+                let magnitude = b1 / (1.0 + self.parms[0] * rkl_scal).powi(2) * exp
                     + if nparm > 1 {
                         izip!(2..nparm, self.parms.slice(s![1..]))
-                            .map(|(p, b)| b * p as f64 * exp * rkl_scal.powi(p as i32 - 1 ))
+                            .map(|(p, b)| b * p as f64 * exp * rkl_scal.powi(p as i32 - 1))
                             .sum::<f64>()
                     } else {
                         0.0
@@ -125,13 +124,13 @@ impl Differentiate for ElectronElectronTerm {
                 laplacian += 2.0 / rkl * frac * exp - exp.powi(2) * frac_2 - self.scal * exp * frac;
                 laplacian += exp.powi(2)
                     * izip!(2..nparm, self.parms.slice(s![1..]))
-                    .map(|(p, b)| (p*(p - 1)) as f64 * b * rkl_scal.powi(p as i32 - 2))
-                    .sum::<f64>();
-                laplacian += (2.0/rkl - self.scal)*exp
+                        .map(|(p, b)| (p * (p - 1)) as f64 * b * rkl_scal.powi(p as i32 - 2))
+                        .sum::<f64>();
+                laplacian += (2.0 / rkl - self.scal)
+                    * exp
                     * izip!(2..nparm, self.parms.slice(s![1..]))
-                    .map(|(p, b)| (p as f64)*b*rkl_scal.powi(p as i32 - 1))
-                    .sum::<f64>();
-
+                        .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
+                        .sum::<f64>();
             }
         }
         Ok(laplacian)
@@ -254,17 +253,21 @@ impl Cache for JastrowFactor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::grad_laplacian_finite_difference;
     use ndarray_rand::RandomExt;
     use rand::{distributions::Range, SeedableRng, StdRng};
-    use crate::util::grad_laplacian_finite_difference;
 
     #[test]
     fn test_jastrow_factor() {
-
         const NUM_ELECTRONS: usize = 4;
         const NUM_TESTS: usize = 100;
 
-        let jas_ee = JastrowFactor::new(array![0.5, 0.1, 0.01], NUM_ELECTRONS, 0.1, NUM_ELECTRONS/2);
+        let jas_ee = JastrowFactor::new(
+            array![0.5, 0.1, 0.01],
+            NUM_ELECTRONS,
+            0.1,
+            NUM_ELECTRONS / 2,
+        );
         let mut rng = StdRng::from_seed([0; 32]);
 
         for _ in 0..NUM_TESTS {
@@ -272,9 +275,10 @@ mod tests {
             let cfg = Array2::<f64>::random_using(
                 (NUM_ELECTRONS, 3),
                 Range::new(-1.0_f64, 1.0_f64),
-                &mut rng
+                &mut rng,
             );
-            let (grad_fd, laplac_fd) = grad_laplacian_finite_difference(&jas_ee, &cfg, 1e-3).unwrap();
+            let (grad_fd, laplac_fd) =
+                grad_laplacian_finite_difference(&jas_ee, &cfg, 1e-3).unwrap();
             assert!(grad_fd.all_close(&jas_ee.gradient(&cfg).unwrap(), 1e-4));
             assert!((laplac_fd - jas_ee.laplacian(&cfg).unwrap()).abs() < 1e-4);
             //assert_eq!(laplac_fd, jas_ee.laplacian(&cfg).unwrap());

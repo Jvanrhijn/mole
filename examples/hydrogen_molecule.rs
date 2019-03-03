@@ -5,7 +5,9 @@ use rand::{SeedableRng, StdRng};
 use basis::GaussianBasis;
 use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
-use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, IonicHamiltonian};
+use operator::{
+    ElectronicHamiltonian, ElectronicPotential, IonicHamiltonian, IonicPotential, KineticEnergy,
+};
 use wavefunction::{JastrowSlater, Orbital};
 
 fn main() {
@@ -16,14 +18,14 @@ fn main() {
 
     let orbitals = vec![
         Orbital::new(array![[1.0], [1.0]], basis_set.clone()),
-        Orbital::new(array![[1.0], [1.0]], basis_set.clone())
+        Orbital::new(array![[1.0], [1.0]], basis_set.clone()),
     ];
 
     let wave_func = JastrowSlater::new(
-        array![5.0],  // parameters
+        array![5.0], // parameters
         orbitals,
         0.001, // scale distance
-        1 // number of up electrons
+        1,     // number of up electrons
     );
 
     let kinetic = KineticEnergy::new();

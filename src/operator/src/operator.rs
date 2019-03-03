@@ -40,13 +40,13 @@ impl IonicPotential {
         for i in 0..num_ions {
             for j in i + 1..num_ions {
                 let separation = &ion_positions.slice(s![j, ..]) - &ion_positions.slice(s![i, ..]);
-                pot += (ion_charge[i]*ion_charge[j]) as f64 / separation.norm_l2();
+                pot += (ion_charge[i] * ion_charge[j]) as f64 / separation.norm_l2();
             }
         }
         IonicPotential {
             ion_positions,
             ion_charge,
-            ionic_repulsion: pot
+            ionic_repulsion: pot,
         }
     }
 }
@@ -77,7 +77,7 @@ impl Function<f64> for ElectronicPotential {
         let num_elec = cfg.len_of(Axis(0));
         let mut pot = 0.;
         for i in 0..num_elec {
-            for j in i+1..num_elec {
+            for j in i + 1..num_elec {
                 let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..]);
                 pot += 1. / separation.norm_l2();
             }

@@ -254,12 +254,15 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         self.det_down.refresh(&cfg_down);
         self.jastrow.refresh(cfg);
         // TODO get rid of calls to self.value/gradient/laplacian
-        *self.value_cache.front_mut().expect("Value cache empty")
-            = self.value(cfg).expect("Failed to take Jastrow Slater value");
-        *self.grad_cache.front_mut().expect("Gradient cache empty")
-            = self.gradient(cfg).expect("Failed to take Jastrow Slater gradient");
-        *self.lapl_cache.front_mut().expect("Laplacian cache empty")
-            = self.laplacian(cfg).expect("Failed to take Jastrow Slater laplacian");
+        *self.value_cache.front_mut().expect("Value cache empty") = self
+            .value(cfg)
+            .expect("Failed to take Jastrow Slater value");
+        *self.grad_cache.front_mut().expect("Gradient cache empty") = self
+            .gradient(cfg)
+            .expect("Failed to take Jastrow Slater gradient");
+        *self.lapl_cache.front_mut().expect("Laplacian cache empty") = self
+            .laplacian(cfg)
+            .expect("Failed to take Jastrow Slater laplacian");
         self.flush_update();
     }
 
@@ -423,7 +426,7 @@ mod tests {
 
         // change cfg
         cfg[[0, 0]] = 2.0;
-        
+
         let value = wave_function.value(&cfg).unwrap();
         let grad = wave_function.gradient(&cfg).unwrap();
         let laplacian = wave_function.laplacian(&cfg).unwrap();
@@ -454,11 +457,16 @@ mod tests {
 
         cfg[[0, 1]] = -1.0;
 
-        let (grad, laplacian) = grad_laplacian_finite_difference(&wave_function, &cfg, 1e-3).unwrap();
+        let (grad, laplacian) =
+            grad_laplacian_finite_difference(&wave_function, &cfg, 1e-3).unwrap();
 
         wave_function.enqueue_update(0, &cfg);
 
-        assert!(wave_function.enqueued_value().1.unwrap().all_close(&grad, 1e-10));
+        assert!(wave_function
+            .enqueued_value()
+            .1
+            .unwrap()
+            .all_close(&grad, 1e-10));
         assert!((wave_function.enqueued_value().2.unwrap() - laplacian).abs() < 1e-8);
 
         assert!(!(wave_function.current_value().1.all_close(&grad, 1e-10)));

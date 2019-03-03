@@ -85,7 +85,7 @@ where
             // update square mean sifference
             *smd += (bm - om) * (bm - *current_mean);
             // update running variance
-            *error = (*smd / idx as f64).sqrt()/(idx as f64).sqrt();
+            *error = (*smd / idx as f64).sqrt() / (idx as f64).sqrt();
         }
     }
 
@@ -93,7 +93,7 @@ where
         // TODO: find better way to log output
         for key in self.means.keys() {
             let mean = self.means.get(key).unwrap();
-            let error= self.errors.get(key).unwrap();
+            let error = self.errors.get(key).unwrap();
 
             let padding = max_strlen - key.len() + if *mean < 0.0 { 3 } else { 4 };
             let padding2 = if *mean < 0.0 { 3 } else { 4 };

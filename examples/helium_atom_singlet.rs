@@ -8,7 +8,7 @@ use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
 
 fn main() {
-    let optimal_width = 1.0/1.69;
+    let optimal_width = 1.0 / 1.69;
     // setup basis set
     let ion_pos = array![[1.0, 0.0, 0.0]];
     let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width]);
@@ -56,10 +56,7 @@ fn main() {
 
     println!(
         "\nEnergy:         {:.*} +/- {:.*}",
-        8,
-        energy,
-        8,
-        error_energy
+        8, energy, 8, error_energy
     );
     println!("Exact ground state energy: -2.903")
 }

@@ -32,7 +32,7 @@ pub fn hydrogen_1s(pos: &Array1<f64>, width: f64) -> Vgl {
     let value = exp;
     // convert cartesian coordinates to spherical
     //let gradient = -1.0 * exp / (width * 3.0_f64.sqrt()) * pos/r;
-    let gradient = -exp/width * pos/r;
+    let gradient = -exp / width * pos / r;
     let laplacian = (1. / width.powi(2) - 2. / (r * width)) * exp;
     (value, gradient, laplacian)
 }
@@ -61,9 +61,9 @@ pub fn gaussian(pos: &Array1<f64>, width: f64) -> Vgl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::util::grad_laplacian_finite_difference;
     use ndarray_rand::RandomExt;
     use rand::distributions::Range;
-    use crate::util::grad_laplacian_finite_difference;
 
     #[test]
     fn hydrogen_1s_vgl() {
