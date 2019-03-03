@@ -2,11 +2,10 @@
 extern crate ndarray;
 use rand::{SeedableRng, StdRng};
 
-use basis::GaussianBasis;
 use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicHamiltonian, IonicPotential, KineticEnergy,
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy,
 };
 use wavefunction::{JastrowSlater, Orbital};
 
