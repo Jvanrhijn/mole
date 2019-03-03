@@ -54,6 +54,7 @@ where
                 self.update_means_and_variances(block_nr, &block_mean);
                 // log output
                 self.log_data(&block_mean, max_strlen);
+                //println!("{}", self.sampler.acceptance() / (block_nr * block_size) as f64);
             }
         }
     }

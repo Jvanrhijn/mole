@@ -2,7 +2,7 @@
 extern crate ndarray;
 use rand::{SeedableRng, StdRng};
 
-use metropolis::MetropolisBox;
+use metropolis::MetropolisDiffuse;
 use montecarlo::{Runner, Sampler};
 use operator::{
     ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy,
@@ -37,15 +37,15 @@ fn main() {
         potential_electrons.clone(),
     );
 
-    let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
+    let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0; 32]));
 
     let mut sampler = Sampler::new(wave_func, metrop);
     sampler.add_observable("Energy", hamiltonian);
-    sampler.add_observable("Electron potential", potential_electrons);
-    sampler.add_observable("Kinetic", kinetic);
+    //sampler.add_observable("Electron potential", potential_electrons);
+    //sampler.add_observable("Kinetic", kinetic);
 
     let mut runner = Runner::new(sampler);
-    runner.run(1_00_000, 200);
+    runner.run(1_000_000, 100);
 
     let total_energy = *runner.means().get("Energy").unwrap();
     let error_energy = *runner.errors().get("Energy").unwrap();

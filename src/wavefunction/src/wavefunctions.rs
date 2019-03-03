@@ -115,8 +115,8 @@ pub struct SpinDeterminantProduct<T>
 
 impl<T: BasisSet> SpinDeterminantProduct<T> {
     pub fn new(mut orbitals: Vec<Orbital<T>>, num_up: usize) -> Self {
-        let orb_down = orbitals.drain(0..num_up).collect();
         let nelec = orbitals.len();
+        let orb_down = orbitals.drain(0..num_up).collect();
         Self {
             det_up: Slater::new(orbitals),
             det_down: Slater::new(orb_down),
@@ -182,7 +182,7 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         *self.value_cache.front_mut().expect("Value cache empty")
             = det_up_v * det_down_v;
         *self.grad_cache.front_mut().expect("Gradient cache empty")
-            = det_up_v * &det_down_g + det_down_v * &det_up_g;
+            = stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
         *self.laplacian_cache.front_mut().expect("Laplacian cache empty")
             = det_up_v * det_down_l + det_down_v * det_up_l;
         self.flush_update();
@@ -205,8 +205,8 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         };
         self.value_cache.push_back(det_up_v * det_down_v);
         self.grad_cache.push_back(stack![Axis(0),
-            det_up_v * &det_down_g,
-            det_down_v * &det_up_g]);
+            det_down_v * &det_up_g,
+            det_up_v * &det_down_g]);
         self.laplacian_cache.push_back(det_up_v * det_down_l + det_down_v * det_up_l);
     }
 

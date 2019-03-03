@@ -3,7 +3,7 @@ extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use wavefunction::{SpinDeterminantProduct, Orbital};
 use operator::{ElectronicHamiltonian, IonicPotential, KineticEnergy, ElectronicPotential};
-use metropolis::MetropolisBox;
+use metropolis::MetropolisDiffuse;
 use montecarlo::{Sampler, Runner};
 use rand::{SeedableRng,  StdRng};
 
@@ -31,13 +31,14 @@ fn helium_lcao() {
     let hamiltonian = ElectronicHamiltonian::new(kinetic, potential_ions, potential_elec);
 
     let rng = StdRng::from_seed([0u8; 32]);
-    let metrop = MetropolisBox::from_rng(1.0, rng);
+    use metropolis::MetropolisBox;
+    let metrop = MetropolisDiffuse::from_rng(0.1, rng);
 
     let mut sampler = Sampler::new(wave_function, metrop);
     sampler.add_observable("Energy", hamiltonian);
 
     let mut runner = Runner::new(sampler);
-    runner.run(1000, 100);
+    runner.run(1000, 50);
 
     let energy = *runner.means().get("Energy").unwrap();
     let energy_err = *runner.errors().get("Energy").unwrap();
