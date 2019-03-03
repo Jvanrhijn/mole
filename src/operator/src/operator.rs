@@ -1,8 +1,9 @@
 // Third party imports
-use ndarray::{Array, Array1, Array2, Ix2, Axis};
+use ndarray::{Array, Array1, Array2, Axis, Ix2};
+use ndarray_linalg::Norm;
 // First party imports
 use crate::traits::Operator;
-use wavefunction::{Function, Differentiate, Cache, Error};
+use wavefunction::{Cache, Differentiate, Error, Function};
 
 /// Ionic potential energy operator:
 /// $\hat{V}_{\mathrm{ion}} = -\sum_{i=1}^{N_{\mathrm{ions}}\sum_{j=1}^{\mathrm{e}} \frac{Z_i}{r_{ij}}$.
@@ -10,7 +11,8 @@ use wavefunction::{Function, Differentiate, Cache, Error};
 #[derive(Clone)]
 pub struct IonicPotential {
     ion_positions: Array2<f64>,
-    ion_charge: Array1<i32>
+    ion_charge: Array1<i32>,
+    ionic_repulsion: f64,
 }
 
 impl Function<f64> for IonicPotential {
@@ -23,26 +25,35 @@ impl Function<f64> for IonicPotential {
         for i in 0..num_ions {
             for j in 0..num_elec {
                 let separation = &cfg.slice(s![j, ..]) - &self.ion_positions.slice(s![i, ..]);
-                let distance = separation.dot(&separation).sqrt();
-                pot -= self.ion_charge[i] as f64/distance;
+                pot -= self.ion_charge[i] as f64 / separation.norm_l2();
             }
         }
-        Ok(pot)
+        Ok(pot + self.ionic_repulsion)
     }
-
 }
 
 impl IonicPotential {
     pub fn new(ion_positions: Array2<f64>, ion_charge: Array1<i32>) -> Self {
-        IonicPotential{ion_positions, ion_charge}
+        // proton-proton repulsion energy
+        let num_ions = ion_positions.shape()[0];
+        let mut pot = 0.0;
+        for i in 0..num_ions {
+            for j in i + 1..num_ions {
+                let separation = &ion_positions.slice(s![j, ..]) - &ion_positions.slice(s![i, ..]);
+                pot += (ion_charge[i]*ion_charge[j]) as f64 / separation.norm_l2();
+            }
+        }
+        IonicPotential {
+            ion_positions,
+            ion_charge,
+            ionic_repulsion: pot
+        }
     }
 }
 
-impl<'a, T> Operator<T> for IonicPotential
-    where T: Function<f64, D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)> + ?Sized,
-{
+impl<T: Cache> Operator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(self.value(cfg)?*wf.current_value().0)
+        Ok(self.value(cfg)? * wf.current_value().0)
     }
 }
 
@@ -51,16 +62,15 @@ impl<'a, T> Operator<T> for IonicPotential
 /// This potential is only a function of the current electronic configuration, and
 /// so is not parametrized over anything.
 #[derive(Clone)]
-pub struct ElectronicPotential {}
+pub struct ElectronicPotential;
 
 impl ElectronicPotential {
     pub fn new() -> Self {
-        ElectronicPotential{}
+        ElectronicPotential {}
     }
 }
 
 impl Function<f64> for ElectronicPotential {
-
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
@@ -69,18 +79,16 @@ impl Function<f64> for ElectronicPotential {
         for i in 0..num_elec {
             for j in i+1..num_elec {
                 let separation = &cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..]);
-                pot += 1./separation.dot(&separation).sqrt();
+                pot += 1. / separation.norm_l2();
             }
         }
         Ok(pot)
     }
 }
 
-impl<'a, T> Operator<T> for ElectronicPotential
-    where T: Function<f64, D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)> + ?Sized,
-{
+impl<T: Cache> Operator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(self.value(cfg)?*wf.current_value().0)
+        Ok(self.value(cfg)? * wf.current_value().0)
     }
 }
 
@@ -92,16 +100,17 @@ impl<'a, T> Operator<T> for ElectronicPotential
 pub struct KineticEnergy {}
 
 impl KineticEnergy {
-    pub fn  new() -> Self {
-        KineticEnergy{}
+    pub fn new() -> Self {
+        KineticEnergy {}
     }
 }
 
-impl<'a, T> Operator<T> for KineticEnergy
-    where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)> + ?Sized,
+impl<T> Operator<T> for KineticEnergy
+where
+    T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, _cfg: &Array<f64, Ix2>) -> Result<f64, Error> {
-        Ok(-0.5*wf.current_value().2)
+        Ok(-0.5 * wf.current_value().2)
     }
 }
 
@@ -111,17 +120,18 @@ impl<'a, T> Operator<T> for KineticEnergy
 #[derive(Clone)]
 pub struct IonicHamiltonian {
     v: IonicPotential,
-    t: KineticEnergy
+    t: KineticEnergy,
 }
 
 impl IonicHamiltonian {
     pub fn new(t: KineticEnergy, v: IonicPotential) -> Self {
-        IonicHamiltonian{v, t}
+        IonicHamiltonian { v, t }
     }
 }
 
-impl<'a, T> Operator<T> for IonicHamiltonian
-    where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)>+ ?Sized,
+impl<T> Operator<T> for IonicHamiltonian
+where
+    T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
@@ -137,17 +147,18 @@ impl<'a, T> Operator<T> for IonicHamiltonian
 pub struct ElectronicHamiltonian {
     t: KineticEnergy,
     vion: IonicPotential,
-    velec: ElectronicPotential
+    velec: ElectronicPotential,
 }
 
 impl ElectronicHamiltonian {
     pub fn new(t: KineticEnergy, vion: IonicPotential, velec: ElectronicPotential) -> Self {
-        ElectronicHamiltonian{t, vion, velec}
+        ElectronicHamiltonian { t, vion, velec }
     }
 }
 
-impl<'a, T> Operator<T> for ElectronicHamiltonian
-    where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)>+ ?Sized
+impl<T> Operator<T> for ElectronicHamiltonian
+where
+    T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
@@ -159,47 +170,43 @@ impl<'a, T> Operator<T> for ElectronicHamiltonian
 /// This operator should be used in any Monte Carlo simulation
 /// trying to calculate the electronic ground state of a molecular system.
 #[derive(Clone)]
-pub struct LocalEnergy<H>
-{
-    h: H
+pub struct LocalEnergy<H> {
+    h: H,
 }
 
 impl<H> LocalEnergy<H> {
     pub fn new(h: H) -> Self {
-        LocalEnergy{h}
+        LocalEnergy { h }
     }
 }
 
-impl<'a, T, H: Operator<T>> Operator<T> for LocalEnergy<H>
-    where T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Cache<Array2<f64>, V=(f64, Array2<f64>, f64)>+ ?Sized
+impl<T, H: Operator<T>> Operator<T> for LocalEnergy<H>
+where
+    T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
-        Ok(self.h.act_on(wf, cfg)?/wf.current_value().0)
+        Ok(self.h.act_on(wf, cfg)? / wf.current_value().0)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wavefunction::{SingleDeterminant, Orbital};
-    use basis;
+    use basis::{self, Hydrogen1sBasis, Hydrogen2sBasis};
+    use wavefunction::{Orbital, SingleDeterminant};
 
     #[test]
     fn hydrogen_ground_state() {
         let kinetic = KineticEnergy::new();
         let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
         let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set: Vec<Box<basis::Func>> = vec![
-            Box::new(|x| basis::hydrogen_1s(x, 1.0))
-        ];
-        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
+        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));
         wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
         let wval = wf.value(&cfg).unwrap();
-        assert_eq!(hpsi/wval, -0.5);
+        assert_eq!(hpsi / wval, -0.5);
     }
 
     #[test]
@@ -207,15 +214,13 @@ mod tests {
         let kinetic = KineticEnergy::new();
         let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
         let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set: Vec<Box<basis::Func>> = vec![
-            Box::new(|x| basis::hydrogen_2s(x, 2.0))
-        ];
-        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![1.0], &basis_set)]);
+        let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
+        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
         let cfg = Array2::<f64>::ones((1, 3));
         wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
         let wval = wf.value(&cfg).unwrap();
-        assert!((hpsi/wval - (-0.125)).abs() < 1e-15);
+        assert!((hpsi / wval - (-0.125)).abs() < 1e-15);
     }
 
 }

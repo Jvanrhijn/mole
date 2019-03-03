@@ -1,10 +1,9 @@
-#![feature(uniform_paths)]
 #[macro_use]
 extern crate ndarray;
 extern crate ndarray_rand;
 
-mod traits;
 mod metrop;
+mod traits;
 
-pub use traits::*;
 pub use metrop::*;
+pub use traits::*;

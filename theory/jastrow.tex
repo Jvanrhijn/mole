@@ -15,33 +15,93 @@
 The Jastrow factor employed in this library has the functional form
 
 \begin{align}
-  J(\mathbf{R}, \mathbf{r}) = \exp(f_{ee} + f_{en} + f_{een}),
+  J = \exp(f_{ee})
 \end{align}
 
 with 
 
 \begin{align}
-  f_{ee}(r_{ij}) = \sum_{i=1}^{N_e}\sum_{j > i}^{N_e} 
-    \left( \frac{b_1 r_{ij}}{1 + b_2 r_{ij}} + \sum_{p=2}^{N_b - 1} b_{p+1}r_ij^p \right).
+  f_{ee}(R_{ij}) = \sum_{i=1}^{N_e}\sum_{j > i}^{N_e} 
+    \left( \frac{b_1 R_{ij}}{1 + b_2 R_{ij}} + \sum_{p=2}^{N_b - 1} b_{p+1}R_{ij}^p \right).
 \end{align}
 
-The gradient and laplacian of this term are given by
+Here, $R_{ij} = \frac{1 - \exp(-\kappa r_{ij}}{\kappa}$ are scaled distance
+variables. $\kappa$ can be taken so that the exponentiated terms are
+numerically well-behaved. The gradient of $f_{ee}$ is then
 
 \begin{align}
-  \nabla_k f_{ee} = \sum_{i=1}^{N_e} \hat{r}_{ik}\left( \frac{b_1}{1 + b_2 r_{ik})^3}
-    \sum_{p=2}^{N_b - 1} b_{p+1}pr_{ik}^{p-1} \right),
+  \frac{\partial f_{ee}}{\partial\mathbf{r}_k} = \sum_{l=1}^{N_e}
+    \frac{\partial R_{kl}}{\partial\mathbf{r}_{k}}
+    \frac{\partial f_{ee}}{\partial R_{kl}}.
 \end{align}
 
-and
+We have
 
 \begin{align}
-  \nabla^2_k f_{ee} = \sum_{i=1}^{N_e} \frac{1}{r_{ik}}
-    \left( \frac{-2 b_1 b_2}{(1 + b_2 r_{ik})^3}
-    + \sum_{p=2}^{N_b - 1} b_{p+1}p(p-1)r_{ik}^{p-2}\right) \\ 
-    \times (x_i - x_k + y_i - y_k + z_i - z_k).
+  \frac{\partial R_{kl}}{\partial\mathbf{r}_k} = -\frac{\mathbf{r}_{kl}}{r_{kl}} e^{-\kappa r_{kl}},
 \end{align}
 
-We then have $\nabla f_{ee} = \sum_{k=1}^{N_e} \nabla_k f_{ee}$ and $\nabla^2 f_{ee} = \sum_{k=1}^{N_e}\nabla^2_k f_{ee}$. 
+and,
 
+\begin{align}
+  \frac{\partial f_{ee}}{\partial R_{kl}} = \frac{b_1}{(1 + b_2 R_{kl})^2} + \sum_{p=1}^{N_e - 1}
+    pb_{p+1}R_{kl}^{p-1}.
+\end{align}
+
+Putting it all together, the gradient of $f_{ee}$ is
+
+\begin{align}
+  \frac{\partial f_{ee}}{\partial \mathbf{r}_k} = \sum_{l=1}^{N_e} \left( \hat{r}_{kl}e^{-\kappa r_{kl}} 
+    \left( \frac{b_1}{(1 + b_2R_{kl})^2} + \sum_{p=2}^{N_b - 1} pb_{p+1}R_{kl}^{p-1}\right)\right).
+\end{align}
+
+As for the laplacian, we have
+
+\begin{align}
+  \frac{\partial^2 f_{ee}}{\partial \mathbf{r}_k^2} = \frac{\partial}{\partial \mathbf{r}_k} 
+    \bullet \frac{\partial f_{ee}}{\partial \mathbf{r}_k}.
+\end{align}
+
+This divergence can be decomposed as follows. Setting
+
+\begin{align}
+  g(r_{kl}) = e^{-\kappa r_{kl}} \left( \frac{b_1}{(1 + b_2 R_{kl})^2} 
+    + \sum_{p=2}^{N_b - 1}pb_{p+1}R_{kl}^{p-1} \right),
+\end{align}
+
+we have
+
+\begin{align}
+  \nabla_k \bullet \nabla_k f_{ee} = \sum_{l=1}^{N_e}\frac{\partial}{\partial \mathbf{r}_k} 
+    \bullet \left( \hat{r}_{kl} g(r_{kl}) \right)
+    = \sum_{l=1}^{N_e}(g(r_{kl})\nabla_k \bullet \hat{r}_{kl} + \hat{r}_{kl} \bullet \nabla_k g(r_{kl})).
+\end{align}
+
+The gradient of $g(r_{kl})$ yields
+
+\begin{align}
+  \nabla_k g(r_{kl}) = &-\kappa e^{-\kappa r_{kl}}\left( 
+    \frac{b_1}{(1 + b_2 R_{kl})^2} + \sum_{p=2}^{N_b - 1} p b_{p+1} R_{kl}^{p-1}
+    \right)\hat{r}_{kl}\\
+    & + \kappa e^{-2\kappa r_{kl}}\left( 
+    \frac{-2b_1b_2}{(1 + b2R_{kl})^3} + \sum_{p=2}^{N_b - 1}p(p-1)b_{p+1}R_{kl}^{p-2} 
+    \right)\hat{r}_{kl}.
+\end{align}
+
+The divergence of $\hat{r}_{kl}$ is simply $2/r_{kl}$. This then finally yields
+
+\begin{align}
+  \nabla_k \bullet (\hat{r}_{kl}g(r_{kl})) &= g(r_{kl})\left(\frac{2}{r_{kl}} - \kappa\right)\\
+    &+ \kappa e^{-2\kappa r_{kl}}\left( 
+      \frac{-2b_1b_2}{(1 + b_2R_{kl})^3} + \sum_{p=2}^{N_b - 1} p(p-1)b_{p+1}R_{kl}^{p-2}  
+    \right),
+\end{align}
+
+from which we can find the laplacian of $f_{ee}$ as
+
+\begin{align}
+  \nabla^2 f_{ee} = \sum_{k=1}^{N_e} \sum_{l \neq k}^{N_e} \nabla_k 
+    \cdot (\hat{r}_{kl}g(r_{kl})).
+\end{align}
 
 \end{document}
