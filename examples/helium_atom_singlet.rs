@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
-use metropolis::MetropolisBox;
+use metropolis::MetropolisDiffuse;
 use montecarlo::{Runner, Sampler};
 use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
 use rand::{SeedableRng, StdRng};
@@ -28,7 +28,6 @@ fn main() {
     );
 
     // setup metropolis algorithm/markov chain generator
-    use metropolis::MetropolisDiffuse;
     let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0; 32]));
 
     // Construct kinetic energy and ionic potential operators

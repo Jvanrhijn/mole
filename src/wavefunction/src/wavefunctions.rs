@@ -116,10 +116,10 @@ pub struct SpinDeterminantProduct<T>
 impl<T: BasisSet> SpinDeterminantProduct<T> {
     pub fn new(mut orbitals: Vec<Orbital<T>>, num_up: usize) -> Self {
         let nelec = orbitals.len();
-        let orb_down = orbitals.drain(0..num_up).collect();
+        let orb_up = orbitals.drain(0..num_up).collect();
         Self {
-            det_up: Slater::new(orbitals),
-            det_down: Slater::new(orb_down),
+            det_up: Slater::new(orb_up),
+            det_down: Slater::new(orbitals),
             num_up,
             value_cache: VecDeque::from(vec![1.0]),
             grad_cache: VecDeque::from(vec![Array2::zeros((nelec, 3))]),
@@ -262,11 +262,8 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
 /// conditions. The functional form is tailored to be easy to evaluate and differentiate
 /// with respect to its parameters.
 pub struct JastrowSlater<T: BasisSet> {
-    det_up: SingleDeterminant<T>,
-    det_down: SingleDeterminant<T>,
+    det: SpinDeterminantProduct<T>,
     jastrow: JastrowFactor,
-    num_up: usize,
-    num_down: usize,
     value_cache: VecDeque<f64>,
     grad_cache: VecDeque<Array2<f64>>,
     lapl_cache: VecDeque<f64>,
@@ -275,25 +272,18 @@ pub struct JastrowSlater<T: BasisSet> {
 impl<T: BasisSet> JastrowSlater<T> {
     pub fn new(
         parms: Array1<f64>,
-        mut orbitals: Vec<Orbital<T>>,
+        orbitals: Vec<Orbital<T>>,
         scal: f64,
         num_up: usize,
     ) -> Self {
         let num_elec = orbitals.len();
-        let down_orbs: Vec<_> = orbitals.drain(num_up..).collect();
-        let up_orbs = orbitals;
-        let det_up = SingleDeterminant::new(up_orbs);
-        let det_down = SingleDeterminant::new(down_orbs);
         let jastrow = JastrowFactor::new(parms, num_elec, scal, num_up);
         let value_cache = VecDeque::from(vec![1.0]);
         let grad_cache = VecDeque::from(vec![Array2::<f64>::ones((num_elec, 3))]);
         let lapl_cache = VecDeque::from(vec![0.0]);
         Self {
-            det_up,
-            det_down,
+            det: SpinDeterminantProduct::new(orbitals, num_up),
             jastrow,
-            num_up,
-            num_down: num_elec - num_up,
             value_cache,
             grad_cache,
             lapl_cache,
@@ -301,31 +291,19 @@ impl<T: BasisSet> JastrowSlater<T> {
     }
 
     pub fn from_components(
-        det_up: SingleDeterminant<T>,
-        det_down: SingleDeterminant<T>,
+        det: SpinDeterminantProduct<T>,
         jastrow: JastrowFactor,
     ) -> Self {
-        let num_up = det_up.num_electrons();
-        let num_down = det_down.num_electrons();
         let value_cache = VecDeque::from(vec![1.0]);
-        let grad_cache = VecDeque::from(vec![Array2::<f64>::ones((num_up + num_down, 3))]);
+        let grad_cache = VecDeque::from(vec![Array2::<f64>::ones((det.num_electrons(), 3))]);
         let lapl_cache = VecDeque::from(vec![0.0]);
         Self {
-            det_up,
-            det_down,
+            det,
             jastrow,
-            num_up,
-            num_down,
             value_cache,
             grad_cache,
             lapl_cache,
         }
-    }
-
-    fn split_config(&self, cfg: &Array2<f64>) -> (Array2<f64>, Array2<f64>) {
-        let cfg_up = cfg.slice(s![..self.num_up, ..]).to_owned();
-        let cfg_down = cfg.slice(s![self.num_up.., ..]).to_owned();
-        (cfg_up, cfg_down)
     }
 }
 
@@ -333,10 +311,7 @@ impl<T: BasisSet> Function<f64> for JastrowSlater<T> {
     type D = Ix2;
 
     fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        let (cfg_up, cfg_down) = self.split_config(cfg);
-        Ok(self.jastrow.value(cfg)?
-            * self.det_up.value(&cfg_up)?
-            * self.det_down.value(&cfg_down)?)
+        Ok(self.jastrow.value(cfg)? * self.det.value(cfg)?)
     }
 }
 
@@ -344,56 +319,25 @@ impl<T: BasisSet> Differentiate for JastrowSlater<T> {
     type D = Ix2;
 
     fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
-        let (cfg_up, cfg_down) = self.split_config(cfg);
-        let det_up_val = self.det_up.value(&cfg_up)?;
-        let det_down_val = self.det_down.value(&cfg_down)?;
-        let jas_val = self.jastrow.value(cfg)?;
 
-        let grad_det_up = self.det_up.gradient(&cfg_up)?;
-        let grad_det_down = self.det_down.gradient(&cfg_down)?;
-        let (grad_jas_up, grad_jas_down) = self.split_config(&self.jastrow.gradient(cfg)?);
-
-        // apply prod rule:
-        // $\nabla_\uparrow \psi = D^\downarrow(D^\uparrow\nabla_\uparrow J + J\nabla_\uparrow D^\uparrow$
-        // and similar for $\nabla_\downarrow \psi$
-        // then $\nabla \psi = (\nabla_\uparrow \psi, \nabla_\downarrow \psi)$.
-        let grad_up = det_down_val * (det_up_val * &grad_jas_up + jas_val * &grad_det_up);
-        let grad_down = det_up_val * (det_down_val * &grad_jas_down + jas_val * &grad_det_down);
-
-        // concatenate gradients
-        Ok(stack![Axis(0), grad_up, grad_down])
+        Ok(self.jastrow.gradient(cfg)?*self.det.value(cfg)?
+            + self.jastrow.value(cfg)?*self.det.gradient(cfg)?)
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
-        let (cfg_up, cfg_down) = self.split_config(cfg);
-        let det_up_val = self.det_up.value(&cfg_up)?;
-        let det_down_val = self.det_down.value(&cfg_down)?;
-        let jas_val = self.jastrow.value(cfg)?;
-
-        let lapl_det_up = self.det_up.laplacian(&cfg_up)?;
-        let lapl_det_down = self.det_down.laplacian(&cfg_down)?;
-        let lapl_jas = self.jastrow.laplacian(cfg)?;
-
-        let grad_det_up = self.det_up.gradient(&cfg_up)?;
-        let grad_det_down = self.det_down.gradient(&cfg_down)?;
-        let grad_jas = self.jastrow.gradient(cfg)?;
-
-        let (grad_jas_up, grad_jas_down) = self.split_config(&grad_jas);
-
-        // Laplacian formula for $\psi = J(r)\D^\uparrow D^\downarrow$:
-        // see theory/jastrowslater.tex for derivation of formula
-        let laplacian = 2.0 * det_down_val * (&grad_det_up * &grad_jas_up).scalar_sum()
-            + 2.0 * det_up_val * (&grad_det_down * &grad_jas_down).scalar_sum()
-            + det_up_val * det_down_val * lapl_jas
-            + jas_val * (det_up_val * lapl_det_down + det_down_val * lapl_det_up);
-
-        Ok(laplacian)
+        let det_v = self.det.value(cfg)?;
+        let det_g = self.det.gradient(cfg)?;
+        let det_l = self.det.laplacian(cfg)?;
+        let jas_v = self.jastrow.value(cfg)?;
+        let jas_g = self.jastrow.gradient(cfg)?;
+        let jas_l = self.jastrow.laplacian(cfg)?;
+        Ok(det_v * jas_l + jas_v * det_l + 2.0 * (&det_g * &jas_g).scalar_sum())
     }
 }
 
 impl<T: BasisSet> WaveFunction for JastrowSlater<T> {
     fn num_electrons(&self) -> usize {
-        self.num_up + self.num_down
+        self.det.num_electrons()
     }
 }
 
@@ -401,9 +345,7 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
     type U = usize;
 
     fn refresh(&mut self, cfg: &Array2<f64>) {
-        let (cfg_up, cfg_down) = self.split_config(cfg);
-        self.det_up.refresh(&cfg_up);
-        self.det_down.refresh(&cfg_down);
+        self.det.refresh(cfg);
         self.jastrow.refresh(cfg);
         // TODO get rid of calls to self.value/gradient/laplacian
         *self.value_cache.front_mut().expect("Value cache empty") = self
@@ -419,47 +361,24 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
     }
 
     fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
-        let (cfg_up, cfg_down) = self.split_config(cfg);
-        if ud < self.num_up {
-            self.det_up.enqueue_update(ud, &cfg_up);
-        } else {
-            self.det_down.enqueue_update(ud - self.num_up, &cfg_down);
-        }
+        self.det.enqueue_update(ud, cfg);
         self.jastrow.enqueue_update(ud, cfg);
-        let (det_up_v, det_up_g, det_up_l) = match self.det_up.enqueued_value() {
+        let (det_v, det_g, det_l) = match self.det.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.det_up.current_value(),
-        };
-        let (det_down_v, det_down_g, det_down_l) = match self.det_down.enqueued_value() {
-            (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.det_down.current_value(),
+            _ => unreachable!(),
         };
         let (jas_v, jas_g, jas_l) = match self.jastrow.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.jastrow.current_value(),
+            _ => unreachable!(),
         };
-        // Cache wave function value
-        self.value_cache.push_back(det_up_v * det_down_v * jas_v);
-        // gradient w.r.t. spin-up electron coordinates
-        let (jas_g_up, jas_g_down) = self.split_config(&jas_g);
-        // gradient w.r.t. spin-up electron coordinates
-        let grad_up = det_up_v * det_down_v * &jas_g_up + det_down_v * jas_v * &det_up_g;
-        // gradient w.r.t. spin-down electron coordinates
-        let grad_down = det_down_v * det_up_v * &jas_g_down + det_up_v * jas_v * &det_down_g;
-        // full gradient
-        let grad = stack![Axis(0), grad_up, grad_down];
-        self.grad_cache.push_back(grad);
-        // laplacian computation
-        let laplacian = 2.0 * det_down_v * (&det_up_g * &jas_g_up).scalar_sum()
-            + 2.0 * det_up_v * (&det_down_g * &jas_g_down).scalar_sum()
-            + det_up_v * det_down_v * jas_l
-            + jas_v * (det_up_v * det_down_l + det_down_v * det_up_l);
+        self.value_cache.push_back(det_v * jas_v);
+        self.grad_cache.push_back(det_v * &jas_g + jas_v * &det_g);
+        let laplacian = det_v * jas_l + jas_v * det_l + 2.0*(&det_g * &jas_g).scalar_sum();
         self.lapl_cache.push_back(laplacian);
     }
 
     fn push_update(&mut self) {
-        self.det_up.push_update();
-        self.det_down.push_update();
+        self.det.push_update();
         self.jastrow.push_update();
         self.value_cache.pop_front();
         self.grad_cache.pop_front();
@@ -467,8 +386,7 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
     }
 
     fn flush_update(&mut self) {
-        self.det_up.flush_update();
-        self.det_down.flush_update();
+        self.det.flush_update();
         self.jastrow.flush_update();
         if self.value_cache.len() == 2 {
             self.value_cache.pop_back();
