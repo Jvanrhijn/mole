@@ -144,7 +144,7 @@ where
         let drift_velocity_old = &wf_grad_old / wf_value_old;
 
         let exponent = -1.0/(2.0 * self.time_step)
-            * (2.0 * ((&drift_velocity - &drift_velocity_old) * (cfg_prop - cfg)).scalar_sum()
+            * (2.0 * ((&drift_velocity + &drift_velocity_old) * (cfg_prop - cfg)).scalar_sum() * self.time_step
             + self.time_step.powi(2) * (drift_velocity.norm_l2() - drift_velocity_old.norm_l2()));
 
         let acceptance =

@@ -31,14 +31,13 @@ fn helium_lcao() {
     let hamiltonian = ElectronicHamiltonian::new(kinetic, potential_ions, potential_elec);
 
     let rng = StdRng::from_seed([0u8; 32]);
-    use metropolis::MetropolisBox;
     let metrop = MetropolisDiffuse::from_rng(0.1, rng);
 
     let mut sampler = Sampler::new(wave_function, metrop);
     sampler.add_observable("Energy", hamiltonian);
 
     let mut runner = Runner::new(sampler);
-    runner.run(1000, 50);
+    runner.run(1000, 100);
 
     let energy = *runner.means().get("Energy").unwrap();
     let energy_err = *runner.errors().get("Energy").unwrap();
