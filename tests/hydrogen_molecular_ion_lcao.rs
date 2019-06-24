@@ -1,10 +1,10 @@
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
-use wavefunction::{SingleDeterminant, Orbital};
-use operator::{ElectronicHamiltonian, IonicPotential, KineticEnergy, ElectronicPotential};
 use metropolis::MetropolisBox;
-use montecarlo::{Sampler, Runner};
+use montecarlo::{Runner, Sampler};
+use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+use wavefunction::{Orbital, SingleDeterminant};
 
 use rand::{SeedableRng, StdRng};
 
@@ -13,9 +13,7 @@ fn hydrogen_molecular_ion_lcao() {
     let ion_pos = array![[-1.25, 0.0, 0.0], [1.25, 0.0, 0.0]];
     let basis = Hydrogen1sBasis::new(ion_pos.clone(), vec![1.0]);
 
-    let orbitals = vec![
-        Orbital::new(array![[1.0], [1.0]], basis.clone()),
-    ];
+    let orbitals = vec![Orbital::new(array![[1.0], [1.0]], basis.clone())];
 
     let wave_function = SingleDeterminant::new(orbitals);
 
@@ -38,5 +36,4 @@ fn hydrogen_molecular_ion_lcao() {
 
     let exact_result = -0.565;
     assert!((energy - exact_result).abs() < energy_err);
-
 }

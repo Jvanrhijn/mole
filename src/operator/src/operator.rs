@@ -2,7 +2,10 @@
 use ndarray::{Array, Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 // First party imports
-use crate::traits::{Operator, OperatorValue::{self, *}};
+use crate::traits::{
+    Operator,
+    OperatorValue::{self, *},
+};
 use wavefunction::{Cache, Differentiate, Error, Function};
 
 /// Ionic potential energy operator:
@@ -161,7 +164,8 @@ where
     T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(&self.t.act_on(wf, cfg)? + &(&self.vion.act_on(wf, cfg)? + &self.velec.act_on(wf, cfg)?))
+        Ok(&self.t.act_on(wf, cfg)?
+            + &(&self.vion.act_on(wf, cfg)? + &self.velec.act_on(wf, cfg)?))
     }
 }
 

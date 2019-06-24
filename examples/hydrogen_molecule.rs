@@ -4,9 +4,7 @@ use rand::{SeedableRng, StdRng};
 
 use metropolis::MetropolisDiffuse;
 use montecarlo::{Runner, Sampler};
-use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy,
-};
+use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
 use wavefunction::{JastrowSlater, Orbital};
 
 fn main() {

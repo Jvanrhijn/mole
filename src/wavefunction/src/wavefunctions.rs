@@ -103,14 +103,15 @@ where
 }
 
 pub struct SpinDeterminantProduct<T>
-    where T: BasisSet
+where
+    T: BasisSet,
 {
     det_up: Slater<Orbital<T>>,
     det_down: Slater<Orbital<T>>,
     num_up: usize,
     value_cache: VecDeque<f64>,
     grad_cache: VecDeque<Array2<f64>>,
-    laplacian_cache: VecDeque<f64>
+    laplacian_cache: VecDeque<f64>,
 }
 
 impl<T: BasisSet> SpinDeterminantProduct<T> {
@@ -123,7 +124,7 @@ impl<T: BasisSet> SpinDeterminantProduct<T> {
             num_up,
             value_cache: VecDeque::from(vec![1.0]),
             grad_cache: VecDeque::from(vec![Array2::zeros((nelec, 3))]),
-            laplacian_cache: VecDeque::from(vec![1.0])
+            laplacian_cache: VecDeque::from(vec![1.0]),
         }
     }
 
@@ -156,9 +157,11 @@ impl<T: BasisSet> Differentiate for SpinDeterminantProduct<T> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         let det_up_v = self.det_up.value(&cfg_up)?;
         let det_down_v = self.det_down.value(&cfg_down)?;
-        Ok(stack![Axis(0),
+        Ok(stack![
+            Axis(0),
             det_down_v * self.det_up.gradient(&cfg_up)?,
-            det_up_v * self.det_down.gradient(&cfg_down)?])
+            det_up_v * self.det_down.gradient(&cfg_down)?
+        ])
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
@@ -179,12 +182,13 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         self.det_down.refresh(&cfg_down);
         let (det_up_v, det_up_g, det_up_l) = self.det_up.current_value();
         let (det_down_v, det_down_g, det_down_l) = self.det_down.current_value();
-        *self.value_cache.front_mut().expect("Value cache empty")
-            = det_up_v * det_down_v;
-        *self.grad_cache.front_mut().expect("Gradient cache empty")
-            = stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
-        *self.laplacian_cache.front_mut().expect("Laplacian cache empty")
-            = det_up_v * det_down_l + det_down_v * det_up_l;
+        *self.value_cache.front_mut().expect("Value cache empty") = det_up_v * det_down_v;
+        *self.grad_cache.front_mut().expect("Gradient cache empty") =
+            stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
+        *self
+            .laplacian_cache
+            .front_mut()
+            .expect("Laplacian cache empty") = det_up_v * det_down_l + det_down_v * det_up_l;
         self.flush_update();
     }
 
@@ -204,10 +208,13 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
             _ => self.det_down.current_value(),
         };
         self.value_cache.push_back(det_up_v * det_down_v);
-        self.grad_cache.push_back(stack![Axis(0),
+        self.grad_cache.push_back(stack![
+            Axis(0),
             det_down_v * &det_up_g,
-            det_up_v * &det_down_g]);
-        self.laplacian_cache.push_back(det_up_v * det_down_l + det_down_v * det_up_l);
+            det_up_v * &det_down_g
+        ]);
+        self.laplacian_cache
+            .push_back(det_up_v * det_down_l + det_down_v * det_up_l);
     }
 
     fn push_update(&mut self) {
@@ -233,9 +240,13 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
     }
 
     fn current_value(&self) -> Vgl {
-        match (self.value_cache.front(), self.grad_cache.front(), self.laplacian_cache.front()) {
+        match (
+            self.value_cache.front(),
+            self.grad_cache.front(),
+            self.laplacian_cache.front(),
+        ) {
             (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
-            _ => panic!("Attempt to retrieve value from empty cache")
+            _ => panic!("Attempt to retrieve value from empty cache"),
         }
     }
 
@@ -270,12 +281,7 @@ pub struct JastrowSlater<T: BasisSet> {
 }
 
 impl<T: BasisSet> JastrowSlater<T> {
-    pub fn new(
-        parms: Array1<f64>,
-        orbitals: Vec<Orbital<T>>,
-        scal: f64,
-        num_up: usize,
-    ) -> Self {
+    pub fn new(parms: Array1<f64>, orbitals: Vec<Orbital<T>>, scal: f64, num_up: usize) -> Self {
         let num_elec = orbitals.len();
         let jastrow = JastrowFactor::new(parms, num_elec, scal, num_up);
         let value_cache = VecDeque::from(vec![1.0]);
@@ -290,10 +296,7 @@ impl<T: BasisSet> JastrowSlater<T> {
         }
     }
 
-    pub fn from_components(
-        det: SpinDeterminantProduct<T>,
-        jastrow: JastrowFactor,
-    ) -> Self {
+    pub fn from_components(det: SpinDeterminantProduct<T>, jastrow: JastrowFactor) -> Self {
         let value_cache = VecDeque::from(vec![1.0]);
         let grad_cache = VecDeque::from(vec![Array2::<f64>::ones((det.num_electrons(), 3))]);
         let lapl_cache = VecDeque::from(vec![0.0]);
@@ -319,9 +322,8 @@ impl<T: BasisSet> Differentiate for JastrowSlater<T> {
     type D = Ix2;
 
     fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
-
-        Ok(self.jastrow.gradient(cfg)?*self.det.value(cfg)?
-            + self.jastrow.value(cfg)?*self.det.gradient(cfg)?)
+        Ok(self.jastrow.gradient(cfg)? * self.det.value(cfg)?
+            + self.jastrow.value(cfg)? * self.det.gradient(cfg)?)
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
@@ -373,7 +375,7 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         };
         self.value_cache.push_back(det_v * jas_v);
         self.grad_cache.push_back(det_v * &jas_g + jas_v * &det_g);
-        let laplacian = det_v * jas_l + jas_v * det_l + 2.0*(&det_g * &jas_g).scalar_sum();
+        let laplacian = det_v * jas_l + jas_v * det_l + 2.0 * (&det_g * &jas_g).scalar_sum();
         self.lapl_cache.push_back(laplacian);
     }
 

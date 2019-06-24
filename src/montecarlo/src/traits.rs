@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use operator::OperatorValue;
+use std::collections::HashMap;
 use wavefunction::Error;
 
 /// Interface for sampling observables from Monte Carlo integration.

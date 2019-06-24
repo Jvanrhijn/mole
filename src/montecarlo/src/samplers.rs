@@ -8,7 +8,10 @@ use rand::Rng;
 // First party imports
 use crate::traits::*;
 use metropolis::Metropolis;
-use operator::{Operator, OperatorValue::{self, *}};
+use operator::{
+    Operator,
+    OperatorValue::{self, *},
+};
 use wavefunction::{Cache, Differentiate, Error, Function, WaveFunction};
 
 /// Simple Monte Carlo sampler

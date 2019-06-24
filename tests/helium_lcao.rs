@@ -1,29 +1,25 @@
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
-use wavefunction::{SpinDeterminantProduct, Orbital};
-use operator::{ElectronicHamiltonian, IonicPotential, KineticEnergy, ElectronicPotential};
 use metropolis::MetropolisDiffuse;
-use montecarlo::{Sampler, Runner};
-use rand::{SeedableRng,  StdRng};
-
+use montecarlo::{Runner, Sampler};
+use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+use rand::{SeedableRng, StdRng};
+use wavefunction::{Orbital, SpinDeterminantProduct};
 
 #[test]
 fn helium_lcao() {
-    let optimal_width = 1.0/1.69;
+    let optimal_width = 1.0 / 1.69;
 
     let ion_pos = array![[0.0, 0.0, 0.0]];
     let basis = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width]);
 
     let orbitals = vec![
         Orbital::new(array![[1.0]], basis.clone()),
-        Orbital::new(array![[1.0]], basis.clone())
+        Orbital::new(array![[1.0]], basis.clone()),
     ];
 
-    let wave_function = SpinDeterminantProduct::new(
-        orbitals,
-        1
-    );
+    let wave_function = SpinDeterminantProduct::new(orbitals, 1);
 
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_pos, array![2]);
@@ -42,6 +38,6 @@ fn helium_lcao() {
     let energy = *runner.means().get("Energy").unwrap();
     let energy_err = *runner.errors().get("Energy").unwrap();
 
-    let exact_result = 0.5*(1.5_f64).powi(6)*(-0.5);
-    assert!((energy - exact_result).abs() < 2.0*energy_err);
+    let exact_result = 0.5 * (1.5_f64).powi(6) * (-0.5);
+    assert!((energy - exact_result).abs() < 2.0 * energy_err);
 }

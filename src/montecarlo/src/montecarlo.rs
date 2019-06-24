@@ -23,10 +23,17 @@ where
         let means: HashMap<String, f64> = sampler
             .sample()
             .expect("Failed to perform initial sampling")
-            .iter().map(|(k, v)| (k.clone(), match v {
-                OperatorValue::Scalar(v) => *v,
-                _ => unimplemented!()
-            })).collect();
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.clone(),
+                    match v {
+                        OperatorValue::Scalar(v) => *v,
+                        _ => unimplemented!(),
+                    },
+                )
+            })
+            .collect();
         let errors = means.keys().map(|key| (key.clone(), 0.0)).collect();
         let square_mean_diff = means.keys().map(|key| (key.clone(), 0.0)).collect();
         Self {
@@ -49,14 +56,21 @@ where
                 self.sampler.move_state();
                 // Discard first block for equilibration
                 if block_nr > 0 {
-                    let samples: HashMap<String, f64> = self.sampler
+                    let samples: HashMap<String, f64> = self
+                        .sampler
                         .sample()
                         .expect("Failed to sample observables")
                         .iter()
-                        .map(|(k, v)| (k.clone(), match v {
-                            OperatorValue::Scalar(value) => *value,
-                            _ => unimplemented!()
-                        })).collect();
+                        .map(|(k, v)| {
+                            (
+                                k.clone(),
+                                match v {
+                                    OperatorValue::Scalar(value) => *value,
+                                    _ => unimplemented!(),
+                                },
+                            )
+                        })
+                        .collect();
                     block.set_value(b, &samples);
                 }
             }

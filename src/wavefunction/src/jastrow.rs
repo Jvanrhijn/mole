@@ -1,8 +1,8 @@
 use crate::error::Error;
 use crate::traits::{Cache, Differentiate, Function};
-use optimize::Optimize;
 use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
+use optimize::Optimize;
 use std::collections::VecDeque;
 
 type Vgl = (f64, Array2<f64>, f64);
@@ -28,13 +28,11 @@ impl ElectronElectronTerm {
     }
 
     fn get_b1(&self, i: usize, j: usize) -> f64 {
-        if (i < self.num_up && j >= self.num_up)
-                || (i >= self.num_up && j < self.num_up)
-        {
+        if (i < self.num_up && j >= self.num_up) || (i >= self.num_up && j < self.num_up) {
             0.5
-         } else {
+        } else {
             0.25
-          }
+        }
     }
 }
 
@@ -52,7 +50,7 @@ impl Function<f64> for ElectronElectronTerm {
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
                 value += b1 * rij_scal / (1.0 + self.parms[0] * rij_scal);
                 if nparm > 1 {
-                    value += izip!(2..nparm+1, self.parms.slice(s![1..]))
+                    value += izip!(2..nparm + 1, self.parms.slice(s![1..]))
                         .map(|(p, b)| b * rij_scal.powi(p as i32))
                         .sum::<f64>();
                 }
@@ -84,7 +82,7 @@ impl Differentiate for ElectronElectronTerm {
                 let rkl_scal = (1.0 - exp) / self.scal;
                 let magnitude = b1 / (1.0 + self.parms[0] * rkl_scal).powi(2) * exp
                     + if nparm > 1 {
-                        izip!(2..nparm+1, self.parms.slice(s![1..]))
+                        izip!(2..nparm + 1, self.parms.slice(s![1..]))
                             .map(|(p, b)| b * p as f64 * exp * rkl_scal.powi(p as i32 - 1))
                             .sum::<f64>()
                     } else {
@@ -116,12 +114,12 @@ impl Differentiate for ElectronElectronTerm {
                 let frac_2 = 2.0 * b1 * self.parms[0] / (1.0 + self.parms[0] * rkl_scal).powi(3);
                 laplacian += 2.0 / rkl * frac * exp - exp.powi(2) * frac_2 - self.scal * exp * frac;
                 laplacian += exp.powi(2)
-                    * izip!(2..nparm+1, self.parms.slice(s![1..]))
+                    * izip!(2..nparm + 1, self.parms.slice(s![1..]))
                         .map(|(p, b)| (p * (p - 1)) as f64 * b * rkl_scal.powi(p as i32 - 2))
                         .sum::<f64>();
                 laplacian += (2.0 / rkl - self.scal)
                     * exp
-                    * izip!(2..nparm+1, self.parms.slice(s![1..]))
+                    * izip!(2..nparm + 1, self.parms.slice(s![1..]))
                         .map(|(p, b)| (p as f64) * b * rkl_scal.powi(p as i32 - 1))
                         .sum::<f64>();
             }
@@ -135,11 +133,11 @@ impl Optimize for ElectronElectronTerm {
         let num_elec = cfg.shape()[0];
         let mut grad_bp = Array1::<f64>::zeros((self.parms.len()));
         for i in 0..num_elec {
-            for j in i+1..num_elec {
+            for j in i + 1..num_elec {
                 let b1 = self.get_b1(i, j);
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
-                grad_bp[0] += -b1 * rij_scal.powi(2) * (1.0 + self.parms[0]*rij_scal).powi(-2);
+                grad_bp[0] += -b1 * rij_scal.powi(2) * (1.0 + self.parms[0] * rij_scal).powi(-2);
                 let mut grad_rest = grad_bp.slice_mut(s![1..]);
                 grad_rest += &(1..self.parms.len())
                     .map(|p| rij_scal.powi(p as i32 + 1))

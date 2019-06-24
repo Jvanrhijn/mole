@@ -1,5 +1,5 @@
 // std imports
-use std::ops::{Add, Mul, Div};
+use std::ops::{Add, Div, Mul};
 // Third party imports
 use ndarray::{Array1, Array2};
 use wavefunction::Error;
@@ -23,12 +23,12 @@ impl Add for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other + value),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             },
             Matrix(value) => match other {
                 Scalar(value_other) => Matrix(*value_other + value),
-                _ => unimplemented!()
-            }
+                _ => unimplemented!(),
+            },
         }
     }
 }
@@ -46,12 +46,12 @@ impl Mul for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other * value),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             },
             Matrix(value) => match other {
                 Scalar(value_other) => Matrix(*value_other * value),
-                _ => unimplemented!()
-            }
+                _ => unimplemented!(),
+            },
         }
     }
 }
@@ -69,12 +69,12 @@ impl Div for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other / value),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             },
             Matrix(value) => match other {
                 Scalar(value_other) => Matrix(*value_other / value),
-                _ => unimplemented!()
-            }
+                _ => unimplemented!(),
+            },
         }
     }
 }
@@ -92,10 +92,13 @@ mod tests {
     fn add_op_values() {
         first = Scalar(1.0);
         second = Scalar(2.0);
-        assert_eq!(1.0 + 2.0, match (&first + &second) {
-            Scalar(value) => value,
-            _ => unimplemented!()
-        });
+        assert_eq!(
+            1.0 + 2.0,
+            match (&first + &second) {
+                Scalar(value) => value,
+                _ => unimplemented!(),
+            }
+        );
     }
 
 }
