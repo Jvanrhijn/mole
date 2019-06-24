@@ -4,6 +4,7 @@ use std::ops::{Add, Div, Mul};
 use ndarray::{Array1, Array2};
 use wavefunction::Error;
 
+#[derive(Debug, PartialEq)]
 pub enum OperatorValue {
     Scalar(f64),
     Vector(Array1<f64>),
@@ -90,12 +91,12 @@ mod tests {
 
     #[test]
     fn add_op_values() {
-        first = Scalar(1.0);
-        second = Scalar(2.0);
+        let first = OperatorValue::Scalar(1.0);
+        let second = OperatorValue::Scalar(2.0);
         assert_eq!(
             1.0 + 2.0,
-            match (&first + &second) {
-                Scalar(value) => value,
+            match &first + &second {
+                OperatorValue::Scalar(value) => value,
                 _ => unimplemented!(),
             }
         );

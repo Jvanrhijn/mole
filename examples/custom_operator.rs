@@ -5,7 +5,7 @@ use metropolis::MetropolisBox;
 use montecarlo::{Runner, Sampler};
 use ndarray::{Array2, Ix2};
 use ndarray_linalg::Norm;
-use operator::{KineticEnergy, Operator};
+use operator::{KineticEnergy, Operator, OperatorValue};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Cache, Differentiate, Error, Orbital, SingleDeterminant};
 
@@ -32,12 +32,14 @@ impl<T> Operator<T> for HarmonicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         // Kinetic energy
         let ke = self.t.act_on(wf, cfg)?;
         // Potential energy: V = 0.5*m*omega^2*|x|^2
-        let pe = 0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.current_value().0;
-        Ok(ke + pe)
+        let pe = OperatorValue::Scalar(
+            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.current_value().0,
+        );
+        Ok(&ke + &pe)
     }
 }
 

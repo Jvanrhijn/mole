@@ -210,7 +210,7 @@ mod tests {
         wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
         let wval = wf.value(&cfg).unwrap();
-        assert_eq!(hpsi / wval, -0.5);
+        assert_eq!(&hpsi / &Scalar(wval), Scalar(-0.5));
     }
 
     #[test]
@@ -224,7 +224,13 @@ mod tests {
         wf.refresh(&cfg);
         let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
         let wval = wf.value(&cfg).unwrap();
-        assert!((hpsi / wval - (-0.125)).abs() < 1e-15);
+        let hpsi = if let OperatorValue::Scalar(value) = hpsi {
+            value
+        } else {
+            assert!(false);
+            0.0
+        };
+        assert!((hpsi/ wval - (-0.125)).abs() < 1e-15);
     }
 
 }
