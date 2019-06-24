@@ -10,8 +10,8 @@ members = [
   "src/metropolis",
   "src/montecarlo",
   "src/operator",
-  "src/optimizers",
   "src/wavefunction",
+  "src/optimize",
 ]
 
 [dependencies]
@@ -20,7 +20,6 @@ wavefunction = { path = "src/wavefunction" }
 metropolis = { path = "src/metropolis" }
 operator = { path = "src/operator" }
 basis = { path = "src/basis" }
-optimizers = { path = "src/optimizers" }
 
 
 [dev-dependencies]

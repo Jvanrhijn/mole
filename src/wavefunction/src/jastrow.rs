@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::traits::{Cache, Differentiate, Function};
+use optimize::Optimize;
 use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use std::collections::VecDeque;
@@ -25,6 +26,16 @@ impl ElectronElectronTerm {
             num_up,
         }
     }
+
+    fn get_b1(&self, i: usize, j: usize) -> f64 {
+        if (i < self.num_up && j >= self.num_up)
+                || (i >= self.num_up && j < self.num_up)
+        {
+            0.5
+         } else {
+            0.25
+          }
+    }
 }
 
 impl Function<f64> for ElectronElectronTerm {
@@ -36,13 +47,7 @@ impl Function<f64> for ElectronElectronTerm {
         let mut value = 0.0;
         for i in 0..num_elec {
             for j in i + 1..num_elec {
-                let b1 = if (i < self.num_up && j >= self.num_up)
-                    || (i >= self.num_up && j < self.num_up)
-                {
-                    0.5
-                } else {
-                    0.25
-                };
+                let b1 = self.get_b1(i, j);
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
                 value += b1 * rij_scal / (1.0 + self.parms[0] * rij_scal);
@@ -71,13 +76,7 @@ impl Differentiate for ElectronElectronTerm {
                 if l == k {
                     continue;
                 }
-                let b1 = if (k < self.num_up && l >= self.num_up)
-                    || (k >= self.num_up && l < self.num_up)
-                {
-                    0.5
-                } else {
-                    0.25
-                };
+                let b1 = self.get_b1(k, l);
                 let xl = cfg.slice(s![l, ..]);
                 let xkl = &xk - &xl;
                 let rkl = xkl.norm_l2();
@@ -108,13 +107,7 @@ impl Differentiate for ElectronElectronTerm {
                 if k == l {
                     continue;
                 }
-                let b1 = if (k < self.num_up && l >= self.num_up)
-                    || (k >= self.num_up && l < self.num_up)
-                {
-                    0.5
-                } else {
-                    0.25
-                };
+                let b1 = self.get_b1(k, l);
                 let rkl: f64 = (&cfg.slice(s![k, ..]) - &cfg.slice(s![l, ..])).norm_l2();
                 let exp = (-self.scal * rkl).exp();
                 let rkl_scal = (1.0 - exp) / self.scal;
@@ -134,6 +127,26 @@ impl Differentiate for ElectronElectronTerm {
             }
         }
         Ok(laplacian)
+    }
+}
+
+impl Optimize for ElectronElectronTerm {
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
+        let num_elec = cfg.shape()[0];
+        let mut grad_bp = Array1::<f64>::zeros((self.parms.len()));
+        for i in 0..num_elec {
+            for j in i+1..num_elec {
+                let b1 = self.get_b1(i, j);
+                let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
+                let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
+                grad_bp[0] += -b1 * rij_scal.powi(2) * (1.0 + self.parms[0]*rij_scal).powi(-2);
+                let mut grad_rest = grad_bp.slice_mut(s![1..]);
+                grad_rest += &(1..self.parms.len())
+                    .map(|p| rij_scal.powi(p as i32 + 1))
+                    .collect::<Array1<f64>>();
+            }
+        }
+        grad_bp
     }
 }
 
@@ -178,6 +191,12 @@ impl Differentiate for JastrowFactor {
     fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
         let value = self.value(cfg)?;
         Ok(value * (self.fee.laplacian(cfg)? + self.fee.gradient(cfg)?.norm_l2().powi(2)))
+    }
+}
+
+impl Optimize for JastrowFactor {
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
+        self.fee.parameter_gradient(cfg)
     }
 }
 

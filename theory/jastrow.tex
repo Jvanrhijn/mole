@@ -104,4 +104,25 @@ from which we can find the laplacian of $f_{ee}$ as
     \cdot (\hat{r}_{kl}g(r_{kl})).
 \end{align}
 
+The parameter gradient is easier: we have
+
+\begin{align}
+  \frac{\partial f_{ee}}{\partial b_2} = -\sum_{i=1}^{N_e}\sum_{j>i}^{N_e}
+      b_1 R_{ij}^2(1 + b_2 R_{ij})^{-2}, 
+\end{align}
+
+and
+
+\begin{align}
+  \frac{\partial f_{ee}}{\partial b_p} = \sum_{i=1}^{N_e}\sum_{j>i}^{N_e}
+    R_{ij}^{p-1} 
+\end{align}
+
+for $b > 2$. This then trivially yields
+
+\begin{align}
+    \frac{\partial J}{\partial b_p} = \frac{\partial f_{ee}}{\partial b_p}
+        \frac{\partial J}{\partial f_{ee}} = J\frac{\partial f_{ee}}{\partial b_p}.
+\end{align}
+
 \end{document}

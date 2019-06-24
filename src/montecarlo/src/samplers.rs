@@ -21,7 +21,7 @@ where
     wave_function: T,
     config: Array2<f64>,
     metropolis: V,
-    observables: HashMap<String, Box<Operator<T>>>,
+    observables: HashMap<String, Box<dyn Operator<T, Value=f64>>>,
     acceptance: f64,
 }
 
@@ -57,7 +57,7 @@ where
 
     pub fn add_observable<O>(&mut self, name: &str, operator: O)
     where
-        O: 'static + Operator<T>,
+        O: 'static + Operator<T, Value=f64>,
     {
         self.observables
             .insert(name.to_string(), Box::new(operator));
