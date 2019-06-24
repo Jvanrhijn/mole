@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use operator::OperatorValue;
 use wavefunction::Error;
 
 /// Interface for sampling observables from Monte Carlo integration.
 pub trait MonteCarloSampler {
     /// Sample observables from the current configuration.
-    fn sample(&self) -> Result<HashMap<String, f64>, Error>;
+    fn sample(&self) -> Result<HashMap<String, OperatorValue>, Error>;
 
     /// Move the current state to a new configuration.
     fn move_state(&mut self);

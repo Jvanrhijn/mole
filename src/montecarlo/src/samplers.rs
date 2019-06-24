@@ -8,7 +8,7 @@ use rand::Rng;
 // First party imports
 use crate::traits::*;
 use metropolis::Metropolis;
-use operator::Operator;
+use operator::{Operator, OperatorValue::{self, *}};
 use wavefunction::{Cache, Differentiate, Error, Function, WaveFunction};
 
 /// Simple Monte Carlo sampler
@@ -21,7 +21,7 @@ where
     wave_function: T,
     config: Array2<f64>,
     metropolis: V,
-    observables: HashMap<String, Box<dyn Operator<T, Value=f64>>>,
+    observables: HashMap<String, Box<dyn Operator<T>>>,
     acceptance: f64,
 }
 
@@ -57,7 +57,7 @@ where
 
     pub fn add_observable<O>(&mut self, name: &str, operator: O)
     where
-        O: 'static + Operator<T, Value=f64>,
+        O: 'static + Operator<T>,
     {
         self.observables
             .insert(name.to_string(), Box::new(operator));
@@ -69,17 +69,17 @@ where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache,
     V: Metropolis<T>,
 {
-    fn sample(&self) -> Result<HashMap<String, f64>, Error> {
+    fn sample(&self) -> Result<HashMap<String, OperatorValue>, Error> {
         Ok(self
             .observables
             .iter()
             .map(|(name, operator)| {
                 (
                     name.clone(),
-                    operator
+                    &operator
                         .act_on(&self.wave_function, &self.config)
                         .expect("Failed to act on wave function with operator")
-                        / self.wave_function.current_value().0,
+                        / &Scalar(self.wave_function.current_value().0),
                 )
             })
             .collect())
