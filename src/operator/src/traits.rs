@@ -1,18 +1,17 @@
 // std imports
-use std::ops::{Add, Div, Mul};
+use std::ops::{Add, Div, Mul, Sub};
 use std::iter::Sum;
 // Third party imports
 use ndarray::{Array1, Array2};
 use wavefunction::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum OperatorValue {
     Scalar(f64),
     Vector(Array1<f64>),
     Matrix(Array2<f64>),
 }
 
-// TODO: implement other arithmetic traits for OperatorValue
 impl Add for OperatorValue {
     type Output = OperatorValue;
 
@@ -37,6 +36,78 @@ impl Add for OperatorValue {
 
 }
 
+impl Sub for OperatorValue {
+    type Output = OperatorValue;
+
+    fn sub(self, other: OperatorValue) -> OperatorValue {
+        use OperatorValue::*;
+        match self {
+            Scalar(value) => match other {
+                Scalar(value_other) => Scalar(value - value_other),
+                Vector(value_other) => Vector(value - value_other),
+                Matrix(value_other) => Matrix(value - value_other),
+            },
+            Vector(value) => match other {
+                Scalar(value_other) => Vector(value_other - value),
+                _ => unimplemented!(),
+            },
+            Matrix(value) => match other {
+                Scalar(value_other) => Matrix(value_other - value),
+                _ => unimplemented!(),
+            },
+        }
+    }
+
+}
+
+impl Mul for OperatorValue {
+    type Output = OperatorValue;
+
+    fn mul(self, other: OperatorValue) -> OperatorValue {
+        use OperatorValue::*;
+        match self {
+            Scalar(value) => match other {
+                Scalar(value_other) => Scalar(value * value_other),
+                Vector(value_other) => Vector(value * value_other),
+                Matrix(value_other) => Matrix(value * value_other),
+            },
+            Vector(value) => match other {
+                Scalar(value_other) => Vector(value_other * value),
+                _ => unimplemented!(),
+            },
+            Matrix(value) => match other {
+                Scalar(value_other) => Matrix(value_other * value),
+                _ => unimplemented!(),
+            },
+        }
+    }
+
+}
+
+impl Div for OperatorValue {
+    type Output = OperatorValue;
+
+    fn div(self, other: OperatorValue) -> OperatorValue {
+        use OperatorValue::*;
+        match self {
+            Scalar(value) => match other {
+                Scalar(value_other) => Scalar(value / value_other),
+                Vector(value_other) => Vector(value / value_other),
+                Matrix(value_other) => Matrix(value / value_other),
+            },
+            Vector(value) => match other {
+                Scalar(value_other) => Vector(value_other / value),
+                _ => unimplemented!(),
+            },
+            Matrix(value) => match other {
+                Scalar(value_other) => Matrix(value_other / value),
+                _ => unimplemented!(),
+            },
+        }
+    }
+
+}
+
 impl Add for &OperatorValue {
     type Output = OperatorValue;
 
@@ -54,6 +125,29 @@ impl Add for &OperatorValue {
             },
             Matrix(value) => match other {
                 Scalar(value_other) => Matrix(*value_other + value),
+                _ => unimplemented!(),
+            },
+        }
+    }
+}
+
+impl Sub for &OperatorValue {
+    type Output = OperatorValue;
+
+    fn sub(self, other: &OperatorValue) -> OperatorValue {
+        use OperatorValue::*;
+        match self {
+            Scalar(value) => match other {
+                Scalar(value_other) => Scalar(value  - value_other),
+                Vector(value_other) => Vector(*value - value_other),
+                Matrix(value_other) => Matrix(*value - value_other),
+            },
+            Vector(value) => match other {
+                Scalar(value_other) => Vector(*value_other - value),
+                _ => unimplemented!(),
+            },
+            Matrix(value) => match other {
+                Scalar(value_other) => Matrix(*value_other - value),
                 _ => unimplemented!(),
             },
         }
@@ -106,11 +200,11 @@ impl Div for &OperatorValue {
     }
 }
 
-//impl Sum for OperatorValue {
-//    fn sum<I: Iterator<Item=OperatorValue>>(iter: I) -> OperatorValue {
-//        iter.fold(OperatorValue::Scalar(0.0), |a, b| &a + &b)
-//    }
-//}
+impl Sum for OperatorValue {
+    fn sum<I: Iterator<Item=OperatorValue>>(iter: I) -> OperatorValue {
+        iter.fold(OperatorValue::Scalar(0.0), |a, b| &a + &b)
+    }
+}
 
 /// Interface for creating quantum operators that act on Function types.
 pub trait Operator<T> {

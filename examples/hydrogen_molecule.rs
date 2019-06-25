@@ -14,7 +14,7 @@ impl Log for Logger {
     fn log(&self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
         //let mut output = String::new();
         let nsamples = data["Energy"].len();
-        let energy = &data["Energy"].iter().fold(OperatorValue::Scalar(0.0), |a, b| &a + b) 
+        let energy = &data["Energy"].clone().into_iter().sum::<OperatorValue>() 
             / &OperatorValue::Scalar(nsamples as f64);
 
         let e = match energy {
