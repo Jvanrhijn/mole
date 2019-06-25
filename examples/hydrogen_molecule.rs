@@ -23,7 +23,11 @@ impl Logger {
         }
     }
 
-    fn compute_mean_and_block_avg(&self, name: &str, data: &HashMap<String, Vec<OperatorValue>>) -> (f64, f64) {
+    fn compute_mean_and_block_avg(
+        &self,
+        name: &str,
+        data: &HashMap<String, Vec<OperatorValue>>,
+    ) -> (f64, f64) {
         let blocks = &data[name].chunks(self.block_size);
 
         let block_means = blocks.clone().into_iter().map(|block| {
@@ -40,7 +44,6 @@ impl Logger {
         .unwrap();
 
         (quantity, *block_means.last().unwrap().get_scalar().unwrap())
-
     }
 }
 
@@ -52,10 +55,7 @@ impl Log for Logger {
 
         format!(
             "Energy: {:.5}  {:.5}    Kinetic: {:.5}    Electron Potential: {:.5}",
-            energy,
-            energy_ba,
-            ke,
-            pe
+            energy, energy_ba, ke, pe
         )
     }
 }

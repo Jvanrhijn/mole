@@ -1,13 +1,31 @@
+use std::collections::HashMap;
 #[macro_use]
 extern crate ndarray;
 use basis::GaussianBasis;
 use metropolis::MetropolisBox;
-use montecarlo::{Runner, Sampler};
-use ndarray::{Array2, Ix2};
+use montecarlo::{traits::Log, Runner, Sampler};
+use ndarray::{Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 use operator::{KineticEnergy, Operator, OperatorValue};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Cache, Differentiate, Error, Orbital, SingleDeterminant};
+
+// Create a very basic logger
+struct Logger;
+impl Log for Logger {
+    fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+        format!(
+            "Energy: {}",
+            data.get("Energy")
+                .unwrap()
+                .iter()
+                .last()
+                .unwrap()
+                .get_scalar()
+                .unwrap()
+        )
+    }
+}
 
 // Create a struct to hold Hamiltonian parameters
 struct HarmonicHamiltonian {
@@ -61,11 +79,22 @@ fn main() {
     sampler.add_observable("Energy", hamiltonian);
 
     // Perform the MC integration
-    let mut runner = Runner::new(sampler);
+    let mut runner = Runner::new(sampler, Logger);
     runner.run(1000, 1);
 
-    let energy = *runner.means().get("Energy").unwrap();
-    let error = *runner.errors().get("Energy").unwrap();
+    let energy_data = Array1::<f64>::from_vec(
+        runner
+            .data()
+            .get("Energy")
+            .unwrap()
+            .iter()
+            .map(|x| *x.get_scalar().unwrap())
+            .collect::<Vec<_>>(),
+    );
+
+    // Retrieve mean values of energy over run
+    let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
+    let error = *energy_data.std_axis(Axis(0), 0.0).first().unwrap();
 
     assert_eq!(energy, 1.5);
     assert!(error < 1e-15);

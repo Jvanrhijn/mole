@@ -34,8 +34,14 @@ where
                     output = self.logger.log(self.sampler.data());
                 }
             }
-            println!("{}", output);
+            if !output.is_empty() {
+                println!("{}", output);
+            }
         }
+    }
+
+    pub fn data(&self) -> &HashMap<String, Vec<OperatorValue>> {
+        self.sampler.data()
     }
 }
 
@@ -43,11 +49,19 @@ where
 mod tests {
     use super::*;
     use crate::samplers::Sampler;
+    use crate::traits::Log;
     use basis::{self, Hydrogen1sBasis};
     use metropolis::MetropolisBox;
     use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
     use rand::rngs::StdRng;
     use wavefunction::{Orbital, SingleDeterminant};
+
+    struct MockLogger;
+    impl Log for MockLogger {
+        fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+            String::new()
+        }
+    }
 
     #[test]
     fn test_hydrogen_atom_single_det_metrop_box() {
@@ -67,12 +81,19 @@ mod tests {
         let mut sampler = Sampler::new(wave_func, metropolis);
         sampler.add_observable("Local Energy", local_e);
 
-        let mut runner = Runner::new(sampler);
+        let mut runner = Runner::new(sampler, MockLogger);
         runner.run(100, 1);
 
-        let result = *runner.means().get("Local Energy").unwrap();
+        let result = runner
+            .data()
+            .get("Local Energy")
+            .unwrap()
+            .clone()
+            .into_iter()
+            .sum::<OperatorValue>()
+            / OperatorValue::Scalar(99.0);
 
-        assert!((result - ENERGY_EXACT).abs() < 1e-15);
+        assert!((result.get_scalar().unwrap() - ENERGY_EXACT).abs() < 1e-15);
     }
 
 }

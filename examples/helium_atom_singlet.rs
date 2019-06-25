@@ -1,11 +1,55 @@
+use std::collections::HashMap;
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use metropolis::MetropolisDiffuse;
-use montecarlo::{Runner, Sampler};
-use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+use montecarlo::{traits::Log, Runner, Sampler};
+use ndarray::{Array1, Axis};
+use operator::{
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
+};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
+
+struct Logger {
+    block_size: usize,
+}
+
+impl Logger {
+    pub fn new(block_size: usize) -> Self {
+        Self { block_size }
+    }
+
+    fn compute_mean_and_block_avg(
+        &self,
+        name: &str,
+        data: &HashMap<String, Vec<OperatorValue>>,
+    ) -> (f64, f64) {
+        let blocks = &data[name].chunks(self.block_size);
+
+        let block_means = blocks.clone().into_iter().map(|block| {
+            block
+                .clone()
+                .into_iter()
+                .fold(OperatorValue::Scalar(0.0), |a, b| a + b.clone())
+                / OperatorValue::Scalar(block.len() as f64)
+        });
+
+        let quantity = *(block_means.clone().into_iter().sum::<OperatorValue>()
+            / OperatorValue::Scalar(block_means.len() as f64))
+        .get_scalar()
+        .unwrap();
+
+        (quantity, *block_means.last().unwrap().get_scalar().unwrap())
+    }
+}
+
+impl Log for Logger {
+    fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+        let (energy, energy_ba) = self.compute_mean_and_block_avg("Hamiltonian", data);
+        format!("Energy: {:.5}  {:.5}", energy, energy_ba,)
+    }
+}
 
 fn main() {
     let optimal_width = 1.0 / 1.69;
@@ -44,19 +88,32 @@ fn main() {
     let mut sampler = Sampler::new(wave_function, metrop);
     sampler.add_observable("Hamiltonian", hamiltonian);
 
+    let block_size = 100;
+    let steps = 1_00_000;
+
     // create MC runner
-    let mut runner = Runner::new(sampler);
+    let mut runner = Runner::new(sampler, Logger::new(block_size));
 
     // Run Monte Carlo integration for 100000 steps, with block size 50
-    runner.run(1_00_000, 100);
+    runner.run(steps, block_size);
 
-    //// Retrieve mean values of energy over run
-    let energy = *runner.means().get("Hamiltonian").unwrap();
-    let error_energy = *runner.errors().get("Hamiltonian").unwrap();
+    let energy_data = Array1::<f64>::from_vec(
+        runner
+            .data()
+            .get("Hamiltonian")
+            .unwrap()
+            .iter()
+            .map(|x| *x.get_scalar().unwrap())
+            .collect::<Vec<_>>(),
+    );
+
+    // Retrieve mean values of energy over run
+    let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
+    let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap();
 
     println!(
         "\nEnergy:         {:.*} +/- {:.*}",
-        8, energy, 8, error_energy
+        8, energy, 8, energy_err
     );
     println!("Exact ground state energy: -2.903")
 }
