@@ -25,6 +25,7 @@ where
     config: Array2<f64>,
     metropolis: V,
     observables: HashMap<String, Box<dyn Operator<T>>>,
+    samples: HashMap<String, Vec<OperatorValue>>,
     acceptance: f64,
 }
 
@@ -43,6 +44,7 @@ where
             config: cfg,
             metropolis: metrop,
             observables: HashMap::new(),
+            samples: HashMap::new(),
             acceptance: 0.0,
         }
     }
@@ -54,6 +56,7 @@ where
             config: cfg,
             metropolis: metrop,
             observables: HashMap::new(),
+            samples: HashMap::new(),
             acceptance: 0.0,
         }
     }
@@ -72,8 +75,9 @@ where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache,
     V: Metropolis<T>,
 {
-    fn sample(&self) -> Result<HashMap<String, OperatorValue>, Error> {
-        Ok(self
+    fn sample(&mut self) {
+        // First sample all observables on the current configuration
+        let mut samples: HashMap<String, OperatorValue> = self
             .observables
             .iter()
             .map(|(name, operator)| {
@@ -85,7 +89,11 @@ where
                         / &Scalar(self.wave_function.current_value().0),
                 )
             })
-            .collect())
+            .collect();
+        // save the sampled values
+        samples
+            .drain()
+            .for_each(|(name, value)| self.samples.entry(name).or_insert(vec![]).push(value));
     }
 
     fn move_state(&mut self) {
@@ -102,6 +110,10 @@ where
             }
         }
         self.wave_function.refresh(&self.config);
+    }
+
+    fn data(&self) -> &HashMap<String, Vec<OperatorValue>> {
+        &self.samples
     }
 
     fn num_observables(&self) -> usize {
