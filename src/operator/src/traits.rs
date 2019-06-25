@@ -95,7 +95,7 @@ mod tests {
         let second = OperatorValue::Scalar(2.0);
         assert_eq!(
             1.0 + 2.0,
-            match &first + &second {
+            match &first + &second{
                 OperatorValue::Scalar(value) => value,
                 _ => unimplemented!(),
             }
