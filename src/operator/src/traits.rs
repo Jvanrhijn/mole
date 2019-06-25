@@ -85,21 +85,26 @@ pub trait Operator<T> {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error>;
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::{num, prelude::*};
 
-    #[test]
-    fn add_op_values() {
-        let first = OperatorValue::Scalar(1.0);
-        let second = OperatorValue::Scalar(2.0);
-        assert_eq!(
-            1.0 + 2.0,
-            match &first + &second{
-                OperatorValue::Scalar(value) => value,
-                _ => unimplemented!(),
-            }
-        );
+    proptest! {
+        #[test]
+        fn add_op_values(x in num::f64::NORMAL, y in num::f64::NORMAL) {
+            let first = OperatorValue::Scalar(x);
+            let second = OperatorValue::Scalar(y);
+            prop_assert_eq!(
+                x + y,
+                match &first + &second{
+                    OperatorValue::Scalar(value) => value,
+                    _ => unimplemented!(),
+                }
+            );
+        }
     }
 
 }
