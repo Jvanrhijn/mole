@@ -13,11 +13,24 @@ pub enum OperatorValue {
 }
 
 impl OperatorValue {
-    pub fn get_scalar(&self) -> &f64 {
-        if let OperatorValue::Scalar(value) = self {
-            value
-        } else {
-            panic!()
+    pub fn get_scalar(&self) -> Option<&f64> {
+        match self {
+            OperatorValue::Scalar(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn get_vector(&self) -> Option<&Array1<f64>> {
+        match self {
+            OperatorValue::Vector(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    pub fn get_matrix(&self) -> Option<&Array2<f64>> {
+        match self {
+            OperatorValue::Matrix(value) => Some(value),
+            _ => None,
         }
     }
 }

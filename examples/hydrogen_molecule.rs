@@ -12,14 +12,21 @@ use wavefunction::{JastrowSlater, Orbital};
 
 struct Logger {
     block_size: usize,
+    energy: f64,
 }
 
-impl Log for Logger {
-    fn log(&self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+impl Logger {
+    pub fn new(block_size: usize) -> Self {
+        Self {
+            block_size,
+            energy: 0.0,
+        }
+    }
 
-        let energy_blocks = &data["Energy"].chunks(self.block_size);
+    fn compute_mean_and_block_avg(&self, name: &str, data: &HashMap<String, Vec<OperatorValue>>) -> (f64, f64) {
+        let blocks = &data[name].chunks(self.block_size);
 
-        let block_means = energy_blocks.clone().into_iter().map(|block| {
+        let block_means = blocks.clone().into_iter().map(|block| {
             block
                 .clone()
                 .into_iter()
@@ -27,13 +34,28 @@ impl Log for Logger {
                 / OperatorValue::Scalar(block.len() as f64)
         });
 
-        let energy = block_means.clone().into_iter().sum::<OperatorValue>()
-            / OperatorValue::Scalar(block_means.len() as f64);
+        let quantity = *(block_means.clone().into_iter().sum::<OperatorValue>()
+            / OperatorValue::Scalar(block_means.len() as f64))
+        .get_scalar()
+        .unwrap();
+
+        (quantity, *block_means.last().unwrap().get_scalar().unwrap())
+
+    }
+}
+
+impl Log for Logger {
+    fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+        let (energy, energy_ba) = self.compute_mean_and_block_avg("Energy", data);
+        let (ke, ke_ba) = self.compute_mean_and_block_avg("Kinetic", data);
+        let (pe, pe_ba) = self.compute_mean_and_block_avg("Electron potential", data);
 
         format!(
-            "Energy: {:.5}    {:.5}",
-            energy.get_scalar(),
-            block_means.last().unwrap().get_scalar()
+            "Energy: {:.5}  {:.5}    Kinetic: {:.5}    Electron Potential: {:.5}",
+            energy,
+            energy_ba,
+            ke,
+            pe
         )
     }
 }
@@ -66,27 +88,16 @@ fn main() {
         potential_electrons.clone(),
     );
 
-    let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0; 32]));
+    let metrop = MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0; 32]));
 
     let mut sampler = Sampler::new(wave_func, metrop);
     sampler.add_observable("Energy", hamiltonian);
-    //sampler.add_observable("Electron potential", potential_electrons);
-    //sampler.add_observable("Kinetic", kinetic);
+    sampler.add_observable("Electron potential", potential_electrons);
+    sampler.add_observable("Kinetic", kinetic);
 
     let steps = 1_000_000;
-    let block_size = 100;
+    let block_size = 50;
 
-    let mut runner = Runner::new(sampler, Logger { block_size });
+    let mut runner = Runner::new(sampler, Logger::new(block_size));
     runner.run(steps, block_size);
-
-    //let total_energy = *runner.means().get("Energy").unwrap();
-    //let error_energy = *runner.errors().get("Energy").unwrap();
-
-    //println!(
-    //    "\nTotal Energy: {e:.*} +/- {s:.*}",
-    //    8,
-    //    8,
-    //    e = total_energy,
-    //    s = error_energy
-    //);
 }

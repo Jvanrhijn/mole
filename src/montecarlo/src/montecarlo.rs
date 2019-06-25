@@ -24,15 +24,17 @@ where
     pub fn run(&mut self, steps: usize, block_size: usize) {
         assert!(steps >= 2 * block_size);
         let blocks = steps / block_size;
+        let mut output = String::new();
         for block_nr in 0..blocks {
             for b in 0..block_size {
                 self.sampler.move_state();
                 // Discard first block for equilibration
                 if block_nr > 0 {
                     self.sampler.sample();
-                    println!("{}", self.logger.log(self.sampler.data()));
+                    output = self.logger.log(self.sampler.data());
                 }
             }
+            println!("{}", output);
         }
     }
 }

@@ -16,7 +16,7 @@ def int_width(num):
 
 def read_data(fpath):
     """Read data from file located at fpath"""
-    return np.array(list(float(line.split()[1]) for line in open(fpath, "r")))
+    return np.array(list(float(line.split()[0]) for line in open(fpath, "r")))
 
 
 def correlation(data, mean, var):

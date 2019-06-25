@@ -1,6 +1,5 @@
 use operator::OperatorValue;
 use std::collections::HashMap;
-use wavefunction::Error;
 
 /// Interface for sampling observables from Monte Carlo integration.
 pub trait MonteCarloSampler {
@@ -25,5 +24,5 @@ pub trait MonteCarloSampler {
 /// run.
 pub trait Log {
     /// Use logging data to create pretty logging output string.
-    fn log(&self, data: &HashMap<String, Vec<OperatorValue>>) -> String;
+    fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String;
 }
