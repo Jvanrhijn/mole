@@ -15,13 +15,10 @@ pub struct Runner<S: MonteCarloSampler, L: Log> {
 impl<S, L> Runner<S, L>
 where
     S: MonteCarloSampler,
-    L: Log
+    L: Log,
 {
     pub fn new(sampler: S, logger: L) -> Self {
-        Self {
-            sampler,
-            logger,
-        }
+        Self { sampler, logger }
     }
 
     pub fn run(&mut self, steps: usize, block_size: usize) {
@@ -38,7 +35,6 @@ where
             }
         }
     }
-
 }
 
 #[cfg(test)]

@@ -1,6 +1,6 @@
 // std imports
-use std::ops::{Add, Div, Mul, Sub};
 use std::iter::Sum;
+use std::ops::{Add, Div, Mul, Sub};
 // Third party imports
 use ndarray::{Array1, Array2};
 use wavefunction::Error;
@@ -10,6 +10,16 @@ pub enum OperatorValue {
     Scalar(f64),
     Vector(Array1<f64>),
     Matrix(Array2<f64>),
+}
+
+impl OperatorValue {
+    pub fn get_scalar(&self) -> &f64 {
+        if let OperatorValue::Scalar(value) = self {
+            value
+        } else {
+            panic!()
+        }
+    }
 }
 
 impl Add for OperatorValue {
@@ -33,7 +43,6 @@ impl Add for OperatorValue {
             },
         }
     }
-
 }
 
 impl Sub for OperatorValue {
@@ -57,7 +66,6 @@ impl Sub for OperatorValue {
             },
         }
     }
-
 }
 
 impl Mul for OperatorValue {
@@ -81,7 +89,6 @@ impl Mul for OperatorValue {
             },
         }
     }
-
 }
 
 impl Div for OperatorValue {
@@ -105,7 +112,6 @@ impl Div for OperatorValue {
             },
         }
     }
-
 }
 
 impl Add for &OperatorValue {
@@ -138,7 +144,7 @@ impl Sub for &OperatorValue {
         use OperatorValue::*;
         match self {
             Scalar(value) => match other {
-                Scalar(value_other) => Scalar(value  - value_other),
+                Scalar(value_other) => Scalar(value - value_other),
                 Vector(value_other) => Vector(*value - value_other),
                 Matrix(value_other) => Matrix(*value - value_other),
             },
@@ -201,7 +207,7 @@ impl Div for &OperatorValue {
 }
 
 impl Sum for OperatorValue {
-    fn sum<I: Iterator<Item=OperatorValue>>(iter: I) -> OperatorValue {
+    fn sum<I: Iterator<Item = OperatorValue>>(iter: I) -> OperatorValue {
         iter.fold(OperatorValue::Scalar(0.0), |a, b| &a + &b)
     }
 }

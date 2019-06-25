@@ -164,8 +164,7 @@ where
     T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(self.t.act_on(wf, cfg)?
-            + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
+        Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
     }
 }
 

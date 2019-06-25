@@ -4,24 +4,37 @@ extern crate ndarray;
 use rand::{SeedableRng, StdRng};
 
 use metropolis::MetropolisDiffuse;
-use montecarlo::{Runner, Sampler, traits::Log};
-use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue};
+use montecarlo::{traits::Log, Runner, Sampler};
+use operator::{
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
+};
 use wavefunction::{JastrowSlater, Orbital};
 
-struct Logger;
+struct Logger {
+    block_size: usize,
+}
 
 impl Log for Logger {
     fn log(&self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
-        //let mut output = String::new();
-        let nsamples = data["Energy"].len();
-        let energy = &data["Energy"].clone().into_iter().sum::<OperatorValue>() 
-            / &OperatorValue::Scalar(nsamples as f64);
 
-        let e = match energy {
-            OperatorValue::Scalar(e) => e,
-            _ => unreachable!()
-        };
-        format!("Energy: {}", e)
+        let energy_blocks = &data["Energy"].chunks(self.block_size);
+
+        let block_means = energy_blocks.clone().into_iter().map(|block| {
+            block
+                .clone()
+                .into_iter()
+                .fold(OperatorValue::Scalar(0.0), |a, b| a + b.clone())
+                / OperatorValue::Scalar(block.len() as f64)
+        });
+
+        let energy = block_means.clone().into_iter().sum::<OperatorValue>()
+            / OperatorValue::Scalar(block_means.len() as f64);
+
+        format!(
+            "Energy: {:.5}    {:.5}",
+            energy.get_scalar(),
+            block_means.last().unwrap().get_scalar()
+        )
     }
 }
 
@@ -60,8 +73,11 @@ fn main() {
     //sampler.add_observable("Electron potential", potential_electrons);
     //sampler.add_observable("Kinetic", kinetic);
 
-    let mut runner = Runner::new(sampler, Logger);
-    runner.run(1_000_000, 100);
+    let steps = 1_000_000;
+    let block_size = 100;
+
+    let mut runner = Runner::new(sampler, Logger { block_size });
+    runner.run(steps, block_size);
 
     //let total_energy = *runner.means().get("Energy").unwrap();
     //let error_energy = *runner.errors().get("Energy").unwrap();
