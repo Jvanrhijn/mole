@@ -1,7 +1,6 @@
 // Standard imports
 use std::collections::HashMap;
 // First party imports
-use crate::block::Block;
 use crate::traits::*;
 use operator::OperatorValue;
 
@@ -26,7 +25,7 @@ where
         let blocks = steps / block_size;
         let mut output = String::new();
         for block_nr in 0..blocks {
-            for b in 0..block_size {
+            for _ in 0..block_size {
                 self.sampler.move_state();
                 // Discard first block for equilibration
                 if block_nr > 0 {

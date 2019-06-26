@@ -11,6 +11,7 @@ use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+type VglMat = (Array2<f64>, Array3<f64>, Array2<f64>);
 
 #[derive(Clone)]
 pub struct Slater<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> {
@@ -53,10 +54,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
     }
 
     /// Build matrix of orbital values, gradients and laplacians
-    fn build_matrices(
-        &self,
-        cfg: &Array2<f64>,
-    ) -> Result<(Array2<f64>, Array3<f64>, Array2<f64>), Error> {
+    fn build_matrices(&self, cfg: &Array2<f64>) -> Result<VglMat, Error> {
         let mat_dim = self.orbs.len();
         let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
         let mut matrix_grad = Array3::<f64>::zeros((mat_dim, mat_dim, 3));
@@ -362,9 +360,9 @@ mod tests {
         let det = Slater::new(vec![orb]);
         let x = array![[1.0, -1.0, 1.0]];
 
-        assert_eq!(
-            det.value(&x).unwrap(),
-            hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0
+        assert!(
+            (det.value(&x).unwrap() - hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0).abs()
+                < 1e-15
         );
         assert!(det
             .gradient(&x)
@@ -389,11 +387,11 @@ mod tests {
         let phi21 = hydrogen_2s(&x.slice(s![0, ..]).to_owned(), 2.0).0;
         let value = phi11 * phi22 - phi21 * phi12;
 
-        assert_eq!(det.value(&x).unwrap(), value);
+        assert!((det.value(&x).unwrap() - value).abs() < 1e-15);
 
         // switching electron positions should flip determinant sign
         let x_switched = x.permuted_axes([0, 1]);
-        assert_eq!(det.value(&x_switched).unwrap(), -value);
+        assert!((det.value(&x_switched).unwrap() - (-value)).abs() < 1e-15);
     }
 
     #[test]

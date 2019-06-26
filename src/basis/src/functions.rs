@@ -3,7 +3,7 @@ use ndarray::Array1;
 
 // function returning value, gradient and laplacian
 pub type Vgl = (f64, Array1<f64>, f64);
-pub type Func = Fn(&Array1<f64>) -> Vgl;
+pub type Func = dyn Fn(&Array1<f64>) -> Vgl;
 
 fn get_spherical_angles(vector: &Array1<f64>) -> (f64, f64, f64) {
     let (x, y, z) = match vector.as_slice().expect("Empty position vector") {

@@ -64,7 +64,7 @@ mod tests {
             *data.get_mut("Energy").unwrap() = i as f64;
             block.set_value(i, &data);
         }
-        assert_eq!(block.mean()["Energy"], MEAN);
+        assert!((block.mean()["Energy"] - MEAN).abs() < 1e-15);
     }
 
 }

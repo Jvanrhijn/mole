@@ -4,7 +4,7 @@ type Vgl = (f64, Array1<f64>, f64);
 
 #[allow(dead_code)]
 pub fn grad_laplacian_finite_difference(
-    func: &Fn(&Array1<f64>) -> Vgl,
+    func: &dyn Fn(&Array1<f64>) -> Vgl,
     cfg: &Array1<f64>,
     step: f64,
 ) -> (Array1<f64>, f64) {

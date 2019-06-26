@@ -13,8 +13,8 @@ fn linear_combination_general(
     pos: &Array1<f64>,
     coeffs: &Array2<f64>,
     centers: &Array2<f64>,
-    widths: &Vec<f64>,
-    func: &Fn(&Array1<f64>, f64) -> Vgl,
+    widths: &[f64],
+    func: &dyn Fn(&Array1<f64>, f64) -> Vgl,
 ) -> Vgl {
     let mut value = 0.0;
     let mut grad = Array1::<f64>::zeros(3);

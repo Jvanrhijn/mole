@@ -12,7 +12,7 @@ use operator::{
     Operator,
     OperatorValue::{self, *},
 };
-use wavefunction::{Cache, Differentiate, Error, Function, WaveFunction};
+use wavefunction::{Cache, Differentiate, Function, WaveFunction};
 
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample

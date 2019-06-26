@@ -28,7 +28,7 @@ impl Function<f64> for IonicPotential {
         for i in 0..num_ions {
             for j in 0..num_elec {
                 let separation = &cfg.slice(s![j, ..]) - &self.ion_positions.slice(s![i, ..]);
-                pot -= self.ion_charge[i] as f64 / separation.norm_l2();
+                pot -= f64::from(self.ion_charge[i]) / separation.norm_l2();
             }
         }
         Ok(pot + self.ionic_repulsion)
@@ -43,7 +43,7 @@ impl IonicPotential {
         for i in 0..num_ions {
             for j in i + 1..num_ions {
                 let separation = &ion_positions.slice(s![j, ..]) - &ion_positions.slice(s![i, ..]);
-                pot += (ion_charge[i] * ion_charge[j]) as f64 / separation.norm_l2();
+                pot += f64::from(ion_charge[i] * ion_charge[j]) / separation.norm_l2();
             }
         }
         IonicPotential {
@@ -66,6 +66,12 @@ impl<T: Cache> Operator<T> for IonicPotential {
 /// so is not parametrized over anything.
 #[derive(Clone)]
 pub struct ElectronicPotential;
+
+impl Default for ElectronicPotential {
+    fn default() -> Self {
+        ElectronicPotential
+    }
+}
 
 impl ElectronicPotential {
     pub fn new() -> Self {
@@ -101,6 +107,12 @@ impl<T: Cache> Operator<T> for ElectronicPotential {
 /// and so it is not parametrized over anything.
 #[derive(Clone)]
 pub struct KineticEnergy {}
+
+impl Default for KineticEnergy {
+    fn default() -> Self {
+        KineticEnergy {}
+    }
+}
 
 impl KineticEnergy {
     pub fn new() -> Self {

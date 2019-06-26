@@ -447,12 +447,12 @@ mod tests {
         let cur_grad = wf.current_value().1;
         let cur_laplac = wf.current_value().2;
 
-        assert_eq!(cur_value, basis::hydrogen_1s(&config_slice, 1.0).0);
+        assert!((cur_value - basis::hydrogen_1s(&config_slice, 1.0).0).abs() < 1e-15);
         assert_eq!(
             cur_grad.slice(s![0, ..]),
             basis::hydrogen_1s(&config_slice, 1.0).1
         );
-        assert_eq!(cur_laplac, basis::hydrogen_1s(&config_slice, 1.0).2);
+        assert!((cur_laplac - basis::hydrogen_1s(&config_slice, 1.0).2).abs() < 1e-15);
     }
 
     #[test]
