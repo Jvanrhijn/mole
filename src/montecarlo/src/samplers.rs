@@ -93,7 +93,7 @@ where
         // save the sampled values
         samples
             .drain()
-            .for_each(|(name, value)| self.samples.entry(name).or_insert(vec![]).push(value));
+            .for_each(|(name, value)| self.samples.entry(name).or_default().push(value));
     }
 
     fn move_state(&mut self) {
