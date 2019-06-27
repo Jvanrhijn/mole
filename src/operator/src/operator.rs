@@ -6,6 +6,7 @@ use crate::traits::{
     Operator,
     OperatorValue::{self, *},
 };
+use optimize::Optimize;
 use wavefunction::{Cache, Differentiate, Error, Function};
 
 /// Ionic potential energy operator:
@@ -171,6 +172,14 @@ where
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
+    }
+}
+
+struct ParameterGradient;
+
+impl<T: Optimize + Cache> Operator<T> for ParameterGradient {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
+        Ok(OperatorValue::Vector(wf.parameter_gradient(cfg)) * Scalar(wf.current_value().0))
     }
 }
 
