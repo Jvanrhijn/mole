@@ -65,7 +65,7 @@ impl<T: Cache> Operator<T> for IonicPotential {
 /// $\hat{V}_{ee} = \sum_{i=1}^{N_e} \sum_{j>i}^{N_e} \frac{1}{r_{ij}}.$
 /// This potential is only a function of the current electronic configuration, and
 /// so is not parametrized over anything.
-#[derive(Clone, Default)]
+#[derive(Copy, Clone, Default)]
 pub struct ElectronicPotential;
 
 impl ElectronicPotential {
@@ -100,7 +100,7 @@ impl<T: Cache> Operator<T> for ElectronicPotential {
 /// $\hat{T} = -\frac{1}{2}\sum_{i=1}^{N_e}\nabla_{i}^2$.
 /// The kinetic energy is solely a function of the current electronic configuration,
 /// and so it is not parametrized over anything.
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct KineticEnergy {}
 
 impl Default for KineticEnergy {
@@ -183,6 +183,7 @@ impl<T: Optimize + Cache> Operator<T> for ParameterGradient {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct WavefunctionValue;
 
 impl<T: Cache> Operator<T> for WavefunctionValue {
