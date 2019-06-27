@@ -206,6 +206,7 @@ mod tests {
             let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
             let wval = wf.value(&cfg).unwrap();
 
+            //TODO: find better way to filter out NaNs
             if hpsi.get_scalar().unwrap().is_normal() && wval.is_normal() {
                 let eloc = *(hpsi / Scalar(wval)).get_scalar().unwrap();
                 prop_assert!((eloc - (-0.5)).abs() < 1e-10);
@@ -215,24 +216,39 @@ mod tests {
         }
     }
 
-    #[test]
-    fn hydrogen_first_excited() {
-        let kinetic = KineticEnergy::new();
-        let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
-        let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
-        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
-        let cfg = Array2::<f64>::ones((1, 3));
-        wf.refresh(&cfg);
-        let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
-        let wval = wf.value(&cfg).unwrap();
-        let hpsi = if let OperatorValue::Scalar(value) = hpsi {
-            value
-        } else {
-            assert!(false);
-            0.0
-        };
-        assert!((hpsi / wval - (-0.125)).abs() < 1e-15);
+    proptest! {
+        #[test]
+        fn hydrogen_first_excited(
+                v in vec(num::f64::NORMAL, 3)
+                .prop_map(|x| {
+                    let d = x.iter().map(|c| c.powi(2)).sum::<f64>().sqrt();
+                    match d {
+                        (0.0..1e-5) => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
+                        (1e-5..100.0) => x,
+                        _ => x.iter().map(|c| c / d * 100.0).collect::<Vec<_>>()
+                    }
+                })
+
+        ) {
+            let kinetic = KineticEnergy::new();
+            let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
+            let hamiltonian = IonicHamiltonian::new(kinetic, potential);
+            let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+
+            let cfg = array![[v[0], v[1], v[2]]];
+
+            wf.refresh(&cfg);
+            let hpsi = *hamiltonian.act_on(&wf, &cfg).unwrap().get_scalar().unwrap();
+            let wval = wf.value(&cfg).unwrap();
+            let energy = hpsi/wval;
+            //TODO: find better way to filter out NaNs
+            if energy.is_normal() {
+                prop_assert!((energy - (-0.125)).abs() < 1e-10);
+            } else {
+                prop_assert!(true);
+            }
+        }
     }
 
 }
