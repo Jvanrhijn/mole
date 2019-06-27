@@ -139,12 +139,12 @@ impl Optimize for ElectronElectronTerm {
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
                 grad_bp[0] += -b1 * rij_scal.powi(2) * (1.0 + self.parms[0] * rij_scal).powi(-2);
                 let mut grad_rest = grad_bp.slice_mut(s![1..]);
-                grad_rest += &(1..self.parms.len())
-                    .map(|p| rij_scal.powi(p as i32 + 1))
+                grad_rest += &(3..=self.parms.len()+1)
+                    .map(|p| rij_scal.powi(p as i32 - 1))
                     .collect::<Array1<f64>>();
             }
         }
-        grad_bp
+        -grad_bp
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -306,7 +306,6 @@ mod tests {
                 grad_laplacian_finite_difference(&jas_ee, &cfg, 1e-3).unwrap();
             assert!(grad_fd.all_close(&jas_ee.gradient(&cfg).unwrap(), 1e-4));
             assert!((laplac_fd - jas_ee.laplacian(&cfg).unwrap()).abs() < 1e-4);
-            //assert_eq!(laplac_fd, jas_ee.laplacian(&cfg).unwrap());
         }
     }
 

@@ -92,7 +92,7 @@ fn main() {
         );
 
         // setup metropolis algorithm/markov chain generator
-        let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0; 32]));
+        let metrop = MetropolisDiffuse::from_rng(0.2, StdRng::from_seed([0; 32]));
 
         // construct sampler
         let mut sampler = Sampler::new(wave_function, metrop);
@@ -152,16 +152,16 @@ fn main() {
             .fold(Array1::zeros(jas_parm.len()), |a, b| a + b)
             / (steps - block_size) as f64;
 
-        //println!("{}", energy);
-        println!("Energy:         {:.*} +/- {:.*}", 8, energy, 8, energy_err);
+        println!("{}", energy);
+        //println!("Energy:         {:.*} +/- {:.*}", 8, energy, 8, energy_err);
 
         //println!("Exact ground state energy: -2.903");
 
         //println!("\nEnergy gradient: {}", energy_grad);
 
         // do gradient descent step
-        let step_size = 1e-5;
-        jas_parm += &(step_size * energy_grad);
+        let step_size = 1e-7;
+        jas_parm -= &(step_size * energy_grad);
 
         //println!("\nSuggested new parameters: {}", jas_parm);
     }
