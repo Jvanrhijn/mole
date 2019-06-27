@@ -174,30 +174,6 @@ where
     }
 }
 
-/// Local energy operator:
-/// $\hat{E}_{L}\psi(x) = \frac{\hat{H}\psi}{\psi(x)}$.
-/// This operator should be used in any Monte Carlo simulation
-/// trying to calculate the electronic ground state of a molecular system.
-#[derive(Clone)]
-pub struct LocalEnergy<H> {
-    h: H,
-}
-
-impl<H> LocalEnergy<H> {
-    pub fn new(h: H) -> Self {
-        LocalEnergy { h }
-    }
-}
-
-impl<T, H: Operator<T>> Operator<T> for LocalEnergy<H>
-where
-    T: Differentiate<D = Ix2> + Cache,
-{
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(&self.h.act_on(wf, cfg)? / &Scalar(wf.current_value().0))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
