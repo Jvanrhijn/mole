@@ -9,7 +9,7 @@ use montecarlo::{traits::Log, Runner, Sampler};
 use ndarray::{Array1, Array2, Axis};
 use operator::{
     ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
-    ParameterGradient, WavefunctionValue
+    ParameterGradient, WavefunctionValue,
 };
 use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
@@ -68,7 +68,9 @@ fn main() {
         Orbital::new(array![[1.0]], basis_set.clone()),
     ];
 
-    let mut jas_parm = array![0.7, -0.01, -0.15];
+    //let mut jas_parm = array![0.7, -0.01, -0.15];
+    const NPARM_JAS: usize = 3;
+    let mut jas_parm = Array1::zeros(NPARM_JAS);
 
     // Construct kinetic energy and ionic potential operators
     let kinetic = KineticEnergy::new();
@@ -92,7 +94,6 @@ fn main() {
         // setup metropolis algorithm/markov chain generator
         let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0; 32]));
 
-
         // construct sampler
         let mut sampler = Sampler::new(wave_function, metrop);
         sampler.add_observable("Hamiltonian", hamiltonian.clone());
@@ -100,12 +101,12 @@ fn main() {
         sampler.add_observable("Wavefunction value", WavefunctionValue);
 
         let block_size = 100;
-        let steps = 1_00_00;
+        let steps = 10_000;
 
         // create MC runner
         let mut runner = Runner::new(sampler, Logger::new(block_size));
 
-        // Run Monte Carlo integration for 100000 steps, with block size 50
+        // Run Monte Carlo integration
         runner.run(steps, block_size);
 
         let energy_data = Array1::<f64>::from_vec(
@@ -120,29 +121,45 @@ fn main() {
 
         // Retrieve mean values of energy over run
         let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
-        let energy_err =
-            *energy_data.std_axis(Axis(0), 0.0).first().unwrap() / ((block_size * steps) as f64).sqrt();
+        let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap()
+            / ((block_size * steps) as f64).sqrt();
 
-        let par_grads = runner.data().get("Parameter gradient").unwrap();
-        let local_energy = runner.data().get("Hamiltonian").unwrap();
-        let wf_values = runner.data().get("Wavefunction value").unwrap();
+        let par_grads = runner
+            .data()
+            .get("Parameter gradient")
+            .unwrap()
+            .iter()
+            .map(|x| x.get_vector().unwrap().clone());
+        let local_energy = runner
+            .data()
+            .get("Hamiltonian")
+            .unwrap()
+            .iter()
+            .map(|x| *x.get_scalar().unwrap());
+        let wf_values = runner
+            .data()
+            .get("Wavefunction value")
+            .unwrap()
+            .iter()
+            .map(|x| *x.get_scalar().unwrap());
 
         let local_energy_grad = izip!(par_grads, local_energy, wf_values)
-            .map(|(psi_i, el, psi)| 2.0 * psi_i.get_vector().unwrap() / *psi.get_scalar().unwrap() * (el.get_scalar().unwrap() - energy))
+            .map(|(psi_i, el, psi)| 2.0 * psi_i / psi * (el - energy))
             .collect::<Vec<Array1<f64>>>();
 
-        let energy_grad = local_energy_grad.iter().fold(Array1::zeros(3), |a, b| a + b) / (local_energy.len() as f64);
+        let energy_grad = local_energy_grad
+            .iter()
+            .fold(Array1::zeros(jas_parm.len()), |a, b| a + b)
+            / (steps - block_size) as f64;
 
-
-        println!(
-            "Energy:         {:.*} +/- {:.*}",
-            8, energy, 8, energy_err
-        );
+        //println!("{}", energy);
+        println!("Energy:         {:.*} +/- {:.*}", 8, energy, 8, energy_err);
 
         //println!("Exact ground state energy: -2.903");
 
         //println!("\nEnergy gradient: {}", energy_grad);
 
+        // do gradient descent step
         let step_size = 1e-5;
         jas_parm += &(step_size * energy_grad);
 

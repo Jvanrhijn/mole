@@ -198,7 +198,7 @@ impl Differentiate for JastrowFactor {
 
 impl Optimize for JastrowFactor {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
-        self.fee.parameter_gradient(cfg)
+        self.fee.parameter_gradient(cfg) * self.current_value().0
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {

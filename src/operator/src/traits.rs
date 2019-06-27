@@ -1,6 +1,6 @@
 // std imports
-use std::iter::Sum;
 use std::fmt;
+use std::iter::Sum;
 use std::ops::{Add, Div, Mul, Sub};
 // Third party imports
 use ndarray::{Array1, Array2};
@@ -24,7 +24,7 @@ impl fmt::Display for OperatorValue {
                 }
                 write!(f, "{}", output)
             }
-            _ => unimplemented!()
+            _ => unimplemented!(),
         }
     }
 }
