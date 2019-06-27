@@ -60,5 +60,7 @@ fn helium_lcao() {
     let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap();
 
     let exact_result = 0.5 * (1.5_f64).powi(6) * (-0.5);
+    dbg!(energy);
+    dbg!(exact_result);
     assert!((energy - exact_result).abs() < 2.0 * energy_err);
 }

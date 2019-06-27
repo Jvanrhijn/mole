@@ -177,21 +177,32 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::{num, prelude::*};
     use basis::{self, Hydrogen1sBasis, Hydrogen2sBasis};
     use wavefunction::{Orbital, SingleDeterminant};
 
-    #[test]
-    fn hydrogen_ground_state() {
-        let kinetic = KineticEnergy::new();
-        let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
-        let hamiltonian = IonicHamiltonian::new(kinetic, potential);
-        let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
-        let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
-        let cfg = Array2::<f64>::ones((1, 3));
-        wf.refresh(&cfg);
-        let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
-        let wval = wf.value(&cfg).unwrap();
-        assert_eq!(&hpsi / &Scalar(wval), Scalar(-0.5));
+    proptest! { 
+        #[test]
+        fn hydrogen_ground_state(x in num::f64::NORMAL, y in num::f64::NORMAL, z in num::f64::NORMAL) {
+            let kinetic = KineticEnergy::new();
+            let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
+            let hamiltonian = IonicHamiltonian::new(kinetic, potential);
+            let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+
+            let cfg = array![[x, y, z]];
+
+            wf.refresh(&cfg);
+            let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
+            let wval = wf.value(&cfg).unwrap();
+
+            if hpsi.get_scalar().unwrap().is_normal() && wval.is_normal() {
+                let eloc = *(hpsi / Scalar(wval)).get_scalar().unwrap();
+                prop_assert!((eloc - (-0.5)).abs() < 1e-15);
+            } else {
+                prop_assert!(true);
+            }
+        }
     }
 
     #[test]

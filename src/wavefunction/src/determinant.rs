@@ -31,7 +31,9 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
         let matrix = Array::<f64, Ix2>::eye(mat_dim);
         let matrix_grad = Array::<f64, Ix3>::zeros((mat_dim, mat_dim, mat_dim));
         let matrix_laplac = Array::<f64, Ix2>::zeros((mat_dim, mat_dim));
-        let inv = matrix.inv().expect("Failed to take matrix inverse");
+        // Scale matrix for stability in inversion
+        let scale = matrix.iter().fold(0.0_f64, |a, b| a.abs().max(b.abs())); 
+        let inv = (1.0/scale * &matrix).inv().expect("Failed to take matrix inverse") / scale;
         // put cached data in queues
         let matrix_queue = VecDeque::from(vec![matrix]);
         let matrix_laplac_queue = VecDeque::from(vec![matrix_laplac]);
@@ -143,9 +145,10 @@ where
         let (values, gradients, laplacians) = self
             .build_matrices(new)
             .expect("Failed to construct matrix");
-        let inv = values.inv().expect("Failed to take matrix inverse");
+        // scale matrix inversion for stability
+        let scale = values.iter().fold(0.0_f64, |a, b| a.abs().max(b.abs())); 
+        let inv = (1.0/scale * &values).inv().expect("Failed to take matrix inverse") / scale;
         let value = values.det().expect("Failed to take matrix determinant");
-
         *self.current_value_queue.front_mut().unwrap() = value;
         *self.current_grad_queue.front_mut().unwrap() =
             value * (&gradients * &inv.t().insert_axis(Axis(2))).sum_axis(Axis(1));
@@ -261,7 +264,7 @@ where
     }
 
     fn push_update(&mut self) {
-        for q in vec![
+        for q in [
             &mut self.matrix_queue,
             &mut self.matrix_laplac_queue,
             &mut self.inv_matrix_queue,
@@ -275,7 +278,7 @@ where
         if self.matrix_grad_queue.len() == 2 {
             self.matrix_grad_queue.pop_front();
         }
-        for q in vec![
+        for q in [
             &mut self.current_value_queue,
             &mut self.current_laplac_queue,
         ]
@@ -291,7 +294,7 @@ where
     }
 
     fn flush_update(&mut self) {
-        for q in vec![
+        for q in [
             &mut self.matrix_queue,
             &mut self.matrix_laplac_queue,
             &mut self.inv_matrix_queue,
@@ -305,7 +308,7 @@ where
         if self.matrix_grad_queue.len() == 2 {
             self.matrix_grad_queue.pop_back();
         }
-        for q in vec![
+        for q in [
             &mut self.current_value_queue,
             &mut self.current_laplac_queue,
         ]
