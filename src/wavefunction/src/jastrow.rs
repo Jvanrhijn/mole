@@ -146,6 +146,10 @@ impl Optimize for ElectronElectronTerm {
         }
         grad_bp
     }
+
+    fn update_parameters(&mut self, deltap: &Array1<f64>) {
+        self.parms += deltap;
+    }
 }
 
 pub struct JastrowFactor {
@@ -195,6 +199,10 @@ impl Differentiate for JastrowFactor {
 impl Optimize for JastrowFactor {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
         self.fee.parameter_gradient(cfg)
+    }
+
+    fn update_parameters(&mut self, deltap: &Array1<f64>) {
+        self.fee.update_parameters(deltap);
     }
 }
 

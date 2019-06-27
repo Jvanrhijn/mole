@@ -9,6 +9,7 @@ use crate::jastrow::JastrowFactor;
 use crate::orbitals::Orbital;
 use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 use basis::BasisSet;
+use optimize::Optimize;
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
@@ -424,6 +425,16 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
                 .back()
                 .and(Some(*self.lapl_cache.back().unwrap())),
         )
+    }
+}
+
+impl<T: BasisSet> Optimize for JastrowSlater<T> {
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
+        self.jastrow.parameter_gradient(cfg)
+    }
+
+    fn update_parameters(&mut self, deltap: &Array1<f64>) {
+        self.jastrow.update_parameters(deltap);
     }
 }
 

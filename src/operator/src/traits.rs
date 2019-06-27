@@ -1,5 +1,6 @@
 // std imports
 use std::iter::Sum;
+use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 // Third party imports
 use ndarray::{Array1, Array2};
@@ -10,6 +11,22 @@ pub enum OperatorValue {
     Scalar(f64),
     Vector(Array1<f64>),
     Matrix(Array2<f64>),
+}
+
+impl fmt::Display for OperatorValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            OperatorValue::Scalar(value) => write!(f, "{}", value),
+            OperatorValue::Vector(value) => {
+                let mut output = String::new();
+                for x in value {
+                    output = format!("{} {}", output, x);
+                }
+                write!(f, "{}", output)
+            }
+            _ => unimplemented!()
+        }
+    }
 }
 
 impl OperatorValue {
