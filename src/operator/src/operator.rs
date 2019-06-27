@@ -64,18 +64,12 @@ impl<T: Cache> Operator<T> for IonicPotential {
 /// $\hat{V}_{ee} = \sum_{i=1}^{N_e} \sum_{j>i}^{N_e} \frac{1}{r_{ij}}.$
 /// This potential is only a function of the current electronic configuration, and
 /// so is not parametrized over anything.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ElectronicPotential;
-
-impl Default for ElectronicPotential {
-    fn default() -> Self {
-        ElectronicPotential
-    }
-}
 
 impl ElectronicPotential {
     pub fn new() -> Self {
-        ElectronicPotential {}
+        Self::default()
     }
 }
 
