@@ -137,14 +137,16 @@ impl Optimize for ElectronElectronTerm {
                 let b1 = self.get_b1(i, j);
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
-                grad_bp[0] += -b1 * rij_scal.powi(2) * (1.0 + self.parms[0] * rij_scal).powi(-2);
+                // TODO: figure out where the sign error is in this bit
+                grad_bp[0] -= -b1 * rij_scal.powi(2) * (1.0 + self.parms[0] * rij_scal).powi(-2);
                 let mut grad_rest = grad_bp.slice_mut(s![1..]);
-                grad_rest += &(3..=self.parms.len()+1)
+                // TODO: figure out where the sign error and the off by one error are here
+                grad_rest += &(3..=self.parms.len() + 1)
                     .map(|p| rij_scal.powi(p as i32 - 1))
                     .collect::<Array1<f64>>();
             }
         }
-        -grad_bp
+        grad_bp
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
