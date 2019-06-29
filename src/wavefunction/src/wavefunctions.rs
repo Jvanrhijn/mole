@@ -103,6 +103,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct SpinDeterminantProduct<T>
 where
     T: BasisSet,
@@ -273,6 +274,7 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
 /// Slater determinants with a prefactor that takes care of electron-electron cusp
 /// conditions. The functional form is tailored to be easy to evaluate and differentiate
 /// with respect to its parameters.
+#[derive(Clone)]
 pub struct JastrowSlater<T: BasisSet> {
     det: SpinDeterminantProduct<T>,
     jastrow: JastrowFactor,

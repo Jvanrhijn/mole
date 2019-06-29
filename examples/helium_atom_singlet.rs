@@ -1,5 +1,8 @@
-use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 use std::collections::HashMap;
+use std::sync::mpsc;
+use std::thread;
+
+use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 #[macro_use]
 extern crate itertools;
 #[macro_use]
@@ -71,7 +74,7 @@ fn main() {
         Orbital::new(array![[1.0]], basis_set.clone()),
     ];
 
-    const NPARM_JAS: usize = 3;
+    const NPARM_JAS: usize = 2;
     let mut jas_parm = Array1::zeros(NPARM_JAS);
 
     // Construct kinetic energy and ionic potential operators
@@ -83,7 +86,13 @@ fn main() {
     //  Full hamiltonian
     let hamiltonian = ElectronicHamiltonian::new(kinetic, potential.clone(), potential_ee);
 
-    const NITERS: usize = 100;
+    const NITERS: usize = 500;
+    const NWORKERS: usize = 8;
+
+    const TOTAL_SAMPLES: usize = 10_000;
+
+    let block_size = 10;
+    let steps = TOTAL_SAMPLES / NWORKERS;
 
     let mut energies = Array1::<f64>::zeros(NITERS);
     let mut errors = Array1::<f64>::zeros(NITERS);
@@ -97,72 +106,114 @@ fn main() {
             1,     // number of electrons with spin up
         );
 
-        // setup metropolis algorithm/markov chain generator
-        let metrop = MetropolisDiffuse::from_rng(0.2, StdRng::from_seed([0; 32]));
+        let (tx, rx) = mpsc::channel();
 
-        // construct sampler
-        let mut sampler = Sampler::new(wave_function, metrop);
-        sampler.add_observable("Hamiltonian", hamiltonian.clone());
-        sampler.add_observable("Parameter gradient", ParameterGradient);
-        sampler.add_observable("Wavefunction value", WavefunctionValue);
+        for worker in 0..NWORKERS {
+            let sender = tx.clone();
+            
+            let wf = wave_function.clone();
 
-        let block_size = 500;
-        let steps = 10_000;
+            let jas_parm = jas_parm.clone();
 
-        // create MC runner
-        let mut runner = Runner::new(sampler, Logger::new(block_size));
+            let kinetic = kinetic.clone();
+            let potential = potential.clone();
+            let potential_ee = potential_ee.clone();
+            let hamiltonian = hamiltonian.clone();
 
-        // Run Monte Carlo integration
-        runner.run(steps, block_size);
+            thread::spawn(move || {
+                // setup metropolis algorithm/markov chain generator
+                let metrop = MetropolisDiffuse::from_rng(0.2, StdRng::from_seed([worker as u8; 32]));
 
-        let energy_data = Array1::<f64>::from_vec(
-            runner
-                .data()
-                .get("Hamiltonian")
-                .unwrap()
-                .iter()
-                .map(|x| *x.get_scalar().unwrap())
-                .collect::<Vec<_>>(),
+                // construct sampler
+                let mut sampler = Sampler::new(wf.clone(), metrop);
+                sampler.add_observable("Hamiltonian", hamiltonian.clone());
+                sampler.add_observable("Parameter gradient", ParameterGradient);
+                sampler.add_observable("Wavefunction value", WavefunctionValue);
+
+
+                // create MC runner
+                let mut runner = Runner::new(sampler, Logger::new(block_size));
+
+                // Run Monte Carlo integration
+                runner.run(steps, block_size);
+
+                let energy_data = Array1::<f64>::from_vec(
+                    runner
+                        .data()
+                        .get("Hamiltonian")
+                        .unwrap()
+                        .iter()
+                        .map(|x| *x.get_scalar().unwrap())
+                        .collect::<Vec<_>>(),
+                );
+
+                // Retrieve mean values of energy over run
+                let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
+                let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap()
+                    / ((steps - block_size) as f64).sqrt();
+
+                let par_grads: Vec<_> = runner
+                    .data()
+                    .get("Parameter gradient")
+                    .unwrap()
+                    .iter()
+                    .map(|x| x.get_vector().unwrap().clone())
+                    .collect();
+                let local_energy: Vec<_> = runner
+                    .data()
+                    .get("Hamiltonian")
+                    .unwrap()
+                    .iter()
+                    .map(|x| *x.get_scalar().unwrap())
+                    .collect();
+                let wf_values: Vec<_> = runner
+                    .data()
+                    .get("Wavefunction value")
+                    .unwrap()
+                    .iter()
+                    .map(|x| *x.get_scalar().unwrap())
+                    .collect();
+
+                let sr_matrix = construct_sr_matrix(&par_grads, &wf_values);
+
+                // obtain the energy gradient
+                let local_energy_grad = izip!(par_grads, local_energy, wf_values)
+                    .map(|(psi_i, el, psi)| 2.0 * psi_i / psi * (el - energy))
+                    .collect::<Vec<Array1<f64>>>();
+
+                let energy_grad = local_energy_grad
+                    .iter()
+                    .fold(Array1::zeros(jas_parm.len()), |a, b| a + b)
+                    / (steps - block_size) as f64;
+
+                sender.send((sr_matrix, energy_grad, energy, energy_err)).unwrap();
+            });
+
+        }
+
+        let mut results: Vec<(Array2<f64>, Array1<f64>, f64, f64)> = Vec::new();
+
+        //match rx.recv() {
+        //    Ok(result) => results.push(result),
+        //    Err(_) => panic!("Receive error")
+        //};
+
+
+        for _ in 0..NWORKERS {
+            let result = rx.recv().unwrap();
+            results.push(result);
+        }
+
+        // average over results from workers
+        let (sr_matrix, energy_grad, energy, energy_err_sq) = results.into_iter().fold(
+            (Array2::<f64>::zeros((NPARM_JAS, NPARM_JAS)), Array1::<f64>::zeros(NPARM_JAS), 0.0, 0.0),
+            |(srmat, g, e, err), (srmat2, g2, e2, err2)| (srmat + srmat2, g + g2, e + e2, err + err2.powi(2))
         );
 
-        // Retrieve mean values of energy over run
-        let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
-        let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap()
-            / ((steps - block_size) as f64).sqrt();
-
-        let par_grads: Vec<_> = runner
-            .data()
-            .get("Parameter gradient")
-            .unwrap()
-            .iter()
-            .map(|x| x.get_vector().unwrap().clone())
-            .collect();
-        let local_energy: Vec<_> = runner
-            .data()
-            .get("Hamiltonian")
-            .unwrap()
-            .iter()
-            .map(|x| *x.get_scalar().unwrap())
-            .collect();
-        let wf_values: Vec<_> = runner
-            .data()
-            .get("Wavefunction value")
-            .unwrap()
-            .iter()
-            .map(|x| *x.get_scalar().unwrap())
-            .collect();
-
-        let sr_matrix = construct_sr_matrix(&par_grads, &wf_values);
-
-        // obtain the energy gradient
-        let local_energy_grad = izip!(par_grads, local_energy, wf_values)
-            .map(|(psi_i, el, psi)| 2.0 * psi_i / psi * (el - energy))
-            .collect::<Vec<Array1<f64>>>();
-
-        let energy_grad = local_energy_grad
-            .iter()
-            .fold(Array1::zeros(jas_parm.len()), |a, b| a + b)
-            / (steps - block_size) as f64;
+        let energy = energy / NWORKERS as f64;
+        let sr_matrix = sr_matrix / NWORKERS as f64;
+        let energy_grad = energy_grad / NWORKERS as f64;
+        let energy_err = energy_err_sq.sqrt() / NWORKERS as f64;
 
         let sr_direction = sr_matrix.solveh_into(-0.5 * energy_grad).unwrap();
 
@@ -170,10 +221,10 @@ fn main() {
         errors[t] = energy_err;
         println!("Energy:         {:.*} +/- {:.*}", 8, energy, 8, energy_err);
 
-        //println!("Exact ground state energy: -2.903");
+        ////println!("Exact ground state energy: -2.903");
 
         // do SR step
-        let step_size = 0.5;
+        let step_size = 0.05;
         jas_parm += &(step_size * sr_direction);
 
         //println!("\nSuggested new parameters: {}", jas_parm);

@@ -10,6 +10,7 @@ type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
 
 // f_ee in notes
 // full Jastrow is then exp(f_ee)
+#[derive(Clone)]
 struct ElectronElectronTerm {
     parms: Array1<f64>,
     scal: f64,
@@ -154,6 +155,7 @@ impl Optimize for ElectronElectronTerm {
     }
 }
 
+#[derive(Clone)]
 pub struct JastrowFactor {
     fee: ElectronElectronTerm,
     value_queue: VecDeque<f64>,
