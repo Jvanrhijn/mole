@@ -164,6 +164,14 @@ impl ElectronicHamiltonian {
     pub fn new(t: KineticEnergy, vion: IonicPotential, velec: ElectronicPotential) -> Self {
         ElectronicHamiltonian { t, vion, velec }
     }
+
+    pub fn from_ions(ion_pos: Array2<f64>, ion_charge: Array1<i32>) -> Self {
+        Self {
+            t: KineticEnergy {},
+            vion: IonicPotential::new(ion_pos, ion_charge),
+            velec: ElectronicPotential {},
+        }
+    }
 }
 
 impl<T> Operator<T> for ElectronicHamiltonian

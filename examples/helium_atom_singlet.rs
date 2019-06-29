@@ -12,13 +12,9 @@ use metropolis::MetropolisDiffuse;
 use montecarlo::{traits::Log, Runner, Sampler};
 use ndarray::{Array1, Array2, Axis};
 use ndarray_linalg::SolveH;
-use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, Operator,
-    OperatorValue, ParameterGradient, WavefunctionValue,
-};
-use optimize::Optimize;
+use operator::{ElectronicHamiltonian, OperatorValue, ParameterGradient, WavefunctionValue};
 use rand::{SeedableRng, StdRng};
-use wavefunction::{Cache, Error, JastrowSlater, Orbital};
+use wavefunction::{JastrowSlater, Orbital};
 
 struct Logger {
     block_size: usize,
@@ -63,9 +59,10 @@ impl Log for Logger {
 }
 
 fn main() {
-    let optimal_width = 1.0 / 1.69;
+    let optimal_width = 0.5;
     // setup basis set
     let ion_pos = array![[0.0, 0.0, 0.0]];
+
     let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width]);
 
     // construct orbitals
@@ -77,16 +74,10 @@ fn main() {
     const NPARM_JAS: usize = 2;
     let mut jas_parm = Array1::zeros(NPARM_JAS);
 
-    // Construct kinetic energy and ionic potential operators
-    let kinetic = KineticEnergy::new();
-    // One ion located at r = (0, 0, 0) with Z = 1
-    let potential = IonicPotential::new(ion_pos.clone(), array![2]);
-    // electron-electron interaction potential
-    let potential_ee = ElectronicPotential::new();
-    //  Full hamiltonian
-    let hamiltonian = ElectronicHamiltonian::new(kinetic, potential.clone(), potential_ee);
+    //  hamiltonian operator
+    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![2]);
 
-    const NITERS: usize = 500;
+    const NITERS: usize = 100;
     const NWORKERS: usize = 8;
 
     const TOTAL_SAMPLES: usize = 10_000;
@@ -110,26 +101,23 @@ fn main() {
 
         for worker in 0..NWORKERS {
             let sender = tx.clone();
-            
+
             let wf = wave_function.clone();
 
             let jas_parm = jas_parm.clone();
 
-            let kinetic = kinetic.clone();
-            let potential = potential.clone();
-            let potential_ee = potential_ee.clone();
             let hamiltonian = hamiltonian.clone();
 
             thread::spawn(move || {
                 // setup metropolis algorithm/markov chain generator
-                let metrop = MetropolisDiffuse::from_rng(0.2, StdRng::from_seed([worker as u8; 32]));
+                let metrop =
+                    MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([worker as u8; 32]));
 
                 // construct sampler
                 let mut sampler = Sampler::new(wf.clone(), metrop);
                 sampler.add_observable("Hamiltonian", hamiltonian.clone());
                 sampler.add_observable("Parameter gradient", ParameterGradient);
                 sampler.add_observable("Wavefunction value", WavefunctionValue);
-
 
                 // create MC runner
                 let mut runner = Runner::new(sampler, Logger::new(block_size));
@@ -186,9 +174,10 @@ fn main() {
                     .fold(Array1::zeros(jas_parm.len()), |a, b| a + b)
                     / (steps - block_size) as f64;
 
-                sender.send((sr_matrix, energy_grad, energy, energy_err)).unwrap();
+                sender
+                    .send((sr_matrix, energy_grad, energy, energy_err))
+                    .unwrap();
             });
-
         }
 
         let mut results: Vec<(Array2<f64>, Array1<f64>, f64, f64)> = Vec::new();
@@ -198,7 +187,6 @@ fn main() {
         //    Err(_) => panic!("Receive error")
         //};
 
-
         for _ in 0..NWORKERS {
             let result = rx.recv().unwrap();
             results.push(result);
@@ -206,8 +194,15 @@ fn main() {
 
         // average over results from workers
         let (sr_matrix, energy_grad, energy, energy_err_sq) = results.into_iter().fold(
-            (Array2::<f64>::zeros((NPARM_JAS, NPARM_JAS)), Array1::<f64>::zeros(NPARM_JAS), 0.0, 0.0),
-            |(srmat, g, e, err), (srmat2, g2, e2, err2)| (srmat + srmat2, g + g2, e + e2, err + err2.powi(2))
+            (
+                Array2::<f64>::zeros((NPARM_JAS, NPARM_JAS)),
+                Array1::<f64>::zeros(NPARM_JAS),
+                0.0,
+                0.0,
+            ),
+            |(srmat, g, e, err), (srmat2, g2, e2, err2)| {
+                (srmat + srmat2, g + g2, e + e2, err + err2.powi(2))
+            },
         );
 
         let energy = energy / NWORKERS as f64;
@@ -224,7 +219,7 @@ fn main() {
         ////println!("Exact ground state energy: -2.903");
 
         // do SR step
-        let step_size = 0.05;
+        let step_size = 0.1;
         jas_parm += &(step_size * sr_direction);
 
         //println!("\nSuggested new parameters: {}", jas_parm);
@@ -241,13 +236,11 @@ fn main() {
             &(&energies + &errors),
             &[Color("blue"), FillAlpha(0.1)],
         )
-        //.y_error_bars(&iters, &energies, &errors, &[Caption("VMC Energy of Helium singlet"), Color("black")])
         .lines(
             &iters,
             &energies,
             &[Caption("VMC Energy of Helium singlet"), Color("blue")],
         )
-        //.lines(&iters, &energies, &[Caption("VMC Energy of Helium singlet"), Color("black")])
         .lines(
             &iters,
             &exact,
