@@ -28,11 +28,33 @@ $ cargo run --example hydrogen_atom
 
 ### Usage
 
-Currently, only Monte Carlo integration is supported with simple Slater determinant wave function
-ansätze. A few basis functions are provided. In the future it will be possible to provide basis
-functions obtained from a previous calculation, for instance from DFT or SCF computations.
+Currently, Mole supports VMC optimization of all-electron wave functions. Provided wave functions
+are Jastrow-Slater wave functions with two-body correlation Jastrow factor, and a single
+Slater determinant. The Slater determinant can be populated with either STO or Gaussian
+orbitals. Optimization is at this point in time only supported for the Jastrow parameters.
+
+VMC optimization is very crude and must essentially be done manually. A suitable
+abstraction will be implemented soon.
+
+Adding new operators and wave functions is simply a matter of creating a new type and
+implementing the relevant traits. In order to create a new operator, one should implement
+the `Operator<T>` trait (see `src/operator`). For a new wave function, implement **at least**
+
+* `Function` (see `src/wavefunction/src/traits`)
+* `Cache` (see `src/wavefuction/src/traits`)
+
+Other traits that are likely required are `Optimize` and `Differentiate`, but this depends
+on the type of computation being done.
 
 See the examples folder for detailed example usage.
+
+### Example result
+
+The figure below shows the result of optimizing a Jastrow-Slater wave function with two
+Jastrow e-e parameters and STO-populated Slater determinant, on a hydrogen molecule (H2)
+Hamiltonian. See `examples/hydrogen_molecule`.
+
+[![optimization demo](https://i.imgur.com/YtLT54M.png)](https://i.imgur.com/YtLT54M.png)
 
 ### Goals
 
@@ -52,11 +74,12 @@ Rust is such a young language.
 
 ### Planned Features
 
-* Python frontend
 * Variational and diffusion QMC capabilities
 * Jastrow-Slater wave functions
 * Various optimization schemes
 * Concurrency
+* Serde integration for storing optimized wave functions
+* 
 
 ### Dependencies
 
