@@ -9,7 +9,7 @@ cache:
   - cargo
 
 script:
-  - cargo test --all
+  - RUSTC=rustc-proptest-fix cargo test --all
 
 addons:
   apt:
@@ -29,7 +29,9 @@ before_script: |
   sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list' &&
   sudo apt-get update &&
   sudo apt-get install intel-mkl-64bit-2018.2-046 &&
-  source /opt/intel/parallel_studio_xe_2018/compilers_and_libraries_2018/linux/bin/compilervars_global.sh intel64 
+  source /opt/intel/parallel_studio_xe_2018/compilers_and_libraries_2018/linux/bin/compilervars_global.sh intel64 &&
+  wget https://gist.githubusercontent.com/jix/4342dd522a7125a2803c6edeedd8735c/raw/8c9fbe63bee722ff484215479e836ab714de1b9b/rustc-proptest-fix &&
+  chmod +x rustc-proptest-fix
 
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
