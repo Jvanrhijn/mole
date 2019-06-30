@@ -10,19 +10,18 @@ use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 #[macro_use]
 extern crate itertools;
 
-use ndarray::{Array1, Array2, Axis, Ix2};
-use ndarray_linalg::SolveH;
+use ndarray::{Array1, Axis, Ix2};
 
 use basis::Hydrogen1sBasis;
 use metropolis::{Metropolis, MetropolisDiffuse};
 use montecarlo::{
-    traits::{Log, MonteCarloResult, MonteCarloSampler},
+    traits::{Log, MonteCarloResult},
     Runner, Sampler,
 };
 use operator::{
     ElectronicHamiltonian, Operator, OperatorValue, ParameterGradient, WavefunctionValue,
 };
-use optimize::{Optimize, Optimizer};
+use optimize::{Optimize, Optimizer, StochasticReconfiguration};
 use wavefunction::{Cache, Differentiate, Function, JastrowSlater, Orbital, WaveFunction};
 
 // testing ground for VMC
@@ -31,58 +30,6 @@ struct EmptyLogger;
 impl Log for EmptyLogger {
     fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
         String::new()
-    }
-}
-
-#[derive(Clone)]
-struct StochasticReconfiguration {
-    step_size: f64,
-}
-
-impl StochasticReconfiguration {
-    fn construct_sr_matrix(parm_grad: &[Array1<f64>], wf_values: &[f64]) -> Array2<f64> {
-        let nparm = parm_grad[0].len();
-        let nsamples = parm_grad.len();
-
-        // construct the stochastic reconfiguration matrix
-        let mut sr_mat = Array2::<f64>::zeros((nparm, nparm));
-
-        // build array2 of o_i values
-        let mut sr_o = Array2::<f64>::zeros((nsamples, nparm));
-        for n in 0..nsamples {
-            for i in 0..nparm {
-                sr_o[[n, i]] = parm_grad[n][i] / wf_values[n];
-            }
-        }
-
-        // add the <Ok Ol> term to sr_mat
-        for n in 0..nsamples {
-            sr_mat += &(outer_product(
-                &sr_o.slice(s![n, ..]).to_owned(),
-                &sr_o.slice(s![n, ..]).to_owned(),
-            ) / nsamples as f64);
-        }
-
-        let sr_o_avg = sr_o.mean_axis(Axis(0));
-
-        // subtract <Ok><Ol>
-        for i in 0..nparm {
-            for j in 0..nparm {
-                sr_mat -= sr_o_avg[i] * sr_o_avg[j];
-            }
-        }
-
-        sr_mat //- &sr_o_avg_mat2
-    }
-}
-
-impl Optimizer for StochasticReconfiguration {
-    fn compute_parameter_update(
-        &mut self,
-        (energy_grad, wf_values, grad_parm): &(Array1<f64>, Vec<f64>, Vec<Array1<f64>>),
-    ) -> Array1<f64> {
-        let sr_matrix = StochasticReconfiguration::construct_sr_matrix(&grad_parm, &wf_values);
-        self.step_size * sr_matrix.solveh_into(-0.5 * energy_grad).unwrap()
     }
 }
 
@@ -275,18 +222,20 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 100;
+    const NITERS: usize = 5;
     // use 8 threads
     const NWORKERS: usize = 8;
 
     // Sample 10_000 data points across all workers
-    const TOTAL_SAMPLES: usize = 10_000;
+    const TOTAL_SAMPLES: usize = 5000;
 
     // use a block size of 10
     let block_size = 10;
 
     // Use 2 Jastrow factor parameters (b2 and b3)
     const NPARM_JAS: usize = 2;
+
+    const STEP_SIZE: f64 = 0.5; // SR step size
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
@@ -301,7 +250,7 @@ fn main() {
     let vmc_runner = VmcRunner::new(
         wave_function,
         hamiltonian,
-        StochasticReconfiguration { step_size: 0.01 },
+        StochasticReconfiguration::new(STEP_SIZE),
         EmptyLogger,
     );
 
@@ -328,12 +277,18 @@ fn main() {
 
     let mut fig = Figure::new();
     fig.axes2d()
-        .fill_between(
+        .y_error_bars(
             &iters,
-            &(&energies - &errors),
-            &(&energies + &errors),
-            &[Color("blue"), FillAlpha(0.1)],
+            &energies,
+            &errors,
+            &[Color("blue")]
         )
+        //.fill_between(
+        //    &iters,
+        //    &(&energies - &errors),
+        //    &(&energies + &errors),
+        //    &[Color("blue"), FillAlpha(0.1)],
+        //)
         .lines(
             &iters,
             &energies,
@@ -350,15 +305,4 @@ fn main() {
         .set_y_grid(true);
 
     fig.show();
-}
-
-fn outer_product(a: &Array1<f64>, b: &Array1<f64>) -> Array2<f64> {
-    let n = a.len();
-    let mut result = Array2::<f64>::zeros((n, n));
-    for i in 0..n {
-        for j in 0..n {
-            result[[i, j]] = a[i] * b[j];
-        }
-    }
-    result
 }

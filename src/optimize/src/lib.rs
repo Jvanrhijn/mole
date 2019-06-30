@@ -1,17 +1,9 @@
-use ndarray::{Array1, Array2};
+#[macro_use]
+extern crate ndarray;
+extern crate ndarray_linalg;
 
-pub trait Optimize {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64>;
+pub mod optimizers;
+pub mod traits;
 
-    fn update_parameters(&mut self, deltap: &Array1<f64>);
-
-    fn num_parameters(&self) -> usize;
-}
-
-pub trait Optimizer {
-    // TODO refactor into taking all MC data
-    fn compute_parameter_update(
-        &mut self,
-        ud: &(Array1<f64>, Vec<f64>, Vec<Array1<f64>>),
-    ) -> Array1<f64>;
-}
+pub use crate::optimizers::*;
+pub use crate::traits::*;
