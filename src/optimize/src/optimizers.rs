@@ -12,9 +12,10 @@ impl StochasticReconfiguration {
         Self { step_size }
     }
 
-    fn construct_sr_matrix(parm_grad: &[Array1<f64>], wf_values: &[f64]) -> Array2<f64> {
-        let nparm = parm_grad[0].len();
-        let nsamples = parm_grad.len();
+    fn construct_sr_matrix(parm_grad: &Array2<f64>, wf_values: &Array1<f64>) -> Array2<f64> {
+        let shape = parm_grad.shape();
+        let nsamples = shape[0];
+        let nparm = shape[1];
 
         // construct the stochastic reconfiguration matrix
         let mut sr_mat = Array2::<f64>::zeros((nparm, nparm));
@@ -23,7 +24,7 @@ impl StochasticReconfiguration {
         let mut sr_o = Array2::<f64>::zeros((nsamples, nparm));
         for n in 0..nsamples {
             for i in 0..nparm {
-                sr_o[[n, i]] = parm_grad[n][i] / wf_values[n];
+                sr_o[[n, i]] = parm_grad[[n, i]] / wf_values[n];
             }
         }
 
@@ -51,9 +52,9 @@ impl StochasticReconfiguration {
 impl Optimizer for StochasticReconfiguration {
     fn compute_parameter_update(
         &mut self,
-        (energy_grad, wf_values, grad_parm): &(Array1<f64>, Vec<f64>, Vec<Array1<f64>>),
+        (energy_grad, wf_values, grad_parm): &(Array1<f64>, Array1<f64>, Array2<f64>),
     ) -> Array1<f64> {
-        let sr_matrix = StochasticReconfiguration::construct_sr_matrix(&grad_parm, &wf_values);
+        let sr_matrix = StochasticReconfiguration::construct_sr_matrix(grad_parm, wf_values);
         self.step_size * sr_matrix.solveh_into(-0.5 * energy_grad).unwrap()
     }
 }

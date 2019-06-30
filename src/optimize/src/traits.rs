@@ -12,6 +12,6 @@ pub trait Optimizer {
     // TODO refactor into taking all MC data
     fn compute_parameter_update(
         &mut self,
-        ud: &(Array1<f64>, Vec<f64>, Vec<Array1<f64>>),
+        ud: &(Array1<f64>, Array1<f64>, Array2<f64>),
     ) -> Array1<f64>;
 }

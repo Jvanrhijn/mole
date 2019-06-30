@@ -10,7 +10,7 @@ use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 #[macro_use]
 extern crate itertools;
 
-use ndarray::{Array1, Axis, Ix2};
+use ndarray::{Array1, Array2, Axis, Ix2, Zip};
 
 use basis::Hydrogen1sBasis;
 use metropolis::{Metropolis, MetropolisDiffuse};
@@ -31,6 +31,14 @@ impl Log for EmptyLogger {
     fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
         String::new()
     }
+}
+
+struct VmcResult {
+    pub energy: f64,
+    pub energy_error: f64,
+    pub energy_grad: Array1<f64>,
+    pub parameter_grads: Array2<f64>,
+    pub wf_values: Array1<f64>,
 }
 
 struct VmcRunner<H, T, L, O> {
@@ -109,86 +117,28 @@ where
 
                     let runner = Runner::new(sampler, logger);
 
-                    let MonteCarloResult { data, .. } = runner.run(steps, block_size);
+                    let result = runner.run(steps, block_size);
 
-                    let energy_data = Array1::<f64>::from_vec(
-                        data.get("Energy")
-                            .unwrap()
-                            .iter()
-                            .map(|x| *x.get_scalar().unwrap())
-                            .collect::<Vec<_>>(),
-                    );
-
-                    // Retrieve mean values of energy over run
-                    let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
-                    let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap()
-                        / ((steps - block_size) as f64).sqrt();
-
-                    let par_grads: Vec<_> = data
-                        .get("Parameter gradient")
-                        .unwrap()
-                        .iter()
-                        .map(|x| x.get_vector().unwrap().clone())
-                        .collect();
-
-                    let local_energy: Vec<_> = data
-                        .get("Energy")
-                        .unwrap()
-                        .iter()
-                        .map(|x| *x.get_scalar().unwrap())
-                        .collect();
-                    let wf_values: Vec<_> = data
-                        .get("Wavefunction value")
-                        .unwrap()
-                        .iter()
-                        .map(|x| *x.get_scalar().unwrap())
-                        .collect();
-
-                    // obtain the energy gradient
-                    let local_energy_grad = izip!(par_grads.iter(), local_energy, wf_values.iter())
-                        .map(|(psi_i, el, psi)| 2.0 * psi_i / *psi * (el - energy))
-                        .collect::<Vec<Array1<f64>>>();
-
-                    let energy_grad = local_energy_grad
-                        .iter()
-                        .fold(Array1::zeros(nparm), |a, b| a + b)
-                        / (steps - block_size) as f64;
-
-                    // TODO: refactor into just sending MonteCarloResult, do data processing
-                    // on main thread
                     sender
-                        .send((energy, energy_grad, energy_err, par_grads, wf_values))
+                        .send(result)
                         .expect("Failed to send Monte carlo result over channel");
                 });
             }
 
-            let mut energy = 0.0;
-            let mut energy_err_sq = 0.0;
-            let mut energy_grad = Array1::<f64>::zeros(nparm);
-            let mut wf_values = Vec::new();
-            let mut grad_parm = Vec::new();
-
+            let mut results = Vec::new();
             for _ in 0..workers {
-                let (e, eg, e_err, mut gparm, mut wfv) = rx.recv().unwrap();
-                energy += e / workers as f64;
-                energy_err_sq += e_err.powi(2);
-                energy_grad += &(eg / workers as f64);
-                wf_values.append(&mut wfv);
-                grad_parm.append(&mut gparm)
+                results.push(rx.recv().unwrap());
             }
 
-            let energy_err = energy_err_sq.sqrt() / workers as f64;
-
-            energies.push(energy);
-            energy_errs.push(energy_err);
+            let VmcResult { energy, energy_error, energy_grad, parameter_grads, wf_values } = Self::process_monte_carlo_results(&results);
 
             let deltap =
                 self.optimizer
-                    .compute_parameter_update(&(energy_grad, wf_values, grad_parm));
+                    .compute_parameter_update(&(energy_grad, wf_values, parameter_grads));
 
             self.wave_function.update_parameters(&deltap);
 
-            println!("Energy:      {:.8} +/- {:.8}", energy, energy_err);
+            println!("Energy:      {:.8} +/- {:.8}", energy, energy_error);
         }
 
         (
@@ -196,6 +146,68 @@ where
             Array1::from_vec(energies),
             Array1::from_vec(energy_errs),
         )
+    }
+
+    fn process_monte_carlo_results(mc_results: &[MonteCarloResult<T>]) -> VmcResult {
+        // computes energy, energy error, energy gradient over several parallel MC runs
+        let nworkers = mc_results.len();
+        let nparm = mc_results[0].wave_function.num_parameters();
+        let mut full_data: HashMap<String, Vec<OperatorValue>> = HashMap::new();
+        // concatenate all MC worker results
+        for MonteCarloResult { data, .. } in mc_results {
+            for (key, data) in data.iter() {
+                full_data
+                    .entry(key.to_string())
+                    .or_insert_with(|| Vec::new())
+                    .append(&mut (data.clone()));
+            }
+        }
+
+        let energies = Array1::from_vec(
+            full_data
+                .get("Energy")
+                .unwrap()
+                .iter()
+                .map(|x| *x.get_scalar().unwrap())
+                .collect(),
+        );
+
+        let wf_values = Array1::from_vec(
+            full_data
+                .get("Wavefunction value")
+                .unwrap()
+                .iter()
+                .map(|x| *x.get_scalar().unwrap())
+                .collect()
+        );
+
+        let energy = *energies.mean_axis(Axis(0)).first().unwrap();
+
+        let nsamples = energies.len();
+        let mut parameter_grads = Array2::<f64>::zeros((nsamples, nparm));
+
+        for (i, pgrad) in full_data.get("Parameter gradient").unwrap().iter().enumerate() {
+            let mut pgrad_slice = parameter_grads.slice_mut(s![i, ..]);
+            pgrad_slice += pgrad.get_vector().unwrap();
+        }
+
+        // compute energy gradient as <E>_i = 2<psi_i / psi (E_L - <E>)>
+        let mut local_energy_grad = Array2::<f64>::zeros((nsamples, nparm));
+        Zip::from(local_energy_grad.genrows_mut())
+            .and(parameter_grads.genrows())
+            .and(&energies)
+            .and(&wf_values)
+            .apply(|mut ge, psi_i, &e, &psi| {
+                ge += &(2.0 * &(&psi_i / psi) * (e - energy))
+            });
+
+        VmcResult {
+            energy,
+            energy_error: *energies.var_axis(Axis(0), 0.0).first().unwrap(),
+            energy_grad: local_energy_grad.mean_axis(Axis(0)),
+            parameter_grads,
+            wf_values,
+        }
     }
 }
 // end testing ground for vmc
@@ -222,7 +234,7 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 5;
+    const NITERS: usize = 100;
     // use 8 threads
     const NWORKERS: usize = 8;
 
@@ -277,18 +289,7 @@ fn main() {
 
     let mut fig = Figure::new();
     fig.axes2d()
-        .y_error_bars(
-            &iters,
-            &energies,
-            &errors,
-            &[Color("blue")]
-        )
-        //.fill_between(
-        //    &iters,
-        //    &(&energies - &errors),
-        //    &(&energies + &errors),
-        //    &[Color("blue"), FillAlpha(0.1)],
-        //)
+        .y_error_bars(&iters, &energies, &errors, &[Color("blue")])
         .lines(
             &iters,
             &energies,
