@@ -1,8 +1,15 @@
 use operator::OperatorValue;
 use std::collections::HashMap;
 
+pub struct MonteCarloResult<T> {
+    pub wave_function: T,
+    pub data: HashMap<String, Vec<OperatorValue>>,
+}
+
 /// Interface for sampling observables from Monte Carlo integration.
 pub trait MonteCarloSampler {
+    type WaveFunc;
+
     /// Sample observables from the current configuration.
     fn sample(&mut self);
 
@@ -17,6 +24,8 @@ pub trait MonteCarloSampler {
     fn acceptance(&self) -> f64;
 
     fn observable_names(&self) -> Vec<&String>;
+
+    fn consume_result(self) -> MonteCarloResult<Self::WaveFunc>;
 }
 
 /// Trait for creating a logging configuration. Implement

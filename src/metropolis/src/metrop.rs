@@ -15,6 +15,7 @@ type Vgl = (f64, Array2<f64>, f64);
 /// Transition matrix T(x -> x') is constant inside a cubical box,
 /// and zero outside it. This yields an acceptance probability of
 /// $A(x -> x') = \min(\psi(x')^2 / \psi(x)^2, 1)$.
+#[derive(Clone)]
 pub struct MetropolisBox<R>
 where
     R: Rng,
@@ -43,7 +44,7 @@ impl MetropolisBox<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
-    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize>,
+    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize> + Clone,
     R: Rng,
 {
     type R = R;
@@ -85,6 +86,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct MetropolisDiffuse<R>
 where
     R: Rng,
@@ -110,7 +112,7 @@ impl MetropolisDiffuse<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
 where
-    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize>,
+    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize> + Clone,
     R: Rng,
 {
     type R = R;

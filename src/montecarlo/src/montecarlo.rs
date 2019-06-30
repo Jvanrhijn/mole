@@ -20,7 +20,7 @@ where
         Self { sampler, logger }
     }
 
-    pub fn run(&mut self, steps: usize, block_size: usize) {
+    pub fn run(mut self, steps: usize, block_size: usize) -> MonteCarloResult<S::WaveFunc> {
         assert!(steps >= 2 * block_size);
         let blocks = steps / block_size;
         let mut output = String::new();
@@ -37,6 +37,7 @@ where
                 println!("{}", output);
             }
         }
+        self.sampler.consume_result()
     }
 
     pub fn data(&self) -> &HashMap<String, Vec<OperatorValue>> {
@@ -80,10 +81,9 @@ mod tests {
         let mut sampler = Sampler::new(wave_func, metropolis);
         sampler.add_observable("Local Energy", local_e);
 
-        let mut runner = Runner::new(sampler, MockLogger);
-        runner.run(100, 1);
+        let sampler = Runner::new(sampler, MockLogger).run(100, 1);
 
-        let result = runner
+        let result = sampler
             .data()
             .get("Local Energy")
             .unwrap()

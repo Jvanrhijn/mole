@@ -18,7 +18,7 @@ use wavefunction::{Cache, Differentiate, Function, WaveFunction};
 /// Performs Metropolis step and keeps list of observables to sample
 pub struct Sampler<T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + Cache,
+    T: Function<f64, D = Ix2> + Differentiate + Cache + Clone,
     V: Metropolis<T>,
 {
     wave_function: T,
@@ -31,7 +31,7 @@ where
 
 impl<T, V> Sampler<T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache,
+    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
     V: Metropolis<T>,
     <V as Metropolis<T>>::R: Rng,
 {
@@ -72,9 +72,11 @@ where
 
 impl<T, V> MonteCarloSampler for Sampler<T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache,
+    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
     V: Metropolis<T>,
 {
+    type WaveFunc = T;
+
     fn sample(&mut self) {
         // First sample all observables on the current configuration
         let mut samples: HashMap<String, OperatorValue> = self
@@ -126,5 +128,12 @@ where
 
     fn observable_names(&self) -> Vec<&String> {
         self.observables.keys().collect()
+    }
+
+    fn consume_result(self) -> MonteCarloResult<Self::WaveFunc> {
+        MonteCarloResult {
+            wave_function: self.wave_function,
+            data: self.samples,
+        }
     }
 }

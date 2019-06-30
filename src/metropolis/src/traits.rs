@@ -3,7 +3,7 @@ use wavefunction::{Differentiate, Function};
 
 /// Interface for implementing Metropolis algorithms that generate
 /// Markov chains of configurations.
-pub trait Metropolis<T: Differentiate + Function<f64, D = Ix2>> {
+pub trait Metropolis<T: Differentiate + Function<f64, D = Ix2> + Clone> {
     /// Rng type to use
     type R;
     /// Propose a move to a new configuration.

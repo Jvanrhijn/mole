@@ -9,10 +9,14 @@ extern crate itertools;
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use metropolis::MetropolisDiffuse;
-use montecarlo::{traits::Log, Runner, Sampler};
+use montecarlo::{
+    traits::{Log, MonteCarloResult},
+    Runner, Sampler,
+};
 use ndarray::{Array1, Array2, Axis};
 use ndarray_linalg::SolveH;
 use operator::{ElectronicHamiltonian, OperatorValue, ParameterGradient, WavefunctionValue};
+use optimize::Optimize;
 use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
 
@@ -72,12 +76,11 @@ fn main() {
     ];
 
     const NPARM_JAS: usize = 2;
-    let mut jas_parm = Array1::zeros(NPARM_JAS);
 
     //  hamiltonian operator
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![2]);
 
-    const NITERS: usize = 100;
+    const NITERS: usize = 250;
     const NWORKERS: usize = 8;
 
     const TOTAL_SAMPLES: usize = 10_000;
@@ -88,23 +91,21 @@ fn main() {
     let mut energies = Array1::<f64>::zeros(NITERS);
     let mut errors = Array1::<f64>::zeros(NITERS);
 
-    for t in 0..NITERS {
-        // construct Jastrow-Slater wave function
-        let wave_function = JastrowSlater::new(
-            jas_parm.clone(), // Jastrow factor parameters
-            orbitals.clone(),
-            0.001, // scale distance
-            1,     // number of electrons with spin up
-        );
+    // construct Jastrow-Slater wave function
+    let mut wave_function = JastrowSlater::new(
+        Array1::zeros(NPARM_JAS), // Jastrow factor parameters
+        orbitals.clone(),
+        0.001, // scale distance
+        1,     // number of electrons with spin up
+    );
 
+    for t in 0..NITERS {
         let (tx, rx) = mpsc::channel();
 
         for worker in 0..NWORKERS {
             let sender = tx.clone();
 
             let wf = wave_function.clone();
-
-            let jas_parm = jas_parm.clone();
 
             let hamiltonian = hamiltonian.clone();
 
@@ -120,15 +121,13 @@ fn main() {
                 sampler.add_observable("Wavefunction value", WavefunctionValue);
 
                 // create MC runner
-                let mut runner = Runner::new(sampler, Logger::new(block_size));
+                let runner = Runner::new(sampler, Logger::new(block_size));
 
                 // Run Monte Carlo integration
-                runner.run(steps, block_size);
+                let MonteCarloResult { data, .. } = runner.run(steps, block_size);
 
                 let energy_data = Array1::<f64>::from_vec(
-                    runner
-                        .data()
-                        .get("Hamiltonian")
+                    data.get("Hamiltonian")
                         .unwrap()
                         .iter()
                         .map(|x| *x.get_scalar().unwrap())
@@ -140,22 +139,19 @@ fn main() {
                 let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap()
                     / ((steps - block_size) as f64).sqrt();
 
-                let par_grads: Vec<_> = runner
-                    .data()
+                let par_grads: Vec<_> = data
                     .get("Parameter gradient")
                     .unwrap()
                     .iter()
                     .map(|x| x.get_vector().unwrap().clone())
                     .collect();
-                let local_energy: Vec<_> = runner
-                    .data()
+                let local_energy: Vec<_> = data
                     .get("Hamiltonian")
                     .unwrap()
                     .iter()
                     .map(|x| *x.get_scalar().unwrap())
                     .collect();
-                let wf_values: Vec<_> = runner
-                    .data()
+                let wf_values: Vec<_> = data
                     .get("Wavefunction value")
                     .unwrap()
                     .iter()
@@ -171,7 +167,7 @@ fn main() {
 
                 let energy_grad = local_energy_grad
                     .iter()
-                    .fold(Array1::zeros(jas_parm.len()), |a, b| a + b)
+                    .fold(Array1::zeros(NPARM_JAS), |a, b| a + b)
                     / (steps - block_size) as f64;
 
                 sender
@@ -219,8 +215,8 @@ fn main() {
         ////println!("Exact ground state energy: -2.903");
 
         // do SR step
-        let step_size = 0.1;
-        jas_parm += &(step_size * sr_direction);
+        let step_size = 1.0;
+        wave_function.update_parameters(&(step_size * sr_direction));
 
         //println!("\nSuggested new parameters: {}", jas_parm);
     }

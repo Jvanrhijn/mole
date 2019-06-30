@@ -12,6 +12,7 @@ members = [
   "src/operator",
   "src/wavefunction",
   "src/optimize",
+  "src/vmc",
 ]
 
 [dependencies]
@@ -21,6 +22,7 @@ metropolis = { path = "src/metropolis" }
 operator = { path = "src/operator" }
 basis = { path = "src/basis" }
 optimize = { path = "src/optimize" }
+vmc = { path = "src/vmc" }
 
 [dev-dependencies]
 ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }

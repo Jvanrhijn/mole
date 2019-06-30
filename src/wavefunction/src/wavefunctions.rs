@@ -438,6 +438,10 @@ impl<T: BasisSet> Optimize for JastrowSlater<T> {
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
         self.jastrow.update_parameters(deltap);
     }
+
+    fn num_parameters(&self) -> usize {
+        self.jastrow.num_parameters()
+    }
 }
 
 #[cfg(test)]

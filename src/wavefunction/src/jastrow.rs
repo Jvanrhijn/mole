@@ -153,6 +153,10 @@ impl Optimize for ElectronElectronTerm {
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
         self.parms += deltap;
     }
+
+    fn num_parameters(&self) -> usize {
+        self.parms.len()
+    }
 }
 
 #[derive(Clone)]
@@ -207,6 +211,10 @@ impl Optimize for JastrowFactor {
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
         self.fee.update_parameters(deltap);
+    }
+
+    fn num_parameters(&self) -> usize {
+        self.fee.num_parameters()
     }
 }
 
