@@ -20,6 +20,28 @@ impl Optimizer for SteepestDescent {
 }
 
 #[derive(Clone)]
+pub struct MomentumDescent {
+    step_size: f64,
+    momentum_parameter: f64,
+    momentum: Array1<f64>,
+}
+
+impl MomentumDescent {
+    pub fn new(step_size: f64, momentum_parameter: f64, nparm: usize) -> Self {
+        Self {
+            step_size, momentum_parameter, momentum: Array1::zeros(nparm)
+        }
+    }
+}
+
+impl Optimizer for MomentumDescent {
+    fn compute_parameter_update(&mut self, (energy_grad, _, _): &(Array1<f64>, Array1<f64>, Array2<f64>)) -> Array1<f64> {
+        self.momentum -= &(self.step_size * energy_grad);
+        self.momentum_parameter * &self.momentum
+    }
+}
+
+#[derive(Clone)]
 pub struct StochasticReconfiguration {
     step_size: f64,
 }

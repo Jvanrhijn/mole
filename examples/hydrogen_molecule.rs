@@ -21,7 +21,7 @@ use montecarlo::{
 use operator::{
     ElectronicHamiltonian, Operator, OperatorValue, ParameterGradient, WavefunctionValue,
 };
-use optimize::{Optimize, Optimizer, StochasticReconfiguration, SteepestDescent};
+use optimize::{Optimize, Optimizer, StochasticReconfiguration, SteepestDescent, MomentumDescent};
 use wavefunction::{Cache, Differentiate, Function, JastrowSlater, Orbital, WaveFunction};
 
 // testing ground for VMC
@@ -247,13 +247,13 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 10;
+    const NITERS: usize = 33;
 
     // use 8 threads
     const NWORKERS: usize = 8;
 
     // Sample 10_000 data points across all workers
-    const TOTAL_SAMPLES: usize = 50_00;
+    const TOTAL_SAMPLES: usize = 10_000;
 
     // use a block size of 10
     const BLOCK_SIZE: usize = 10;
@@ -263,6 +263,7 @@ fn main() {
 
     // SR step size
     const STEP_SIZE: f64 = 0.1;
+    const MOMENTUM_PARAMETER: f64 = 0.01;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
@@ -277,7 +278,8 @@ fn main() {
     let vmc_runner = VmcRunner::new(
         wave_function,
         hamiltonian,
-        SteepestDescent::new(STEP_SIZE),
+        MomentumDescent::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
+        //SteepestDescent::new(STEP_SIZE),
         //StochasticReconfiguration::new(STEP_SIZE),
         EmptyLogger,
     );

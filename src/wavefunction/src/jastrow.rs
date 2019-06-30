@@ -142,7 +142,7 @@ impl Optimize for ElectronElectronTerm {
                 grad_bp[0] -= -b1 * rij_scal.powi(2) * (1.0 + self.parms[0] * rij_scal).powi(-2);
                 let mut grad_rest = grad_bp.slice_mut(s![1..]);
                 // TODO: figure out where the sign error and the off by one error are here
-                grad_rest += &(3..=self.parms.len() + 1)
+                grad_rest -= &(3..=self.parms.len() + 1)
                     .map(|p| rij_scal.powi(p as i32 - 1))
                     .collect::<Array1<f64>>();
             }
