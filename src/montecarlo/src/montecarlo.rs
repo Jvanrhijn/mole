@@ -84,7 +84,7 @@ mod tests {
         let sampler = Runner::new(sampler, MockLogger).run(100, 1);
 
         let result = sampler
-            .data()
+            .data
             .get("Local Energy")
             .unwrap()
             .clone()

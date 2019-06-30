@@ -79,12 +79,12 @@ fn main() {
     sampler.add_observable("Energy", hamiltonian);
 
     // Perform the MC integration
-    let mut runner = Runner::new(sampler, Logger);
-    runner.run(1000, 1);
+    let runner = Runner::new(sampler, Logger);
+    let result = runner.run(1000, 1);
 
     let energy_data = Array1::<f64>::from_vec(
-        runner
-            .data()
+        result
+            .data
             .get("Energy")
             .unwrap()
             .iter()
@@ -96,7 +96,7 @@ fn main() {
     let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
     let error = *energy_data.std_axis(Axis(0), 0.0).first().unwrap();
 
-    assert_eq!(energy, 1.5);
+    assert!((energy - 1.5).abs() < 1e-15);
     assert!(error < 1e-15);
 
     println!("\nEnergy:     {} +/- {:.*}", energy, 8, error);

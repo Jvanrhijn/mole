@@ -174,6 +174,7 @@ mod tests {
     use wavefunction::Error;
 
     // define stub wave function
+    #[derive(Clone)]
     struct WaveFunctionMock {
         value: f64,
     }

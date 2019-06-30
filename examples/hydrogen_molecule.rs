@@ -130,7 +130,13 @@ where
                 results.push(rx.recv().unwrap());
             }
 
-            let VmcResult { energy, energy_error, energy_grad, parameter_grads, wf_values } = Self::process_monte_carlo_results(&results);
+            let VmcResult {
+                energy,
+                energy_error,
+                energy_grad,
+                parameter_grads,
+                wf_values,
+            } = Self::process_monte_carlo_results(&results);
 
             energies.push(energy);
             energy_errs.push(energy_error);
@@ -180,7 +186,7 @@ where
                 .unwrap()
                 .iter()
                 .map(|x| *x.get_scalar().unwrap())
-                .collect()
+                .collect(),
         );
 
         let energy = *energies.mean_axis(Axis(0)).first().unwrap();
@@ -188,7 +194,12 @@ where
         let nsamples = energies.len();
         let mut parameter_grads = Array2::<f64>::zeros((nsamples, nparm));
 
-        for (i, pgrad) in full_data.get("Parameter gradient").unwrap().iter().enumerate() {
+        for (i, pgrad) in full_data
+            .get("Parameter gradient")
+            .unwrap()
+            .iter()
+            .enumerate()
+        {
             let mut pgrad_slice = parameter_grads.slice_mut(s![i, ..]);
             pgrad_slice += pgrad.get_vector().unwrap();
         }
@@ -199,13 +210,12 @@ where
             .and(parameter_grads.genrows())
             .and(&energies)
             .and(&wf_values)
-            .apply(|mut ge, psi_i, &e, &psi| {
-                ge += &(2.0 * &(&psi_i / psi) * (e - energy))
-            });
+            .apply(|mut ge, psi_i, &e, &psi| ge += &(2.0 * &(&psi_i / psi) * (e - energy)));
 
         VmcResult {
             energy,
-            energy_error: *energies.std_axis(Axis(0), 0.0).first().unwrap() / (nsamples as f64).sqrt(),
+            energy_error: *energies.std_axis(Axis(0), 0.0).first().unwrap()
+                / (nsamples as f64).sqrt(),
             energy_grad: local_energy_grad.mean_axis(Axis(0)),
             parameter_grads,
             wf_values,

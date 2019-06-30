@@ -39,12 +39,12 @@ fn hydrogen_molecular_ion_lcao() {
     let mut sampler = Sampler::new(wave_function, metrop);
     sampler.add_observable("Energy", hamiltonian);
 
-    let mut runner = Runner::new(sampler, MockLogger);
-    runner.run(10000, 100);
+    let runner = Runner::new(sampler, MockLogger);
+    let result = runner.run(10000, 100);
 
     let energy_data = Array1::<f64>::from_vec(
-        runner
-            .data()
+        result
+            .data
             .get("Energy")
             .unwrap()
             .iter()
@@ -54,9 +54,6 @@ fn hydrogen_molecular_ion_lcao() {
 
     let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
     let energy_err = *energy_data.std_axis(Axis(0), 0.0).first().unwrap();
-    //let energy = runner.data().get("Energy").unwrap()
-    //    .clone().into_iter().sum::<OperatorValue>() / OperatorValue::Scalar((10000 * 100) as f64);
-    //let energy_err = *runner.errors().get("Energy").unwrap();
 
     let exact_result = -0.565;
     assert!((energy - exact_result).abs() < energy_err);

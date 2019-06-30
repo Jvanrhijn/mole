@@ -44,11 +44,11 @@ fn helium_lcao() {
     sampler.add_observable("Energy", hamiltonian);
 
     let mut runner = Runner::new(sampler, MockLogger);
-    runner.run(1000, 100);
+    let result = runner.run(1000, 100);
 
     let energy_data = Array1::<f64>::from_vec(
-        runner
-            .data()
+        result
+            .data
             .get("Energy")
             .unwrap()
             .iter()
