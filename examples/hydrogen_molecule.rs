@@ -21,7 +21,7 @@ use montecarlo::{
 use operator::{
     ElectronicHamiltonian, Operator, OperatorValue, ParameterGradient, WavefunctionValue,
 };
-use optimize::{Optimize, Optimizer, StochasticReconfiguration};
+use optimize::{Optimize, Optimizer, StochasticReconfiguration, SteepestDescent};
 use wavefunction::{Cache, Differentiate, Function, JastrowSlater, Orbital, WaveFunction};
 
 // testing ground for VMC
@@ -230,7 +230,8 @@ fn main() {
     // Equilibrium H2 geometry
     let ion_positions = array![[-0.7, 0.0, 0.0], [0.7, 0.0, 0.0]];
 
-    // Use STO basis set, with one basis function
+    // Use STO basis set, with one basis function centered on 
+    // each proton
     let basis_set = Hydrogen1sBasis::new(ion_positions.clone(), vec![1.0]);
 
     // Construct two orbitals from basis, both equally centered
@@ -247,19 +248,21 @@ fn main() {
     // Set VMC parameters
     // use 100 iterations
     const NITERS: usize = 10;
+
     // use 8 threads
     const NWORKERS: usize = 8;
 
     // Sample 10_000 data points across all workers
-    const TOTAL_SAMPLES: usize = 10_000;
+    const TOTAL_SAMPLES: usize = 50_00;
 
     // use a block size of 10
-    let block_size = 10;
+    const BLOCK_SIZE: usize = 10;
 
     // Use 2 Jastrow factor parameters (b2 and b3)
     const NPARM_JAS: usize = 2;
 
-    const STEP_SIZE: f64 = 0.5; // SR step size
+    // SR step size
+    const STEP_SIZE: f64 = 0.1;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
@@ -274,7 +277,8 @@ fn main() {
     let vmc_runner = VmcRunner::new(
         wave_function,
         hamiltonian,
-        StochasticReconfiguration::new(STEP_SIZE),
+        SteepestDescent::new(STEP_SIZE),
+        //StochasticReconfiguration::new(STEP_SIZE),
         EmptyLogger,
     );
 
@@ -284,7 +288,7 @@ fn main() {
         let mut v = vec![];
         for m in 0..NWORKERS {
             v.push(MetropolisDiffuse::from_rng(
-                0.1,
+                0.2,
                 StdRng::from_seed([m as u8; 32]),
             ))
         }
@@ -293,18 +297,23 @@ fn main() {
 
     // Actually run the VMC optimization
     let (wave_function, energies, errors) =
-        vmc_runner.run_optimization(NITERS, TOTAL_SAMPLES, block_size, metrops);
+        vmc_runner.run_optimization(NITERS, TOTAL_SAMPLES, BLOCK_SIZE, metrops);
 
     // Plot the results
-    let iters: Vec<_> = (0..NITERS).collect();
-    let exact = vec![-1.175; NITERS];
+    plot_results(energies.as_slice().unwrap(), errors.as_slice().unwrap());
+}
+
+fn plot_results(energy: &[f64], error: &[f64]) {
+    let niters = energy.len();
+    let iters: Vec<_> = (0..niters).collect();
+    let exact = vec![-1.175; niters];
 
     let mut fig = Figure::new();
     fig.axes2d()
-        .y_error_bars(&iters, &energies, &errors, &[Color("blue")])
+        .y_error_bars(&iters, energy, error, &[Color("blue")])
         .lines(
             &iters,
-            &energies,
+            energy,
             &[Caption("VMC Energy of H2"), Color("blue")],
         )
         .lines(

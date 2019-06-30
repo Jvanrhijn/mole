@@ -3,6 +3,23 @@ use ndarray::{Array1, Array2, Axis};
 use ndarray_linalg::SolveH;
 
 #[derive(Clone)]
+pub struct SteepestDescent {
+    step_size: f64,
+}
+
+impl SteepestDescent {
+    pub fn new(step_size: f64) -> Self {
+        Self { step_size }
+    }
+}
+
+impl Optimizer for SteepestDescent {
+    fn compute_parameter_update(&mut self, (energy_grad, _, _): &(Array1<f64>, Array1<f64>, Array2<f64>)) -> Array1<f64> {
+        -&(self.step_size * energy_grad)
+    }
+}
+
+#[derive(Clone)]
 pub struct StochasticReconfiguration {
     step_size: f64,
 }
