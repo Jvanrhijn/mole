@@ -132,6 +132,9 @@ where
 
             let VmcResult { energy, energy_error, energy_grad, parameter_grads, wf_values } = Self::process_monte_carlo_results(&results);
 
+            energies.push(energy);
+            energy_errs.push(energy_error);
+
             let deltap =
                 self.optimizer
                     .compute_parameter_update(&(energy_grad, wf_values, parameter_grads));
@@ -150,7 +153,6 @@ where
 
     fn process_monte_carlo_results(mc_results: &[MonteCarloResult<T>]) -> VmcResult {
         // computes energy, energy error, energy gradient over several parallel MC runs
-        let nworkers = mc_results.len();
         let nparm = mc_results[0].wave_function.num_parameters();
         let mut full_data: HashMap<String, Vec<OperatorValue>> = HashMap::new();
         // concatenate all MC worker results
@@ -203,7 +205,7 @@ where
 
         VmcResult {
             energy,
-            energy_error: *energies.var_axis(Axis(0), 0.0).first().unwrap(),
+            energy_error: *energies.std_axis(Axis(0), 0.0).first().unwrap() / (nsamples as f64).sqrt(),
             energy_grad: local_energy_grad.mean_axis(Axis(0)),
             parameter_grads,
             wf_values,
@@ -234,12 +236,12 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 100;
+    const NITERS: usize = 10;
     // use 8 threads
     const NWORKERS: usize = 8;
 
     // Sample 10_000 data points across all workers
-    const TOTAL_SAMPLES: usize = 5000;
+    const TOTAL_SAMPLES: usize = 10_000;
 
     // use a block size of 10
     let block_size = 10;
