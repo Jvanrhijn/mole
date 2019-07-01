@@ -42,6 +42,30 @@ impl Optimizer for MomentumDescent {
 }
 
 #[derive(Clone)]
+pub struct NesterovMomentum {
+    step_size: f64,
+    momentum_parameter: f64,
+    momentum: Array1<f64>,
+    momentum_prev: Array1<f64>,
+}
+
+impl NesterovMomentum {
+    pub fn new(step_size: f64, momentum_parameter: f64, nparm: usize) -> Self {
+        Self {
+            step_size, momentum_parameter, momentum: Array1::zeros(nparm), momentum_prev: Array1::zeros(nparm)
+        }
+    }
+}
+
+impl Optimizer for NesterovMomentum {
+    fn compute_parameter_update(&mut self, (energy_grad, _, _): &(Array1<f64>, Array1<f64>, Array2<f64>)) -> Array1<f64> {
+        self.momentum_prev = self.momentum.clone();
+        self.momentum = self.momentum_parameter * &self.momentum + self.step_size * energy_grad;
+        -(self.momentum_parameter * &self.momentum_prev + (1.0 + self.momentum_parameter) * &self.momentum)
+    }
+}
+
+#[derive(Clone)]
 pub struct StochasticReconfiguration {
     step_size: f64,
 }
