@@ -278,9 +278,9 @@ fn main() {
     let vmc_runner = VmcRunner::new(
         wave_function,
         hamiltonian,
-        MomentumDescent::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
+        //MomentumDescent::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
         //SteepestDescent::new(STEP_SIZE),
-        //StochasticReconfiguration::new(STEP_SIZE),
+        StochasticReconfiguration::new(STEP_SIZE),
         EmptyLogger,
     );
 
