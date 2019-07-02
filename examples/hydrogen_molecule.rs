@@ -21,7 +21,10 @@ use montecarlo::{
 use operator::{
     ElectronicHamiltonian, Operator, OperatorValue, ParameterGradient, WavefunctionValue,
 };
-use optimize::{Optimize, Optimizer, StochasticReconfiguration, SteepestDescent, MomentumDescent, NesterovMomentum};
+use optimize::{
+    MomentumDescent, NesterovMomentum, Optimize, Optimizer, SteepestDescent,
+    StochasticReconfiguration, OnlineLbfgs,
+};
 use wavefunction::{Cache, Differentiate, Function, JastrowSlater, Orbital, WaveFunction};
 
 // testing ground for VMC
@@ -141,9 +144,12 @@ where
             energies.push(energy);
             energy_errs.push(energy_error);
 
-            let deltap =
-                self.optimizer
-                    .compute_parameter_update(&(energy_grad, wf_values, parameter_grads));
+            let deltap = self.optimizer.compute_parameter_update(&(
+                energy_grad,
+                wf_values,
+                parameter_grads,
+                self.wave_function.parameters().clone(),
+            ));
 
             self.wave_function.update_parameters(&deltap);
 
@@ -230,7 +236,7 @@ fn main() {
     // Equilibrium H2 geometry
     let ion_positions = array![[-0.7, 0.0, 0.0], [0.7, 0.0, 0.0]];
 
-    // Use STO basis set, with one basis function centered on 
+    // Use STO basis set, with one basis function centered on
     // each proton
     let basis_set = Hydrogen1sBasis::new(ion_positions.clone(), vec![1.0]);
 
@@ -247,10 +253,10 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 10;
+    const NITERS: usize = 20;
 
     // use 8 threads
-    const NWORKERS: usize = 8;
+    const NWORKERS: usize = 4;
 
     // Sample 10_000 data points across all workers
     const TOTAL_SAMPLES: usize = 10_000;
@@ -262,8 +268,8 @@ fn main() {
     const NPARM_JAS: usize = 2;
 
     // SR step size
-    const STEP_SIZE: f64 = 0.001;
-    const MOMENTUM_PARAMETER: f64 = 0.01;
+    const STEP_SIZE: f64 = 0.05;
+    const MOMENTUM_PARAMETER: f64 = 0.1;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
@@ -278,9 +284,9 @@ fn main() {
     let vmc_runner = VmcRunner::new(
         wave_function,
         hamiltonian,
+        OnlineLbfgs::new(STEP_SIZE, 5, NPARM_JAS),
         //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
-        //MomentumDescent::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
-        SteepestDescent::new(0.05),
+        //SteepestDescent::new(0.05),
         //StochasticReconfiguration::new(0.1),
         EmptyLogger,
     );

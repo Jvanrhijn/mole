@@ -1,4 +1,6 @@
 #[macro_use]
+extern crate itertools;
+#[macro_use]
 extern crate ndarray;
 extern crate ndarray_linalg;
 

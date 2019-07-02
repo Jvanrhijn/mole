@@ -25,7 +25,7 @@ optimize = { path = "src/optimize" }
 vmc = { path = "src/vmc" }
 
 [dev-dependencies]
-ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
+ndarray-linalg = { version = "0.10.0", features = ["openblas"] }
 rand = "0.5.0"
 ndarray = "0.12.0"
 itertools = "0.7"
