@@ -11,3 +11,6 @@ ndarray-linalg = "0.10.0"
 ndarray-rand = "0.8.0"
 wavefunction_traits = { path = "../wavefunction_traits" }
 
+[dev-dependencies]
+errors = { path = "../errors" }
+

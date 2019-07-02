@@ -17,3 +17,4 @@ itertools = "0.7"
 
 [dev-dependencies]
 basis = {path = "../basis" }
+wavefunction = { path = "../wavefunction" }

@@ -171,7 +171,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wavefunction::Error;
+    use errors::Error;
 
     // define stub wave function
     #[derive(Clone)]

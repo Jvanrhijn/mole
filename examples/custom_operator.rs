@@ -8,7 +8,9 @@ use ndarray::{Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 use operator::{KineticEnergy, Operator, OperatorValue};
 use rand::{SeedableRng, StdRng};
-use wavefunction::{Cache, Differentiate, Error, Orbital, SingleDeterminant};
+use wavefunction::{Orbital, SingleDeterminant};
+use wavefunction_traits::{Cache, Differentiate};
+use errors::Error;
 
 // Create a very basic logger
 struct Logger;
