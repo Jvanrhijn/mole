@@ -120,22 +120,17 @@ impl OnlineLbfgs {
             alphas.push(alpha);
         }
         // scale search direction by averaging
-        if self.iter == 0 {
-            p *= EPS
+        p *= if self.iter == 0 {
+            EPS
         } else {
-            let mut tot = 0.0;
-            for (s, y) in self.s.iter().zip(self.y.iter()) {
-                tot += s.dot(y) / y.dot(y);
-            }
-            p *= tot / (usize::min(self.iter, self.history)) as f64;
-        }
+            izip!(self.s.iter(), self.y.iter())
+                .fold(0.0_f64, |tot, (s, y)| tot + s.dot(y) / y.dot(y))
+                / usize::min(self.iter, self.history) as f64
+        };
         // second of two-loop recursion
-        for (alpha, s, y) in izip!(alphas.iter().rev(), self.s.iter(), self.y.iter()) {
-            let beta = y.dot(&p) / y.dot(s);
-            p += &((alpha - beta) * s);
-        }
-        // p is now the search direction
-        p
+        izip!(alphas.iter().rev(), self.s.iter(), self.y.iter()).fold(p, |p0, (alpha, s, y)| {
+            &p0 + &((alpha - y.dot(&p0) / y.dot(s)) * s)
+        })
     }
 
     fn update_curvature_pairs(&mut self, pars: &Array1<f64>, grad: &Array1<f64>) {
@@ -143,7 +138,7 @@ impl OnlineLbfgs {
         let y = grad - &self.grad_prev;
         if self.s.len() >= self.history {
             self.s.pop_front();
-        } 
+        }
         self.s.push_back(s);
         if self.y.len() >= self.history {
             self.y.pop_front();

@@ -22,8 +22,8 @@ use operator::{
     ElectronicHamiltonian, Operator, OperatorValue, ParameterGradient, WavefunctionValue,
 };
 use optimize::{
-    MomentumDescent, NesterovMomentum, Optimize, Optimizer, SteepestDescent,
-    StochasticReconfiguration, OnlineLbfgs,
+    MomentumDescent, NesterovMomentum, OnlineLbfgs, Optimize, Optimizer, SteepestDescent,
+    StochasticReconfiguration,
 };
 use wavefunction::{Cache, Differentiate, Function, JastrowSlater, Orbital, WaveFunction};
 
