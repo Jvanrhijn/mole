@@ -1,7 +1,9 @@
 use crate::traits::*;
+use crate::util::*;
 use ndarray::{Array1, Array2, Axis};
 use ndarray_linalg::SolveH;
-use std::collections::VecDeque;
+use operator::OperatorValue;
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Clone)]
 pub struct SteepestDescent {
@@ -17,8 +19,11 @@ impl SteepestDescent {
 impl Optimizer for SteepestDescent {
     fn compute_parameter_update(
         &mut self,
-        (energy_grad, _, _, _): &(Array1<f64>, Array1<f64>, Array2<f64>, Array1<f64>),
+        _pars: &Array1<f64>,
+        averages: &HashMap<String, OperatorValue>,
+        raw_data: &HashMap<String, Vec<OperatorValue>>,
     ) -> Array1<f64> {
+        let energy_grad = compute_energy_gradient(raw_data, averages);
         -&(self.step_size * energy_grad)
     }
 }
@@ -43,8 +48,11 @@ impl MomentumDescent {
 impl Optimizer for MomentumDescent {
     fn compute_parameter_update(
         &mut self,
-        (energy_grad, _, _, _): &(Array1<f64>, Array1<f64>, Array2<f64>, Array1<f64>),
+        _pars: &Array1<f64>,
+        averages: &HashMap<String, OperatorValue>,
+        raw_data: &HashMap<String, Vec<OperatorValue>>,
     ) -> Array1<f64> {
+        let energy_grad = compute_energy_gradient(raw_data, averages);
         self.momentum -= &(self.step_size * energy_grad);
         self.momentum_parameter * &self.momentum
     }
@@ -61,7 +69,7 @@ pub struct NesterovMomentum {
 impl NesterovMomentum {
     pub fn new(step_size: f64, momentum_parameter: f64, nparm: usize) -> Self {
         Self {
-            step_size: -step_size,
+            step_size: step_size,
             momentum_parameter,
             momentum: Array1::zeros(nparm),
             momentum_prev: Array1::zeros(nparm),
@@ -72,8 +80,11 @@ impl NesterovMomentum {
 impl Optimizer for NesterovMomentum {
     fn compute_parameter_update(
         &mut self,
-        (energy_grad, _, _, _): &(Array1<f64>, Array1<f64>, Array2<f64>, Array1<f64>),
+        _pars: &Array1<f64>,
+        averages: &HashMap<String, OperatorValue>,
+        raw_data: &HashMap<String, Vec<OperatorValue>>,
     ) -> Array1<f64> {
+        let energy_grad = compute_energy_gradient(raw_data, averages);
         self.momentum_prev = self.momentum.clone();
         self.momentum = self.momentum_parameter * &self.momentum + self.step_size * energy_grad;
         -(self.momentum_parameter * &self.momentum_prev
@@ -150,10 +161,13 @@ impl OnlineLbfgs {
 impl Optimizer for OnlineLbfgs {
     fn compute_parameter_update(
         &mut self,
-        (energy_grad, _, _, pars): &(Array1<f64>, Array1<f64>, Array2<f64>, Array1<f64>),
+        pars: &Array1<f64>,
+        averages: &HashMap<String, OperatorValue>,
+        raw_data: &HashMap<String, Vec<OperatorValue>>,
     ) -> Array1<f64> {
+        let energy_grad = compute_energy_gradient(raw_data, averages);
         self.update_curvature_pairs(&pars, &energy_grad);
-        let p = self.initial_direction(energy_grad);
+        let p = self.initial_direction(&energy_grad);
         let s = -self.step_size * p;
         self.update_curvature_pairs(&pars, &energy_grad);
         self.grad_prev = energy_grad.clone();
@@ -173,10 +187,9 @@ impl StochasticReconfiguration {
         Self { step_size }
     }
 
-    fn construct_sr_matrix(parm_grad: &Array2<f64>, wf_values: &Array1<f64>) -> Array2<f64> {
-        let shape = parm_grad.shape();
-        let nsamples = shape[0];
-        let nparm = shape[1];
+    fn construct_sr_matrix(parm_grad: &Vec<OperatorValue>, wf_values: &Vec<OperatorValue>) -> Array2<f64> {
+        let nsamples = parm_grad.len();
+        let nparm = parm_grad[0].get_vector().unwrap().len();
 
         // construct the stochastic reconfiguration matrix
         let mut sr_mat = Array2::<f64>::zeros((nparm, nparm));
@@ -185,7 +198,7 @@ impl StochasticReconfiguration {
         let mut sr_o = Array2::<f64>::zeros((nsamples, nparm));
         for n in 0..nsamples {
             for i in 0..nparm {
-                sr_o[[n, i]] = parm_grad[[n, i]] / wf_values[n];
+                sr_o[[n, i]] = parm_grad[n].get_vector().unwrap()[i] / wf_values[n].get_scalar().unwrap();
             }
         }
 
@@ -213,13 +226,13 @@ impl StochasticReconfiguration {
 impl Optimizer for StochasticReconfiguration {
     fn compute_parameter_update(
         &mut self,
-        (energy_grad, wf_values, grad_parm, _): &(
-            Array1<f64>,
-            Array1<f64>,
-            Array2<f64>,
-            Array1<f64>,
-        ),
+        pars: &Array1<f64>,
+        averages: &HashMap<String, OperatorValue>,
+        raw_data: &HashMap<String, Vec<OperatorValue>>,
     ) -> Array1<f64> {
+        let energy_grad = compute_energy_gradient(raw_data, averages);
+        let grad_parm = raw_data.get("Parameter gradient").unwrap();
+        let wf_values = raw_data.get("Wavefunction value").unwrap();
         let sr_matrix = StochasticReconfiguration::construct_sr_matrix(grad_parm, wf_values);
         self.step_size * sr_matrix.solveh_into(-0.5 * energy_grad).unwrap()
     }
@@ -235,3 +248,4 @@ fn outer_product(a: &Array1<f64>, b: &Array1<f64>) -> Array2<f64> {
     }
     result
 }
+

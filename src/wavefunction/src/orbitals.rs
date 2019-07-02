@@ -1,9 +1,9 @@
 // Third party imports
 use ndarray::{Array, Array2, Ix1};
 // First party imports
-use crate::error::Error;
-use crate::traits::{Differentiate, Function};
 use basis::BasisSet;
+use errors::Error;
+use wavefunction_traits::{Differentiate, Function};
 
 /// Parametrized orbital as a linear combination of basis functions:
 /// $\phi(x) = \sum_{i=1}^{N_{\text{basis}}} \xi_i(x)$.

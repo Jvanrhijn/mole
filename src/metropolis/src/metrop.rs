@@ -6,7 +6,7 @@ use rand::rngs::StdRng;
 use rand::{FromEntropy, Rng};
 
 use crate::traits::Metropolis;
-use wavefunction::{Cache, Differentiate, Function};
+use wavefunction_traits::{Cache, Differentiate, Function};
 
 #[allow(dead_code)]
 type Vgl = (f64, Array2<f64>, f64);

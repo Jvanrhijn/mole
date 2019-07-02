@@ -6,8 +6,8 @@ use crate::traits::{
     Operator,
     OperatorValue::{self, *},
 };
-use optimize::Optimize;
-use wavefunction::{Cache, Differentiate, Error, Function};
+use errors::Error;
+use wavefunction_traits::{Cache, Differentiate, Function};
 
 /// Ionic potential energy operator:
 /// $\hat{V}_{\mathrm{ion}} = -\sum_{i=1}^{N_{\mathrm{ions}}\sum_{j=1}^{\mathrm{e}} \frac{Z_i}{r_{ij}}$.
@@ -180,24 +180,6 @@ where
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
-    }
-}
-
-pub struct ParameterGradient;
-
-impl<T: Optimize + Cache> Operator<T> for ParameterGradient {
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(OperatorValue::Vector(wf.parameter_gradient(cfg)) * Scalar(wf.current_value().0))
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct WavefunctionValue;
-
-impl<T: Cache> Operator<T> for WavefunctionValue {
-    fn act_on(&self, wf: &T, _cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        // need to square this, since "local value" is operator product / wave function value
-        Ok(OperatorValue::Scalar(wf.current_value().0.powi(2)))
     }
 }
 

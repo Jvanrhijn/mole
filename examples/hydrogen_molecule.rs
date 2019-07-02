@@ -18,30 +18,43 @@ use montecarlo::{
     traits::{Log, MonteCarloResult},
     Runner, Sampler,
 };
-use operator::{
-    ElectronicHamiltonian, Operator, OperatorValue, ParameterGradient, WavefunctionValue,
-};
-use optimize::{
-    MomentumDescent, NesterovMomentum, OnlineLbfgs, Optimize, Optimizer, SteepestDescent,
-    StochasticReconfiguration,
-};
-use wavefunction::{Cache, Differentiate, Function, JastrowSlater, Orbital, WaveFunction};
+use operator::{ElectronicHamiltonian, Operator, OperatorValue};
+use optimize::{Optimize, Optimizer, SteepestDescent, MomentumDescent, NesterovMomentum, OnlineLbfgs, StochasticReconfiguration};
+//use optimize::{
+//    MomentumDescent, NesterovMomentum, OnlineLbfgs, Optimize, Optimizer, SteepestDescent,
+//    StochasticReconfiguration,
+//};
+use errors::Error;
+
+use wavefunction::{JastrowSlater, Orbital};
+use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 
 // testing ground for VMC
+struct ParameterGradient;
+
+impl<T: Optimize + Cache> Operator<T> for ParameterGradient {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
+        Ok(OperatorValue::Vector(wf.parameter_gradient(cfg))
+            * OperatorValue::Scalar(wf.current_value().0))
+    }
+}
+
+#[derive(Copy, Clone)]
+struct WavefunctionValue;
+
+impl<T: Cache> Operator<T> for WavefunctionValue {
+    fn act_on(&self, wf: &T, _cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
+        // need to square this, since "local value" is operator product / wave function value
+        Ok(OperatorValue::Scalar(wf.current_value().0.powi(2)))
+    }
+}
+
 #[derive(Clone)]
 struct EmptyLogger;
 impl Log for EmptyLogger {
     fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
         String::new()
     }
-}
-
-struct VmcResult {
-    pub energy: f64,
-    pub energy_error: f64,
-    pub energy_grad: Array1<f64>,
-    pub parameter_grads: Array2<f64>,
-    pub wf_values: Array1<f64>,
 }
 
 struct VmcRunner<H, T, L, O> {
@@ -90,8 +103,6 @@ where
 
         let steps = total_samples / workers;
 
-        let nparm = self.wave_function.num_parameters();
-
         let mut energies = Vec::new();
         let mut energy_errs = Vec::new();
 
@@ -128,32 +139,22 @@ where
                 });
             }
 
-            let mut results = Vec::new();
-            for _ in 0..workers {
-                results.push(rx.recv().unwrap());
-            }
+            let results: Vec<_> = (0..workers)
+                .map(|_| rx.recv().expect("Failed to retrieve data from channel"))
+                .collect();
 
-            let VmcResult {
-                energy,
-                energy_error,
-                energy_grad,
-                parameter_grads,
-                wf_values,
-            } = Self::process_monte_carlo_results(&results);
+            let mc_data = Self::concatenate_worker_data(&results);
 
-            energies.push(energy);
-            energy_errs.push(energy_error);
+            let (averages, variance) = Self::process_monte_carlo_results(&mc_data);
 
-            let deltap = self.optimizer.compute_parameter_update(&(
-                energy_grad,
-                wf_values,
-                parameter_grads,
-                self.wave_function.parameters().clone(),
-            ));
+            energies.push(*averages["Energy"].get_scalar().unwrap());
+            energy_errs.push((variance["Energy"].get_scalar().unwrap() / total_samples as f64).sqrt());
+
+            let deltap = self.optimizer.compute_parameter_update(self.wave_function.parameters(), &averages, &mc_data);
 
             self.wave_function.update_parameters(&deltap);
 
-            println!("Energy:      {:.8} +/- {:.8}", energy, energy_error);
+            println!("Energy:      {:.8} +/- {:.9}", energies.last().unwrap(), energy_errs.last().unwrap());
         }
 
         (
@@ -163,69 +164,62 @@ where
         )
     }
 
-    fn process_monte_carlo_results(mc_results: &[MonteCarloResult<T>]) -> VmcResult {
+    fn concatenate_worker_data(
+        worker_data: &[MonteCarloResult<T>],
+    ) -> HashMap<String, Vec<OperatorValue>> {
         // computes energy, energy error, energy gradient over several parallel MC runs
-        let nparm = mc_results[0].wave_function.num_parameters();
         let mut full_data: HashMap<String, Vec<OperatorValue>> = HashMap::new();
         // concatenate all MC worker results
-        for MonteCarloResult { data, .. } in mc_results {
-            for (key, data) in data.iter() {
-                full_data
-                    .entry(key.to_string())
-                    .or_insert_with(|| Vec::new())
-                    .append(&mut (data.clone()));
-            }
-        }
-
-        let energies = Array1::from_vec(
-            full_data
-                .get("Energy")
-                .unwrap()
-                .iter()
-                .map(|x| *x.get_scalar().unwrap())
-                .collect(),
-        );
-
-        let wf_values = Array1::from_vec(
-            full_data
-                .get("Wavefunction value")
-                .unwrap()
-                .iter()
-                .map(|x| *x.get_scalar().unwrap())
-                .collect(),
-        );
-
-        let energy = *energies.mean_axis(Axis(0)).first().unwrap();
-
-        let nsamples = energies.len();
-        let mut parameter_grads = Array2::<f64>::zeros((nsamples, nparm));
-
-        for (i, pgrad) in full_data
-            .get("Parameter gradient")
-            .unwrap()
+        worker_data
             .iter()
-            .enumerate()
-        {
-            let mut pgrad_slice = parameter_grads.slice_mut(s![i, ..]);
-            pgrad_slice += pgrad.get_vector().unwrap();
-        }
+            .for_each(|MonteCarloResult { data, .. }| {
+                data.iter().for_each(|(key, data)| {
+                    full_data
+                        .entry(key.to_string())
+                        .or_insert_with(|| Vec::new())
+                        .append(&mut (data.clone()));
+                })
+            });
+        full_data
+    }
 
-        // compute energy gradient as <E>_i = 2<psi_i / psi (E_L - <E>)>
-        let mut local_energy_grad = Array2::<f64>::zeros((nsamples, nparm));
-        Zip::from(local_energy_grad.genrows_mut())
-            .and(parameter_grads.genrows())
-            .and(&energies)
-            .and(&wf_values)
-            .apply(|mut ge, psi_i, &e, &psi| ge += &(2.0 * &(&psi_i / psi) * (e - energy)));
-
-        VmcResult {
-            energy,
-            energy_error: *energies.std_axis(Axis(0), 0.0).first().unwrap()
-                / (nsamples as f64).sqrt(),
-            energy_grad: local_energy_grad.mean_axis(Axis(0)),
-            parameter_grads,
-            wf_values,
-        }
+    // average all MC data and compute error bars
+    fn process_monte_carlo_results(
+        mc_results: &HashMap<String, Vec<OperatorValue>>,
+    ) -> (
+        HashMap<String, OperatorValue>,
+        HashMap<String, OperatorValue>,
+    ) {
+        use OperatorValue::Scalar;
+        // computes averages of all components of concatenated data
+        let averages = mc_results
+            .iter()
+            .map(|(name, samples)| {
+                (
+                    name.to_string(),
+                    samples.iter().enumerate().fold(Scalar(0.0), |a, (n, b)| {
+                        &a + &((b - &a) / Scalar((n + 1) as f64))
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        // naive error computation, TODO: replace with better algorithm
+        let variance = mc_results
+            .iter()
+            .map(|(name, samples)| {
+                let mean_of_squares = samples
+                    .iter()
+                    .map(|x| x * x)
+                    .enumerate()
+                    .fold(Scalar(0.0), |a, (n, b)| {
+                        &a + &((&b - &a) / Scalar((n + 1) as f64))
+                    });
+                let mean = averages.get(name).unwrap();
+                let square_of_mean = mean * mean;
+                (name.to_string(), mean_of_squares - square_of_mean)
+            })
+            .collect::<HashMap<_, _>>();
+        (averages, variance)
     }
 }
 // end testing ground for vmc
@@ -268,7 +262,7 @@ fn main() {
     const NPARM_JAS: usize = 2;
 
     // SR step size
-    const STEP_SIZE: f64 = 0.05;
+    const STEP_SIZE: f64 = 0.01;
     const MOMENTUM_PARAMETER: f64 = 0.1;
 
     // construct Jastrow-Slater wave function
@@ -284,10 +278,10 @@ fn main() {
     let vmc_runner = VmcRunner::new(
         wave_function,
         hamiltonian,
-        OnlineLbfgs::new(STEP_SIZE, 5, NPARM_JAS),
+        OnlineLbfgs::new(0.05, 5, NPARM_JAS),
         //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
         //SteepestDescent::new(0.05),
-        //StochasticReconfiguration::new(0.1),
+        //StochasticReconfiguration::new(0.05),
         EmptyLogger,
     );
 

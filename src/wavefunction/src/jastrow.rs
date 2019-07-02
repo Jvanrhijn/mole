@@ -1,9 +1,9 @@
-use crate::error::Error;
-use crate::traits::{Cache, Differentiate, Function};
+use errors::Error;
 use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use optimize::Optimize;
 use std::collections::VecDeque;
+use wavefunction_traits::{Cache, Differentiate, Function};
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);

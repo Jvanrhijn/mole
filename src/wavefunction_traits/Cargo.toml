@@ -1,5 +1,5 @@
 [package]
-name = "optimize"
+name = "wavefunction_traits"
 version = "0.1.0"
 authors = ["Jesse van Rhijn <jesse.v.rhijn@gmail.com>"]
 edition = "2018"
@@ -7,7 +7,6 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-operator = { path = "../operator" }
 ndarray = "0.12.0"
 ndarray-linalg = "0.10.0"
-itertools = "0.7"
+errors = { path = "../errors" }

@@ -3,8 +3,8 @@ use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, Div, Mul, Sub};
 // Third party imports
+use errors::Error;
 use ndarray::{Array1, Array2};
-use wavefunction::Error;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OperatorValue {
@@ -24,7 +24,7 @@ impl fmt::Display for OperatorValue {
                 }
                 write!(f, "{}", output)
             }
-            _ => unimplemented!(),
+            _ => panic!("Display not implemented for Matrix values"),
         }
     }
 }
@@ -65,10 +65,12 @@ impl Add for OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(value_other + value),
+                Vector(value_other) => Vector(value + value_other),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
                 Scalar(value_other) => Matrix(value_other + value),
+                Matrix(value_other) => Matrix(value_other + value),
                 _ => unimplemented!(),
             },
         }
@@ -88,6 +90,7 @@ impl Sub for OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(value_other - value),
+                Vector(value_other) => Vector(value_other - value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -111,6 +114,7 @@ impl Mul for OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(value_other * value),
+                Vector(value_other) => Vector(value_other * value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -157,6 +161,7 @@ impl Add for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other + value),
+                Vector(value_other) => Vector(value_other + value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -180,6 +185,7 @@ impl Sub for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other - value),
+                Vector(value_other) => Vector(value_other - value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -203,6 +209,7 @@ impl Mul for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other * value),
+                Vector(value_other) => Vector(value_other * value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {

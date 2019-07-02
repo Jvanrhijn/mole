@@ -1,4 +1,4 @@
-use crate::error::Error;
+use errors::Error;
 use ndarray::{Array, Array2};
 
 type Vgl = (f64, Array2<f64>, f64);

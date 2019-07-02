@@ -4,12 +4,12 @@ use std::collections::VecDeque;
 use ndarray::{Array1, Array2, Axis, Ix2};
 // first party imports
 use crate::determinant::Slater;
-use crate::error::Error;
 use crate::jastrow::JastrowFactor;
 use crate::orbitals::Orbital;
-use crate::traits::{Cache, Differentiate, Function, WaveFunction};
 use basis::BasisSet;
+use errors::Error;
 use optimize::Optimize;
+use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);

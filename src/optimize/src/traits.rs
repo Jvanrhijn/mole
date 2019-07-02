@@ -1,4 +1,6 @@
 use ndarray::{Array1, Array2};
+use operator::OperatorValue;
+use std::collections::HashMap;
 
 pub trait Optimize {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64>;
@@ -11,11 +13,10 @@ pub trait Optimize {
 }
 
 pub trait Optimizer {
-    // TODO refactor into taking all MC data
-    // now takes: energy gradient, wave function values,
-    // parameter gradients, parameter values
     fn compute_parameter_update(
         &mut self,
-        ud: &(Array1<f64>, Array1<f64>, Array2<f64>, Array1<f64>),
+        pars: &Array1<f64>,
+        averages: &HashMap<String, OperatorValue>,
+        raw_data: &HashMap<String, Vec<OperatorValue>>,
     ) -> Array1<f64>;
 }
