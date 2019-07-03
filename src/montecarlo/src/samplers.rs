@@ -61,13 +61,6 @@ where
         }
     }
 
-    pub fn add_observable<O>(&mut self, name: &str, operator: O)
-    where
-        O: 'static + Operator<T>,
-    {
-        self.observables
-            .insert(name.to_string(), Box::new(operator));
-    }
 }
 
 impl<T, V> MonteCarloSampler for Sampler<T, V>
@@ -135,5 +128,13 @@ where
             wave_function: self.wave_function,
             data: self.samples,
         }
+    }
+
+    fn add_observable<O>(&mut self, name: &str, operator: O)
+    where
+        O: 'static + Operator<T>,
+    {
+        self.observables
+            .insert(name.to_string(), Box::new(operator));
     }
 }

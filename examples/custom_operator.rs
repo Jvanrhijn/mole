@@ -3,7 +3,7 @@ use std::collections::HashMap;
 extern crate ndarray;
 use basis::GaussianBasis;
 use metropolis::MetropolisBox;
-use montecarlo::{traits::Log, Runner, Sampler};
+use montecarlo::{traits::{Log, MonteCarloSampler}, Runner, Sampler};
 use ndarray::{Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 use operator::{KineticEnergy, Operator, OperatorValue};

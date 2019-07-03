@@ -1,4 +1,4 @@
-use operator::OperatorValue;
+use operator::{Operator, OperatorValue};
 use std::collections::HashMap;
 
 pub struct MonteCarloResult<T> {
@@ -26,6 +26,8 @@ pub trait MonteCarloSampler {
     fn observable_names(&self) -> Vec<&String>;
 
     fn consume_result(self) -> MonteCarloResult<Self::WaveFunc>;
+
+    fn add_observable<O: 'static + Operator<Self::WaveFunc>>(&mut self, name: &str, operator: O);
 }
 
 /// Trait for creating a logging configuration. Implement

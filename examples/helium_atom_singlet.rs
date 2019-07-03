@@ -10,7 +10,7 @@ extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use metropolis::MetropolisDiffuse;
 use montecarlo::{
-    traits::{Log, MonteCarloResult},
+    traits::{Log, MonteCarloResult, MonteCarloSampler},
     Runner, Sampler,
 };
 use ndarray::{Array1, Array2, Axis};
@@ -104,7 +104,7 @@ fn main() {
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![2]);
 
     const NITERS: usize = 250;
-    const NWORKERS: usize = 8;
+    const NWORKERS: usize = 4;
 
     const TOTAL_SAMPLES: usize = 10_000;
 

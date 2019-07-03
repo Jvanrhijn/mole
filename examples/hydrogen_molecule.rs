@@ -16,7 +16,7 @@ use basis::Hydrogen1sBasis;
 use metropolis::{Metropolis, MetropolisDiffuse};
 use montecarlo::{
     traits::{Log, MonteCarloResult},
-    Runner, Sampler,
+    Runner, Sampler, traits::MonteCarloSampler,
 };
 use operator::{ElectronicHamiltonian, Operator, OperatorValue};
 use optimize::{Optimize, Optimizer, SteepestDescent, MomentumDescent, NesterovMomentum, OnlineLbfgs, StochasticReconfiguration};

@@ -445,9 +445,9 @@ mod tests {
         let grad = not_cached.gradient(&x).unwrap();
         let lap = not_cached.laplacian(&x).unwrap();
 
-        assert_eq!(cval, val);
+        assert!((cval - val).abs() < 1e-10);
         assert!(grad.all_close(&cgrad, EPS));
-        assert_eq!(clap, lap);
+        assert!((clap - lap).abs() < 1e-10);
     }
 
     #[test]
