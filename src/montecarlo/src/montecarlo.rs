@@ -52,7 +52,9 @@ mod tests {
     use crate::traits::Log;
     use basis::{self, Hydrogen1sBasis};
     use metropolis::MetropolisBox;
-    use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+    use operator::{
+        ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, Operator,
+    };
     use rand::rngs::StdRng;
     use wavefunction::{Orbital, SingleDeterminant};
 
@@ -78,8 +80,12 @@ mod tests {
         );
 
         let metropolis = MetropolisBox::<StdRng>::new(1.0);
-        let mut sampler = Sampler::new(wave_func, metropolis);
-        sampler.add_observable("Local Energy", local_e);
+        let mut obs = HashMap::new();
+        obs.insert(
+            "Local Energy".to_string(),
+            Box::new(local_e) as Box<dyn Operator<SingleDeterminant<Hydrogen1sBasis>>>,
+        );
+        let sampler = Sampler::new(wave_func, metropolis, &obs);
 
         let sampler = Runner::new(sampler, MockLogger).run(100, 1);
 

@@ -16,7 +16,8 @@ use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
-pub struct Sampler<T, V>
+#[derive(Clone)]
+pub struct Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + Cache + Clone,
     V: Metropolis<T>,
@@ -24,18 +25,22 @@ where
     wave_function: T,
     config: Array2<f64>,
     metropolis: V,
-    observables: HashMap<String, Box<dyn Operator<T>>>,
+    observables: &'a HashMap<String, Box<dyn Operator<T> + Send + Sync>>,
     samples: HashMap<String, Vec<OperatorValue>>,
     acceptance: f64,
 }
 
-impl<T, V> Sampler<T, V>
+impl<'a, T, V> Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
     V: Metropolis<T>,
     <V as Metropolis<T>>::R: Rng,
 {
-    pub fn new(mut wave_function: T, mut metrop: V) -> Self {
+    pub fn new(
+        mut wave_function: T,
+        mut metrop: V,
+        observables: &'a HashMap<String, Box<dyn Operator<T> + Send + Sync>>,
+    ) -> Self {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random_using((nelec, 3), Range::new(-1., 1.), metrop.rng_mut());
         wave_function.refresh(&cfg);
@@ -43,27 +48,31 @@ where
             wave_function,
             config: cfg,
             metropolis: metrop,
-            observables: HashMap::new(),
+            observables,
             samples: HashMap::new(),
             acceptance: 0.0,
         }
     }
 
-    pub fn with_initial_configuration(mut wave_function: T, metrop: V, cfg: Array2<f64>) -> Self {
+    pub fn with_initial_configuration(
+        mut wave_function: T,
+        metrop: V,
+        observables: &'a HashMap<String, Box<dyn Operator<T> + Send + Sync>>,
+        cfg: Array2<f64>,
+    ) -> Self {
         wave_function.refresh(&cfg);
         Self {
             wave_function,
             config: cfg,
             metropolis: metrop,
-            observables: HashMap::new(),
+            observables: observables,
             samples: HashMap::new(),
             acceptance: 0.0,
         }
     }
-
 }
 
-impl<T, V> MonteCarloSampler for Sampler<T, V>
+impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
     V: Metropolis<T>,
@@ -130,11 +139,19 @@ where
         }
     }
 
-    fn add_observable<O>(&mut self, name: &str, operator: O)
-    where
-        O: 'static + Operator<T>,
-    {
-        self.observables
-            .insert(name.to_string(), Box::new(operator));
+    //fn add_observable<O>(&mut self, name: &str, operator: O)
+    //where
+    //    O: 'static + Operator<T>,
+    //{
+    //    self.observables
+    //        .insert(name.to_string(), Box::new(operator));
+    //}
+
+    fn wave_function(&self) -> &Self::WaveFunc {
+        &self.wave_function
+    }
+
+    fn wave_function_mut(&mut self) -> &mut Self::WaveFunc {
+        &mut self.wave_function
     }
 }

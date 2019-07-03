@@ -1,3 +1,4 @@
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use std::collections::HashMap;
 use std::sync::mpsc;
 use std::thread;
@@ -15,11 +16,15 @@ use ndarray::{Array1, Array2, Axis, Ix2, Zip};
 use basis::Hydrogen1sBasis;
 use metropolis::{Metropolis, MetropolisDiffuse};
 use montecarlo::{
+    traits::MonteCarloSampler,
     traits::{Log, MonteCarloResult},
-    Runner, Sampler, traits::MonteCarloSampler,
+    Runner, Sampler,
 };
 use operator::{ElectronicHamiltonian, Operator, OperatorValue};
-use optimize::{Optimize, Optimizer, SteepestDescent, MomentumDescent, NesterovMomentum, OnlineLbfgs, StochasticReconfiguration};
+use optimize::{
+    MomentumDescent, NesterovMomentum, OnlineLbfgs, Optimize, Optimizer, SteepestDescent,
+    StochasticReconfiguration,
+};
 //use optimize::{
 //    MomentumDescent, NesterovMomentum, OnlineLbfgs, Optimize, Optimizer, SteepestDescent,
 //    StochasticReconfiguration,
@@ -57,16 +62,15 @@ impl Log for EmptyLogger {
     }
 }
 
-struct VmcRunner<H, T, L, O> {
-    wave_function: T,
+struct VmcRunner<S, L, O> {
     logger: L,
     optimizer: O,
-    hamiltonian: H,
+    sampler: S,
 }
 
-impl<H, T, L, O> VmcRunner<H, T, L, O>
+impl<S, T, L, O> VmcRunner<S, L, O>
 where
-    O: Optimizer + Send + Clone + 'static,
+    O: Optimizer + Send + Sync + Clone + 'static,
     T: WaveFunction
         + Differentiate
         + Function<f64, D = Ix2>
@@ -74,98 +78,74 @@ where
         + Optimize
         + Clone
         + Send
+        + Sync
         + 'static,
-    L: Log + Clone + Send + 'static,
-    H: Operator<T> + Clone + Send + 'static,
+    L: Log + Clone + Send + Sync + 'static,
+    S: MonteCarloSampler<WaveFunc = T> + Clone + Send + Sync,
 {
-    pub fn new(wave_function: T, hamiltonian: H, optimizer: O, logger: L) -> Self {
+    pub fn new(sampler: S, optimizer: O, logger: L) -> Self {
         Self {
-            wave_function,
             logger,
             optimizer,
-            hamiltonian,
+            sampler,
         }
     }
 
     #[allow(dead_code)]
-    pub fn run_optimization<M>(
+    pub fn run_optimization(
         mut self,
         iters: usize,
         total_samples: usize,
         block_size: usize,
-        metropoles: Vec<M>,
+        nworkers: usize,
     ) -> (T, Array1<f64>, Array1<f64>)
-    where
-        M: Metropolis<T> + Clone + Send + 'static,
-        <M as Metropolis<T>>::R: RngCore,
     {
-        let workers = metropoles.len();
-
-        let steps = total_samples / workers;
+        let steps = total_samples / nworkers;
 
         let mut energies = Vec::new();
         let mut energy_errs = Vec::new();
 
         for t in 0..iters {
-            let (tx, rx) = mpsc::channel();
 
-            let metrops = metropoles.clone();
+            let samplers = vec![self.sampler.clone(); nworkers];
+ 
+            let results: Vec<_> = samplers.into_par_iter().map(|sampler| {
 
-            for (worker, metropolis) in metrops.into_iter().enumerate() {
-                let sender = tx.clone();
-
-                let wf = self.wave_function.clone();
-
-                let metropolis = metropolis.clone();
-
-                let hamiltonian = self.hamiltonian.clone();
-
-                // TODO: only allow one thread to log output
                 let logger = self.logger.clone();
 
-                thread::spawn(move || {
-                    let mut sampler = Sampler::new(wf, metropolis);
-                    sampler.add_observable("Energy", hamiltonian);
-                    sampler.add_observable("Parameter gradient", ParameterGradient);
-                    sampler.add_observable("Wavefunction value", WavefunctionValue);
+                let runner = Runner::new(sampler, logger);
 
-                    let runner = Runner::new(sampler, logger);
-
-                    let result = runner.run(steps, block_size);
-
-                    sender
-                        .send(result)
-                        .expect("Failed to send Monte carlo result over channel");
-                });
-            }
-
-            let results: Vec<_> = (0..workers)
-                .map(|_| rx.recv().expect("Failed to retrieve data from channel"))
-                .collect();
+                runner.run(steps, block_size)
+            }).collect();
 
             let mc_data = Self::concatenate_worker_data(&results);
 
             let (averages, variance) = Self::process_monte_carlo_results(&mc_data);
 
             energies.push(*averages["Energy"].get_scalar().unwrap());
-            energy_errs.push((variance["Energy"].get_scalar().unwrap() / total_samples as f64).sqrt());
+            energy_errs
+                .push((variance["Energy"].get_scalar().unwrap() / total_samples as f64).sqrt());
 
-            let deltap = self.optimizer.compute_parameter_update(self.wave_function.parameters(), &averages, &mc_data);
+            let deltap = self.optimizer.compute_parameter_update(self.sampler.wave_function().parameters(), &averages, &mc_data);
 
-            self.wave_function.update_parameters(&deltap);
+            self.sampler.wave_function_mut().update_parameters(&deltap);
 
-            println!("Energy:      {:.8} +/- {:.9}", energies.last().unwrap(), energy_errs.last().unwrap());
+            println!(
+                "Energy:      {:.8} +/- {:.9}",
+                energies.last().unwrap(),
+                energy_errs.last().unwrap()
+            );
         }
 
         (
-            self.wave_function,
+            self.sampler.wave_function().clone(),
             Array1::from_vec(energies),
             Array1::from_vec(energy_errs),
         )
     }
 
     fn concatenate_worker_data(
-        worker_data: &[MonteCarloResult<T>],
+        worker_data: &Vec<MonteCarloResult<T>>,
     ) -> HashMap<String, Vec<OperatorValue>> {
         // computes energy, energy error, energy gradient over several parallel MC runs
         let mut full_data: HashMap<String, Vec<OperatorValue>> = HashMap::new();
@@ -262,7 +242,7 @@ fn main() {
     const NPARM_JAS: usize = 2;
 
     // SR step size
-    const STEP_SIZE: f64 = 0.01;
+    const STEP_SIZE: f64 = 0.1;
     const MOMENTUM_PARAMETER: f64 = 0.1;
 
     // construct Jastrow-Slater wave function
@@ -273,34 +253,48 @@ fn main() {
         1,     // number of electrons with spin up
     );
 
-    // Construct the VMC runner, with Stochastic reconfiguration as optimizer
-    // and an empty Logger so no output is given during each VMC iteration
-    let vmc_runner = VmcRunner::new(
-        wave_function,
-        hamiltonian,
-        OnlineLbfgs::new(0.05, 5, NPARM_JAS),
-        //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
-        //SteepestDescent::new(0.05),
-        //StochasticReconfiguration::new(0.05),
-        EmptyLogger,
+    let mut obs = HashMap::new();
+    obs.insert(
+        "Energy".to_string(),
+        Box::new(hamiltonian) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+    );    obs.insert(
+        "Parameter gradient".to_string(),
+        Box::new(ParameterGradient) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+    );
+    obs.insert(
+        "Wavefunction value".to_string(),
+        Box::new(WavefunctionValue) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
     );
 
-    // Construct a metropolis object for each worker, so we know
-    // the seed given to each worker
-    let metrops = {
-        let mut v = vec![];
-        for m in 0..NWORKERS {
-            v.push(MetropolisDiffuse::from_rng(
-                0.2,
-                StdRng::from_seed([m as u8; 32]),
-            ))
-        }
-        v
-    };
+    let (wave_function, energies, errors) = {
+        let sampler = Sampler::new(wave_function, metropolis::MetropolisDiffuse::new(0.1), &obs);
 
-    // Actually run the VMC optimization
-    let (wave_function, energies, errors) =
-        vmc_runner.run_optimization(NITERS, TOTAL_SAMPLES, BLOCK_SIZE, metrops);
+        // Construct the VMC runner, with Stochastic reconfiguration as optimizer
+        // and an empty Logger so no output is given during each VMC iteration
+        let vmc_runner = VmcRunner::new(
+            sampler,
+            //OnlineLbfgs::new(0.05, 5, NPARM_JAS),
+            //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
+            SteepestDescent::new(0.05),
+            //StochasticReconfiguration::new(0.05),
+            EmptyLogger,
+        );
+
+        // Construct a metropolis object for each worker, so we know
+        // the seed given to each worker
+        let metrops = {
+            let mut v = vec![];
+            for m in 0..NWORKERS {
+                v.push(MetropolisDiffuse::from_rng(
+                    0.2,
+                    StdRng::from_seed([m as u8; 32]),
+                ))
+            }
+        };
+
+        // Actually run the VMC optimization
+        vmc_runner.run_optimization(NITERS, TOTAL_SAMPLES, BLOCK_SIZE, NWORKERS)
+    };
 
     // Plot the results
     plot_results(energies.as_slice().unwrap(), errors.as_slice().unwrap());

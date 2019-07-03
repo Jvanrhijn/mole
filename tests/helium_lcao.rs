@@ -3,7 +3,10 @@ use std::collections::HashMap;
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use metropolis::MetropolisDiffuse;
-use montecarlo::{traits::{Log, MonteCarloSampler}, Runner, Sampler};
+use montecarlo::{
+    traits::{Log, MonteCarloSampler},
+    Runner, Sampler,
+};
 use ndarray::{Array1, Axis};
 use operator::{
     ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,

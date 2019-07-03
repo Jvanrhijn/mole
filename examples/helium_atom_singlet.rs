@@ -8,6 +8,7 @@ extern crate itertools;
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
+use errors::Error;
 use metropolis::MetropolisDiffuse;
 use montecarlo::{
     traits::{Log, MonteCarloResult, MonteCarloSampler},
@@ -15,13 +16,12 @@ use montecarlo::{
 };
 use ndarray::{Array1, Array2, Axis};
 use ndarray_linalg::SolveH;
+use operator::Operator;
 use operator::{ElectronicHamiltonian, OperatorValue};
 use optimize::Optimize;
 use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
 use wavefunction_traits::Cache;
-use errors::Error;
-use operator::Operator;
 
 struct ParameterGradient;
 
@@ -41,7 +41,6 @@ impl<T: Cache> Operator<T> for WavefunctionValue {
         Ok(OperatorValue::Scalar(wf.current_value().0.powi(2)))
     }
 }
-
 
 struct Logger {
     block_size: usize,

@@ -187,7 +187,10 @@ impl StochasticReconfiguration {
         Self { step_size }
     }
 
-    fn construct_sr_matrix(parm_grad: &Vec<OperatorValue>, wf_values: &Vec<OperatorValue>) -> Array2<f64> {
+    fn construct_sr_matrix(
+        parm_grad: &Vec<OperatorValue>,
+        wf_values: &Vec<OperatorValue>,
+    ) -> Array2<f64> {
         let nsamples = parm_grad.len();
         let nparm = parm_grad[0].get_vector().unwrap().len();
 
@@ -198,7 +201,8 @@ impl StochasticReconfiguration {
         let mut sr_o = Array2::<f64>::zeros((nsamples, nparm));
         for n in 0..nsamples {
             for i in 0..nparm {
-                sr_o[[n, i]] = parm_grad[n].get_vector().unwrap()[i] / wf_values[n].get_scalar().unwrap();
+                sr_o[[n, i]] =
+                    parm_grad[n].get_vector().unwrap()[i] / wf_values[n].get_scalar().unwrap();
             }
         }
 
@@ -248,4 +252,3 @@ fn outer_product(a: &Array1<f64>, b: &Array1<f64>) -> Array2<f64> {
     }
     result
 }
-
