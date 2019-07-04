@@ -25,7 +25,7 @@ where
     wave_function: T,
     config: Array2<f64>,
     metropolis: V,
-    observables: &'a HashMap<String, Box<dyn Operator<T> + Send + Sync>>,
+    observables: &'a HashMap<String, Box<dyn Operator<T>>>,
     samples: HashMap<String, Vec<OperatorValue>>,
     acceptance: f64,
 }
@@ -39,7 +39,7 @@ where
     pub fn new(
         mut wave_function: T,
         mut metrop: V,
-        observables: &'a HashMap<String, Box<dyn Operator<T> + Send + Sync>>,
+        observables: &'a HashMap<String, Box<dyn Operator<T>>>,
     ) -> Self {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random_using((nelec, 3), Range::new(-1., 1.), metrop.rng_mut());
@@ -57,7 +57,7 @@ where
     pub fn with_initial_configuration(
         mut wave_function: T,
         metrop: V,
-        observables: &'a HashMap<String, Box<dyn Operator<T> + Send + Sync>>,
+        observables: &'a HashMap<String, Box<dyn Operator<T>>>,
         cfg: Array2<f64>,
     ) -> Self {
         wave_function.refresh(&cfg);

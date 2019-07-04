@@ -98,14 +98,14 @@ fn main() {
     let mut obs = HashMap::new();
     obs.insert(
         "Energy".to_string(),
-        Box::new(hamiltonian) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+        Box::new(hamiltonian) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>>>,
     );    obs.insert(
         "Parameter gradient".to_string(),
-        Box::new(ParameterGradient) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+        Box::new(ParameterGradient) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>>>,
     );
     obs.insert(
         "Wavefunction value".to_string(),
-        Box::new(WavefunctionValue) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+        Box::new(WavefunctionValue) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>>>,
     );
 
     let (wave_function, energies, errors) = {
