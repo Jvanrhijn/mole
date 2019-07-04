@@ -16,4 +16,3 @@ optimize = { path = "../optimize" }
 wavefunction_traits = { path = "../wavefunction_traits" }
 montecarlo = { path = "../montecarlo" }
 metropolis = { path = "../metropolis" }
-

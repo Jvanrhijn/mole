@@ -29,7 +29,7 @@ vmc = { path = "src/vmc" }
 errors = { path = "src/errors" }
 
 [dev-dependencies]
-ndarray-linalg = { version = "0.10.0", features = ["openblas"] }
+ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
 rand = "0.5.0"
 ndarray = "0.12.0"
 itertools = "0.7"
