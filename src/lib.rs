@@ -6,3 +6,4 @@ pub use operator;
 pub use optimize;
 pub use wavefunction;
 pub use wavefunction_traits;
+pub use vmc;
