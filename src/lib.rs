@@ -4,6 +4,6 @@ pub use metropolis;
 pub use montecarlo;
 pub use operator;
 pub use optimize;
+pub use vmc;
 pub use wavefunction;
 pub use wavefunction_traits;
-pub use vmc;

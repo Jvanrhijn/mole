@@ -8,16 +8,12 @@ use gnuplot::{AxesCommon, Caption, Color, Figure};
 use ndarray::Array1;
 
 use basis::Hydrogen1sBasis;
-use montecarlo::{
-    traits::Log,
-    Sampler,
-};
+use montecarlo::{traits::Log, Sampler};
 use operator::{ElectronicHamiltonian, OperatorValue};
 use optimize::{
-    MomentumDescent, NesterovMomentum, OnlineLbfgs, SteepestDescent,
-    StochasticReconfiguration,
+    MomentumDescent, NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration,
 };
-use vmc::{VmcRunner, ParameterGradient, WavefunctionValue};
+use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};
 
 use wavefunction::{JastrowSlater, Orbital};
 #[macro_use]
@@ -83,7 +79,11 @@ fn main() {
     };
 
     let (wave_function, energies, errors) = {
-        let sampler = Sampler::new(wave_function, metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])), &obs);
+        let sampler = Sampler::new(
+            wave_function,
+            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
+            &obs,
+        );
 
         // Construct the VMC runner, with Stochastic reconfiguration as optimizer
         // and an empty Logger so no output is given during each VMC iteration

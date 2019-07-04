@@ -4,25 +4,31 @@ use gnuplot::{AxesCommon, Caption, Color, Figure};
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
-use montecarlo::{
-    Sampler,
-    traits::Log,
-};
+use montecarlo::{traits::Log, Sampler};
 use ndarray::Array1;
 use operator::{ElectronicHamiltonian, OperatorValue};
-use optimize::{SteepestDescent, NesterovMomentum, StochasticReconfiguration, OnlineLbfgs};
+use optimize::{NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration};
 use rand::{SeedableRng, StdRng};
+use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};
 use wavefunction::{JastrowSlater, Orbital};
-use vmc::{VmcRunner, ParameterGradient, WavefunctionValue};
 #[macro_use]
 extern crate util;
 
 #[derive(Clone)]
-struct EmptyLogger { block_size: usize }
+struct EmptyLogger {
+    block_size: usize,
+}
 impl Log for EmptyLogger {
     fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
-        let energy = data.get("Energy").unwrap().chunks(self.block_size).last().unwrap().iter()
-            .fold(0.0, |a, b| a + b.get_scalar().unwrap()) / self.block_size as f64;
+        let energy = data
+            .get("Energy")
+            .unwrap()
+            .chunks(self.block_size)
+            .last()
+            .unwrap()
+            .iter()
+            .fold(0.0, |a, b| a + b.get_scalar().unwrap())
+            / self.block_size as f64;
         format!("\tLocal energy    {:.8}", energy)
     }
 }
@@ -60,14 +66,18 @@ fn main() {
         1,     // number of electrons with spin up
     );
 
-    let obs = operators!{
+    let obs = operators! {
         "Energy" => hamiltonian,
         "Parameter gradient" => ParameterGradient,
         "Wavefunction value" => WavefunctionValue
     };
 
     let (_wave_function, energies, errors) = {
-        let sampler = Sampler::new(wave_function, metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])), &obs);
+        let sampler = Sampler::new(
+            wave_function,
+            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
+            &obs,
+        );
 
         // Construct the VMC runner, with Stochastic reconfiguration as optimizer
         // and an empty Logger so no output is given during each VMC iteration
@@ -77,7 +87,9 @@ fn main() {
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             //SteepestDescent::new(0.0001),
             StochasticReconfiguration::new(100.0),
-            EmptyLogger { block_size: BLOCK_SIZE },
+            EmptyLogger {
+                block_size: BLOCK_SIZE,
+            },
         );
 
         // Actually run the VMC optimization

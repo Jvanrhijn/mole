@@ -9,7 +9,8 @@ use montecarlo::{
 };
 use ndarray::{Array1, Axis};
 use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue, Operator,
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, Operator,
+    OperatorValue,
 };
 use wavefunction::{Orbital, SingleDeterminant};
 #[macro_use]

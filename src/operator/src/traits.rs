@@ -250,7 +250,7 @@ impl Sum for OperatorValue {
 }
 
 /// Interface for creating quantum operators that act on Function types.
-pub trait Operator<T> : Send + Sync {
+pub trait Operator<T>: Send + Sync {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error>;
 }
 

@@ -1,5 +1,5 @@
-mod vmc;
 mod operators;
+mod vmc;
 
-pub use vmc::*;
 pub use operators::*;
+pub use vmc::*;

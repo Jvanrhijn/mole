@@ -1,8 +1,8 @@
-use operator::{Operator, OperatorValue};
-use wavefunction_traits::Cache;
 use errors::Error;
+use ndarray::Array2;
+use operator::{Operator, OperatorValue};
 use optimize::Optimize;
-use ndarray::{Array2};
+use wavefunction_traits::Cache;
 
 pub struct ParameterGradient;
 

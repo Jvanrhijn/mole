@@ -83,7 +83,7 @@ mod tests {
         let mut obs = HashMap::new();
         obs.insert(
             "Local Energy".to_string(),
-            Box::new(local_e) as Box<dyn Operator<_>>
+            Box::new(local_e) as Box<dyn Operator<_>>,
         );
         let sampler = Sampler::new(wave_func, metropolis, &obs);
 
