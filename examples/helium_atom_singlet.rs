@@ -136,11 +136,22 @@ fn main() {
                 let metrop =
                     MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([worker as u8; 32]));
 
+                let mut obs = HashMap::new();
+                obs.insert(
+                    "Hamiltonian".to_string(),
+                    Box::new(hamiltonian.clone()) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+                );    
+                obs.insert(
+                    "Parameter gradient".to_string(),
+                    Box::new(ParameterGradient) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+                );
+                obs.insert(
+                    "Wavefunction value".to_string(),
+                    Box::new(WavefunctionValue) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
+                );
+
                 // construct sampler
-                let mut sampler = Sampler::new(wf.clone(), metrop);
-                sampler.add_observable("Hamiltonian", hamiltonian.clone());
-                sampler.add_observable("Parameter gradient", ParameterGradient);
-                sampler.add_observable("Wavefunction value", WavefunctionValue);
+                let sampler = Sampler::new(wf.clone(), metrop, &obs);
 
                 // create MC runner
                 let runner = Runner::new(sampler, Logger::new(block_size));

@@ -80,8 +80,10 @@ fn main() {
     // Construct our custom operator
     let hamiltonian = HarmonicHamiltonian::new(1.0);
 
-    let mut sampler = Sampler::new(ansatz, metrop);
-    sampler.add_observable("Energy", hamiltonian);
+    let mut obs = HashMap::new();
+    obs.insert("Energy".to_string(), Box::new(hamiltonian) as Box<dyn Operator<SingleDeterminant<GaussianBasis>> + Send + Sync>);
+
+    let sampler = Sampler::new(ansatz, metrop, &obs);
 
     // Perform the MC integration
     let runner = Runner::new(sampler, Logger);

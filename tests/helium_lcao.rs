@@ -9,7 +9,7 @@ use montecarlo::{
 };
 use ndarray::{Array1, Axis};
 use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue, Operator,
 };
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SpinDeterminantProduct};
@@ -43,10 +43,12 @@ fn helium_lcao() {
     let rng = StdRng::from_seed([0u8; 32]);
     let metrop = MetropolisDiffuse::from_rng(0.1, rng);
 
-    let mut sampler = Sampler::new(wave_function, metrop);
-    sampler.add_observable("Energy", hamiltonian);
+    let mut obs = HashMap::new();
+    obs.insert("Energy".to_string(), Box::new(hamiltonian) as Box<dyn Operator<SpinDeterminantProduct<Hydrogen1sBasis>> + Send + Sync>);
 
-    let mut runner = Runner::new(sampler, MockLogger);
+    let sampler = Sampler::new(wave_function, metrop, &obs);
+
+    let runner = Runner::new(sampler, MockLogger);
     let result = runner.run(1000, 100);
 
     let energy_data = Array1::<f64>::from_vec(

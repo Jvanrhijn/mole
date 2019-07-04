@@ -9,7 +9,7 @@ use montecarlo::{
 };
 use ndarray::{Array1, Axis};
 use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue, Operator,
 };
 use wavefunction::{Orbital, SingleDeterminant};
 
@@ -39,8 +39,10 @@ fn hydrogen_molecular_ion_lcao() {
     let rng = StdRng::from_seed([0u8; 32]);
     let metrop = MetropolisBox::from_rng(1.0, rng);
 
-    let mut sampler = Sampler::new(wave_function, metrop);
-    sampler.add_observable("Energy", hamiltonian);
+    let mut obs = HashMap::new();
+    obs.insert("Energy".to_string(), Box::new(hamiltonian) as Box<dyn Operator<SingleDeterminant<Hydrogen1sBasis>> + Send + Sync>);
+
+    let sampler = Sampler::new(wave_function, metrop, &obs);
 
     let runner = Runner::new(sampler, MockLogger);
     let result = runner.run(10000, 100);

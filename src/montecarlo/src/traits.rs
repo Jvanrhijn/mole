@@ -27,7 +27,6 @@ pub trait MonteCarloSampler {
 
     fn consume_result(self) -> MonteCarloResult<Self::WaveFunc>;
 
-    //fn add_observable<O: 'static + Operator<Self::WaveFunc>>(&mut self, name: &str, operator: O);
 
     fn wave_function(&self) -> &Self::WaveFunc;
 
