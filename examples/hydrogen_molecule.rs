@@ -14,7 +14,7 @@ use montecarlo::{
 };
 use operator::{ElectronicHamiltonian, OperatorValue};
 use optimize::{
-    MomentumDescent, NesterovMomentum, OnlineLbfgs, Optimize, Optimizer, SteepestDescent,
+    MomentumDescent, NesterovMomentum, OnlineLbfgs, SteepestDescent,
     StochasticReconfiguration,
 };
 use vmc::{VmcRunner, ParameterGradient, WavefunctionValue};

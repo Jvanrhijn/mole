@@ -5,7 +5,7 @@ use basis::GaussianBasis;
 use errors::Error;
 use metropolis::MetropolisBox;
 use montecarlo::{
-    traits::{Log, MonteCarloSampler},
+    traits::Log,
     Runner, Sampler,
 };
 use ndarray::{Array1, Array2, Axis, Ix2};
@@ -14,6 +14,8 @@ use operator::{KineticEnergy, Operator, OperatorValue};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SingleDeterminant};
 use wavefunction_traits::{Cache, Differentiate};
+#[macro_use]
+extern crate util;
 
 // Create a very basic logger
 struct Logger;
@@ -80,8 +82,9 @@ fn main() {
     // Construct our custom operator
     let hamiltonian = HarmonicHamiltonian::new(1.0);
 
-    let mut obs = HashMap::new();
-    obs.insert("Energy".to_string(), Box::new(hamiltonian) as Box<dyn Operator<SingleDeterminant<GaussianBasis>> + Send + Sync>);
+    let obs = operators! {
+        "Energy" => hamiltonian
+    };
 
     let sampler = Sampler::new(ansatz, metrop, &obs);
 

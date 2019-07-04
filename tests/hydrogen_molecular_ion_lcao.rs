@@ -12,6 +12,8 @@ use operator::{
     ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue, Operator,
 };
 use wavefunction::{Orbital, SingleDeterminant};
+#[macro_use]
+extern crate util;
 
 use rand::{SeedableRng, StdRng};
 
@@ -39,8 +41,9 @@ fn hydrogen_molecular_ion_lcao() {
     let rng = StdRng::from_seed([0u8; 32]);
     let metrop = MetropolisBox::from_rng(1.0, rng);
 
-    let mut obs = HashMap::new();
-    obs.insert("Energy".to_string(), Box::new(hamiltonian) as Box<dyn Operator<SingleDeterminant<Hydrogen1sBasis>> + Send + Sync>);
+    let obs = operators! {
+        "Energy" => hamiltonian
+    };
 
     let sampler = Sampler::new(wave_function, metrop, &obs);
 

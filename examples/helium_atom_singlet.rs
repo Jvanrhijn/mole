@@ -2,8 +2,6 @@ use std::collections::HashMap;
 
 use gnuplot::{AxesCommon, Caption, Color, Figure};
 #[macro_use]
-extern crate itertools;
-#[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use montecarlo::{
@@ -68,7 +66,7 @@ fn main() {
         "Wavefunction value" => WavefunctionValue
     };
 
-    let (wave_function, energies, errors) = {
+    let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(wave_function, metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])), &obs);
 
         // Construct the VMC runner, with Stochastic reconfiguration as optimizer

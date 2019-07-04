@@ -13,6 +13,8 @@ use operator::{
 };
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SpinDeterminantProduct};
+#[macro_use]
+extern crate util;
 
 struct MockLogger;
 impl Log for MockLogger {
@@ -43,8 +45,9 @@ fn helium_lcao() {
     let rng = StdRng::from_seed([0u8; 32]);
     let metrop = MetropolisDiffuse::from_rng(0.1, rng);
 
-    let mut obs = HashMap::new();
-    obs.insert("Energy".to_string(), Box::new(hamiltonian) as Box<dyn Operator<SpinDeterminantProduct<Hydrogen1sBasis>> + Send + Sync>);
+    let obs = operators! {
+        "Energy" => hamiltonian
+    };
 
     let sampler = Sampler::new(wave_function, metrop, &obs);
 
