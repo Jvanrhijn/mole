@@ -73,7 +73,7 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 20;
+    const NITERS: usize = 30;
 
     // use 8 threads
     const NWORKERS: usize = 4;
@@ -86,10 +86,6 @@ fn main() {
 
     // Use 2 Jastrow factor parameters (b2 and b3)
     const NPARM_JAS: usize = 2;
-
-    // SR step size
-    const STEP_SIZE: f64 = 0.1;
-    const MOMENTUM_PARAMETER: f64 = 0.1;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
@@ -119,9 +115,9 @@ fn main() {
         // and an empty Logger so no output is given during each VMC iteration
         let vmc_runner = VmcRunner::new(
             sampler,
-            //OnlineLbfgs::new(0.05, 5, NPARM_JAS),
+            OnlineLbfgs::new(0.05, 5, NPARM_JAS),
             //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
-            SteepestDescent::new(0.05),
+            //SteepestDescent::new(0.05),
             //StochasticReconfiguration::new(0.05),
             EmptyLogger,
         );

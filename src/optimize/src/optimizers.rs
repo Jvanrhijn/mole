@@ -168,7 +168,7 @@ impl Optimizer for OnlineLbfgs {
         let energy_grad = compute_energy_gradient(raw_data, averages);
         self.update_curvature_pairs(&pars, &energy_grad);
         let p = self.initial_direction(&energy_grad);
-        let s = -self.step_size * p;
+        let s = self.step_size * p;
         self.update_curvature_pairs(&pars, &energy_grad);
         self.grad_prev = energy_grad.clone();
         self.pars_prev = pars.clone();
