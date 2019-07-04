@@ -6,40 +6,18 @@ extern crate itertools;
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
-use errors::Error;
 use montecarlo::{
     Sampler,
     traits::Log,
 };
-use ndarray::{Array1, Array2};
-use operator::Operator;
+use ndarray::Array1;
 use operator::{ElectronicHamiltonian, OperatorValue};
-use optimize::{Optimize, SteepestDescent, NesterovMomentum, StochasticReconfiguration, OnlineLbfgs};
+use optimize::{SteepestDescent, NesterovMomentum, StochasticReconfiguration, OnlineLbfgs};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
-use wavefunction_traits::Cache;
-use vmc::VmcRunner;
+use vmc::{VmcRunner, ParameterGradient, WavefunctionValue};
 #[macro_use]
 extern crate util;
-
-struct ParameterGradient;
-
-impl<T: Optimize + Cache> Operator<T> for ParameterGradient {
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(OperatorValue::Vector(wf.parameter_gradient(cfg))
-            * OperatorValue::Scalar(wf.current_value().0))
-    }
-}
-
-#[derive(Copy, Clone)]
-struct WavefunctionValue;
-
-impl<T: Cache> Operator<T> for WavefunctionValue {
-    fn act_on(&self, wf: &T, _cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        // need to square this, since "local value" is operator product / wave function value
-        Ok(OperatorValue::Scalar(wf.current_value().0.powi(2)))
-    }
-}
 
 #[derive(Clone)]
 struct EmptyLogger;
