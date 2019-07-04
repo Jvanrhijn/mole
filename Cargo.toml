@@ -15,6 +15,7 @@ members = [
   "src/optimize",
   "src/vmc",
   "src/errors",
+  "src/util",
 ]
 
 [dependencies]
@@ -27,6 +28,7 @@ basis = { path = "src/basis" }
 optimize = { path = "src/optimize" }
 vmc = { path = "src/vmc" }
 errors = { path = "src/errors" }
+util = { path = "src/util" }
 
 [dev-dependencies]
 ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
