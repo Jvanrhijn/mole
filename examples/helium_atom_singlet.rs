@@ -19,6 +19,8 @@ use rand::{SeedableRng, StdRng};
 use wavefunction::{JastrowSlater, Orbital};
 use wavefunction_traits::Cache;
 use vmc::VmcRunner;
+#[macro_use]
+extern crate util;
 
 struct ParameterGradient;
 
@@ -80,18 +82,11 @@ fn main() {
         1,     // number of electrons with spin up
     );
 
-    let mut obs = HashMap::new();
-    obs.insert(
-        "Energy".to_string(),
-        Box::new(hamiltonian) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
-    );    obs.insert(
-        "Parameter gradient".to_string(),
-        Box::new(ParameterGradient) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
-    );
-    obs.insert(
-        "Wavefunction value".to_string(),
-        Box::new(WavefunctionValue) as Box<dyn Operator<JastrowSlater<Hydrogen1sBasis>> + Send + Sync>,
-    );
+    let obs = operators!{
+        "Energy" => hamiltonian,
+        "Parameter gradient" => ParameterGradient,
+        "Wavefunction value" => WavefunctionValue
+    };
 
     let (wave_function, energies, errors) = {
         let sampler = Sampler::new(wave_function, metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])), &obs);
