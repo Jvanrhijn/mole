@@ -20,10 +20,12 @@ use vmc::{VmcRunner, ParameterGradient, WavefunctionValue};
 extern crate util;
 
 #[derive(Clone)]
-struct EmptyLogger;
+struct EmptyLogger { block_size: usize }
 impl Log for EmptyLogger {
-    fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
-        String::new()
+    fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+        let energy = data.get("Energy").unwrap().chunks(self.block_size).last().unwrap().iter()
+            .fold(0.0, |a, b| a + b.get_scalar().unwrap()) / self.block_size as f64;
+        format!("\tLocal energy    {:.8}", energy)
     }
 }
 
@@ -50,7 +52,7 @@ fn main() {
 
     const TOTAL_SAMPLES: usize = 10_000;
 
-    const BLOCK_SIZE: usize = 10;
+    const BLOCK_SIZE: usize = 50;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
@@ -77,7 +79,7 @@ fn main() {
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             //SteepestDescent::new(0.0001),
             StochasticReconfiguration::new(100.0),
-            EmptyLogger,
+            EmptyLogger { block_size: BLOCK_SIZE },
         );
 
         // Actually run the VMC optimization
