@@ -9,6 +9,7 @@ pub struct MonteCarloResult<T> {
 /// Interface for sampling observables from Monte Carlo integration.
 pub trait MonteCarloSampler {
     type WaveFunc;
+    type Seed: Sized + Default + AsMut<[u8]> + From<[u8; 32]>;
 
     /// Sample observables from the current configuration.
     fn sample(&mut self);
@@ -27,10 +28,11 @@ pub trait MonteCarloSampler {
 
     fn consume_result(self) -> MonteCarloResult<Self::WaveFunc>;
 
-
     fn wave_function(&self) -> &Self::WaveFunc;
 
     fn wave_function_mut(&mut self) -> &mut Self::WaveFunc;
+
+    fn reseed_rng(&mut self, seed: Self::Seed);
 }
 
 /// Trait for creating a logging configuration. Implement

@@ -1,4 +1,4 @@
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::{IntoParallelIterator, ParallelIterator, IndexedParallelIterator};
 use std::collections::HashMap;
 use std::sync::mpsc;
 use std::thread;
@@ -82,6 +82,7 @@ where
         + 'static,
     L: Log + Clone + Send + Sync + 'static,
     S: MonteCarloSampler<WaveFunc = T> + Clone + Send + Sync,
+    <S as MonteCarloSampler>::Seed: From<[u8; 32]>,
 {
     pub fn new(sampler: S, optimizer: O, logger: L) -> Self {
         Self {
@@ -105,17 +106,20 @@ where
         let mut energies = Vec::new();
         let mut energy_errs = Vec::new();
 
-        for t in 0..iters {
+        for _ in 0..iters {
 
             let samplers = vec![self.sampler.clone(); nworkers];
  
-            let results: Vec<_> = samplers.into_par_iter().map(|sampler| {
+            let results: Vec<_> = samplers.into_par_iter().enumerate().map(|(worker, mut sampler)| {
+
+                sampler.reseed_rng([worker as u8; 32].into());
 
                 let logger = self.logger.clone();
 
                 let runner = Runner::new(sampler, logger);
 
                 runner.run(steps, block_size)
+
             }).collect();
 
             let mc_data = Self::concatenate_worker_data(&results);
@@ -267,7 +271,7 @@ fn main() {
     );
 
     let (wave_function, energies, errors) = {
-        let sampler = Sampler::new(wave_function, metropolis::MetropolisDiffuse::new(0.1), &obs);
+        let sampler = Sampler::new(wave_function, metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])), &obs);
 
         // Construct the VMC runner, with Stochastic reconfiguration as optimizer
         // and an empty Logger so no output is given during each VMC iteration

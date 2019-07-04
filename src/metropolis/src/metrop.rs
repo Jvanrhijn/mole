@@ -3,7 +3,7 @@ use ndarray_linalg::Norm;
 use ndarray_rand::RandomExt;
 use rand::distributions::{Normal, Range};
 use rand::rngs::StdRng;
-use rand::{FromEntropy, Rng};
+use rand::{FromEntropy, Rng, SeedableRng};
 
 use crate::traits::Metropolis;
 use wavefunction_traits::{Cache, Differentiate, Function};
@@ -45,9 +45,11 @@ impl MetropolisBox<StdRng> {
 impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
     T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize> + Clone,
-    R: Rng,
+    R: Rng + SeedableRng,
+    <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
     type R = R;
+    type Seed = R::Seed;
 
     fn rng_mut(&mut self) -> &mut R {
         &mut self.rng
@@ -84,6 +86,10 @@ where
             None
         }
     }
+
+    fn reseed_rng(&mut self, s: Self::Seed) {
+        self.rng = Self::R::from_seed(s);
+    }
 }
 
 #[derive(Clone)]
@@ -113,9 +119,11 @@ impl MetropolisDiffuse<StdRng> {
 impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
 where
     T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize> + Clone,
-    R: Rng,
+    R: Rng + SeedableRng,
+    <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
     type R = R;
+    type Seed = R::Seed;
 
     fn rng_mut(&mut self) -> &mut R {
         &mut self.rng
@@ -165,6 +173,10 @@ where
         } else {
             None
         }
+    }
+
+    fn reseed_rng(&mut self, s: Self::Seed) {
+        self.rng = Self::R::from_seed(s);
     }
 }
 

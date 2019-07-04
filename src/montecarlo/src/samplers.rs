@@ -78,6 +78,7 @@ where
     V: Metropolis<T>,
 {
     type WaveFunc = T;
+    type Seed = V::Seed;
 
     fn sample(&mut self) {
         // First sample all observables on the current configuration
@@ -139,19 +140,15 @@ where
         }
     }
 
-    //fn add_observable<O>(&mut self, name: &str, operator: O)
-    //where
-    //    O: 'static + Operator<T>,
-    //{
-    //    self.observables
-    //        .insert(name.to_string(), Box::new(operator));
-    //}
-
     fn wave_function(&self) -> &Self::WaveFunc {
         &self.wave_function
     }
 
     fn wave_function_mut(&mut self) -> &mut Self::WaveFunc {
         &mut self.wave_function
+    }
+
+    fn reseed_rng(&mut self, s: Self::Seed) {
+        self.metropolis.reseed_rng(s);
     }
 }
