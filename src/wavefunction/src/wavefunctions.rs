@@ -84,8 +84,8 @@ where
         self.det.refresh(new)
     }
 
-    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
-        self.det.enqueue_update(ud, new);
+    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) -> Result<()> {
+        self.det.enqueue_update(ud, new)
     }
 
     fn push_update(&mut self) {
@@ -197,12 +197,12 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         Ok(())
     }
 
-    fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
+    fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) -> Result<()> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         if ud < self.num_up {
-            self.det_up.enqueue_update(ud, &cfg_up);
+            self.det_up.enqueue_update(ud, &cfg_up)?;
         } else {
-            self.det_down.enqueue_update(ud - self.num_up, &cfg_down);
+            self.det_down.enqueue_update(ud - self.num_up, &cfg_down)?;
         }
         let (det_up_v, det_up_g, det_up_l) = match self.det_up.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
@@ -220,6 +220,8 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         ]);
         self.laplacian_cache
             .push_back(det_up_v * det_down_l + det_down_v * det_up_l);
+
+        Ok(())
     }
 
     fn push_update(&mut self) {
@@ -366,9 +368,9 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         Ok(())
     }
 
-    fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
-        self.det.enqueue_update(ud, cfg);
-        self.jastrow.enqueue_update(ud, cfg);
+    fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) -> Result<()> {
+        self.det.enqueue_update(ud, cfg)?;
+        self.jastrow.enqueue_update(ud, cfg)?;
         let (det_v, det_g, det_l) = match self.det.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
             _ => unreachable!(),
@@ -381,6 +383,8 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         self.grad_cache.push_back(det_v * &jas_g + jas_v * &det_g);
         let laplacian = det_v * jas_l + jas_v * det_l + 2.0 * (&det_g * &jas_g).scalar_sum();
         self.lapl_cache.push_back(laplacian);
+
+        Ok(())
     }
 
     fn push_update(&mut self) {
