@@ -11,26 +11,25 @@ pub fn compute_energy_gradient(
         .get("Wavefunction value")
         .ok_or(DataAccessError)?
         .iter()
-        .map(|x| x.get_scalar().ok_or(OperatorValueAccessError))
+        .map(|x| x.get_scalar())
         .collect::<Result<Vec<_>, _>>()?;
     let wf_grad = mc_data
         .get("Parameter gradient")
         .ok_or(DataAccessError)?
         .iter()
-        .map(|x| x.get_vector().ok_or(OperatorValueAccessError))
+        .map(|x| x.get_vector())
         .collect::<Result<Vec<_>, _>>()?;
     let energies = mc_data
         .get("Energy")
         .ok_or(DataAccessError)?
         .iter()
-        .map(|x| x.get_scalar().ok_or(OperatorValueAccessError))
+        .map(|x| x.get_scalar())
         .collect::<Result<Vec<_>, _>>()?;
 
     let energy = averages
         .get("Energy")
         .ok_or(DataAccessError)?
-        .get_scalar()
-        .ok_or(OperatorValueAccessError)?;
+        .get_scalar()?;
 
     let nparm = wf_grad[0].len();
     let nsamples = wf_values.len();

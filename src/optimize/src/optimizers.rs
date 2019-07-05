@@ -194,8 +194,7 @@ impl StochasticReconfiguration {
     ) -> Result<Array2<f64>> {
         let nsamples = parm_grad.len();
         let nparm = parm_grad[0]
-            .get_vector()
-            .ok_or(Error::OperatorValueAccessError)?
+            .get_vector()?
             .len();
 
         // construct the stochastic reconfiguration matrix
@@ -206,11 +205,9 @@ impl StochasticReconfiguration {
         for n in 0..nsamples {
             for i in 0..nparm {
                 sr_o[[n, i]] = parm_grad[n]
-                    .get_vector()
-                    .ok_or(Error::OperatorValueAccessError)?[i]
+                    .get_vector()?[i]
                     / wf_values[n]
-                        .get_scalar()
-                        .ok_or(Error::OperatorValueAccessError)?;
+                        .get_scalar()?;
             }
         }
 

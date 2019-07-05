@@ -3,8 +3,10 @@ use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, Div, Mul, Sub};
 // Third party imports
-use errors::Error;
+use errors::Error::{self, OperatorValueAccessError};
 use ndarray::{Array1, Array2};
+
+type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OperatorValue {
@@ -38,24 +40,24 @@ impl OperatorValue {
         }
     }
 
-    pub fn get_scalar(&self) -> Option<&f64> {
+    pub fn get_scalar(&self) -> Result<&f64> {
         match self {
-            OperatorValue::Scalar(value) => Some(value),
-            _ => None,
+            OperatorValue::Scalar(value) => Ok(value),
+            _ => Err(OperatorValueAccessError),
         }
     }
 
-    pub fn get_vector(&self) -> Option<&Array1<f64>> {
+    pub fn get_vector(&self) -> Result<&Array1<f64>> {
         match self {
-            OperatorValue::Vector(value) => Some(value),
-            _ => None,
+            OperatorValue::Vector(value) => Ok(value),
+            _ => Err(OperatorValueAccessError),
         }
     }
 
-    pub fn get_matrix(&self) -> Option<&Array2<f64>> {
+    pub fn get_matrix(&self) -> Result<&Array2<f64>> {
         match self {
-            OperatorValue::Matrix(value) => Some(value),
-            _ => None,
+            OperatorValue::Matrix(value) => Ok(value),
+            _ => Err(OperatorValueAccessError),
         }
     }
 }
@@ -259,7 +261,7 @@ impl Sum for OperatorValue {
 
 /// Interface for creating quantum operators that act on Function types.
 pub trait Operator<T>: Send + Sync {
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error>;
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue>;
 }
 
 #[cfg(test)]
