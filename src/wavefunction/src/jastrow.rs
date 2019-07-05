@@ -8,6 +8,8 @@ use wavefunction_traits::{Cache, Differentiate, Function};
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
 
+type Result<T> = std::result::Result<T, Error>;
+
 // f_ee in notes
 // full Jastrow is then exp(f_ee)
 #[derive(Clone)]
@@ -40,7 +42,7 @@ impl ElectronElectronTerm {
 impl Function<f64> for ElectronElectronTerm {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let num_elec = cfg.shape()[0];
         let nparm = self.parms.len();
         let mut value = 0.0;
@@ -64,7 +66,7 @@ impl Function<f64> for ElectronElectronTerm {
 impl Differentiate for ElectronElectronTerm {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>> {
         let nelec = cfg.shape()[0];
         let nparm = self.parms.len();
         let mut grad = Array2::<f64>::zeros((nelec, 3));
@@ -97,7 +99,7 @@ impl Differentiate for ElectronElectronTerm {
         Ok(grad)
     }
 
-    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let mut laplacian = 0.0;
         let nparm = self.parms.len();
         let nelec = cfg.shape()[0];
@@ -188,7 +190,7 @@ impl JastrowFactor {
 impl Function<f64> for JastrowFactor {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         Ok(self.fee.value(cfg)?.exp())
     }
 }
@@ -197,12 +199,12 @@ impl Function<f64> for JastrowFactor {
 impl Differentiate for JastrowFactor {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array2<f64>, Error> {
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array2<f64>> {
         let value = self.value(cfg)?;
         Ok(self.fee.gradient(cfg)? * value)
     }
 
-    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let value = self.value(cfg)?;
         Ok(value * (self.fee.laplacian(cfg)? + self.fee.gradient(cfg)?.norm_l2().powi(2)))
     }
@@ -229,15 +231,15 @@ impl Optimize for JastrowFactor {
 impl Cache for JastrowFactor {
     type U = usize;
 
-    fn refresh(&mut self, cfg: &Array2<f64>) {
+    fn refresh(&mut self, cfg: &Array2<f64>) -> Result<()> {
         *self.value_queue.front_mut().unwrap() =
-            self.value(cfg).expect("Failed to compute Jastrow value");
+            self.value(cfg)?;
         *self.grad_queue.front_mut().unwrap() =
-            self.gradient(cfg).expect("Failed to take Jastrow gradient");
+            self.gradient(cfg)?;
         *self.laplac_queue.front_mut().unwrap() = self
-            .laplacian(cfg)
-            .expect("Failed to compute Jastrow Laplacian");
+            .laplacian(cfg)?;
         self.flush_update();
+        Ok(())
     }
 
     fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) {

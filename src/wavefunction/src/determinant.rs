@@ -1,13 +1,14 @@
 // Standard imports
 use std::collections::VecDeque;
-use std::result::Result;
 use std::vec::Vec;
 // Third party imports
 use ndarray::{Array, Array1, Array2, Array3, Axis, Ix1, Ix2, Ix3};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
-use errors::Error;
+use errors::Error::{self, EmptyCacheError};
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
+
+type Result<T> = std::result::Result<T, Error>;
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
@@ -59,7 +60,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
     }
 
     /// Build matrix of orbital values, gradients and laplacians
-    fn build_matrices(&self, cfg: &Array2<f64>) -> Result<VglMat, Error> {
+    fn build_matrices(&self, cfg: &Array2<f64>) -> Result<VglMat> {
         let mat_dim = self.orbs.len();
         let mut matrix = Array2::<f64>::zeros((mat_dim, mat_dim));
         let mut matrix_grad = Array3::<f64>::zeros((mat_dim, mat_dim, 3));
@@ -85,7 +86,7 @@ where
 {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64> {
         let (matrix, _, _) = self.build_matrices(cfg)?;
         Ok(matrix.det()?)
     }
@@ -97,7 +98,7 @@ where
 {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>> {
         let mat_dim = self.orbs.len();
         let (matrix, matrix_grad, _) = self.build_matrices(cfg)?;
         let det = matrix.det()?;
@@ -113,7 +114,7 @@ where
         Ok(result * det)
     }
 
-    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let mat_dim = self.orbs.len();
         let (matrix, _, matrix_laplac) = self.build_matrices(cfg)?;
         let det = matrix.det()?;
@@ -144,23 +145,21 @@ where
 {
     type U = usize;
 
-    fn refresh(&mut self, new: &Array2<f64>) {
+    fn refresh(&mut self, new: &Array2<f64>) -> Result<()> {
         let (values, gradients, laplacians) = self
-            .build_matrices(new)
-            .expect("Failed to construct matrix");
+            .build_matrices(new)?;
         // scale matrix inversion for stability
         let scale = values.iter().fold(0.0_f64, |a, b| a.abs().max(b.abs()));
         let inv = (1.0 / scale * &values)
-            .inv()
-            .expect("Failed to take matrix inverse")
+            .inv()?
             / scale;
-        let value = values.det().expect("Failed to take matrix determinant");
-        *self.current_value_queue.front_mut().unwrap() = value;
-        *self.current_grad_queue.front_mut().unwrap() =
+        let value = values.det()?;
+        *self.current_value_queue.front_mut().ok_or(EmptyCacheError)? = value;
+        *self.current_grad_queue.front_mut().ok_or(EmptyCacheError)? =
             value * (&gradients * &inv.t().insert_axis(Axis(2))).sum_axis(Axis(1));
-        *self.current_laplac_queue.front_mut().unwrap() =
+        *self.current_laplac_queue.front_mut().ok_or(EmptyCacheError)? =
             value * (&laplacians * &inv.t()).scalar_sum();
-        *self.matrix_grad_queue.front_mut().unwrap() = gradients;
+        *self.matrix_grad_queue.front_mut().ok_or(EmptyCacheError)? = gradients;
 
         for (queue, data) in vec![
             &mut self.matrix_queue,
@@ -171,10 +170,10 @@ where
         .zip(vec![values, laplacians, inv].into_iter())
         {
             *queue
-                .front_mut()
-                .expect("Attempt to retrieve data from empty queue") = data;
+                .front_mut().ok_or(EmptyCacheError)? = data;
         }
         self.flush_update();
+        Ok(())
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
@@ -438,7 +437,7 @@ mod tests {
         // arbitrary configuration
         let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
         // initialize cache
-        cached.refresh(&x);
+        cached.refresh(&x).unwrap();
 
         let (cval, cgrad, clap) = cached.current_value();
         let val = not_cached.value(&x).unwrap();

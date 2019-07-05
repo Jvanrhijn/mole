@@ -10,6 +10,7 @@ pub enum Error {
     FuncError,
     OperatorValueAccessError,
     DataAccessError,
+    EmptyCacheError,
 }
 
 impl convert::From<LinalgError> for Error {

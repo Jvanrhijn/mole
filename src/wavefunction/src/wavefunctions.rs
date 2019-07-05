@@ -7,9 +7,11 @@ use crate::determinant::Slater;
 use crate::jastrow::JastrowFactor;
 use crate::orbitals::Orbital;
 use basis::BasisSet;
-use errors::Error;
+use errors::Error::{self, EmptyCacheError};
 use optimize::Optimize;
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
+
+type Result<T> = std::result::Result<T, Error>;
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
@@ -43,7 +45,7 @@ where
 {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64> {
         self.det.value(cfg)
     }
 }
@@ -54,11 +56,11 @@ where
 {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>> {
         self.det.gradient(cfg)
     }
 
-    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64> {
         self.det.laplacian(cfg)
     }
 }
@@ -78,8 +80,8 @@ where
 {
     type U = usize;
 
-    fn refresh(&mut self, new: &Array2<f64>) {
-        self.det.refresh(new);
+    fn refresh(&mut self, new: &Array2<f64>) -> Result<()> {
+        self.det.refresh(new)
     }
 
     fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
@@ -146,7 +148,7 @@ impl<T: BasisSet> WaveFunction for SpinDeterminantProduct<T> {
 impl<T: BasisSet> Function<f64> for SpinDeterminantProduct<T> {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         Ok(self.det_up.value(&cfg_up)? * self.det_down.value(&cfg_down)?)
     }
@@ -155,7 +157,7 @@ impl<T: BasisSet> Function<f64> for SpinDeterminantProduct<T> {
 impl<T: BasisSet> Differentiate for SpinDeterminantProduct<T> {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         let det_up_v = self.det_up.value(&cfg_up)?;
         let det_down_v = self.det_down.value(&cfg_down)?;
@@ -166,7 +168,7 @@ impl<T: BasisSet> Differentiate for SpinDeterminantProduct<T> {
         ])
     }
 
-    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         let det_up_v = self.det_up.value(&cfg_up)?;
         let det_down_v = self.det_down.value(&cfg_down)?;
@@ -178,20 +180,21 @@ impl<T: BasisSet> Differentiate for SpinDeterminantProduct<T> {
 impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
     type U = usize;
 
-    fn refresh(&mut self, cfg: &Array2<f64>) {
+    fn refresh(&mut self, cfg: &Array2<f64>) -> Result<()> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
-        self.det_up.refresh(&cfg_up);
-        self.det_down.refresh(&cfg_down);
+        self.det_up.refresh(&cfg_up)?;
+        self.det_down.refresh(&cfg_down)?;
         let (det_up_v, det_up_g, det_up_l) = self.det_up.current_value();
         let (det_down_v, det_down_g, det_down_l) = self.det_down.current_value();
-        *self.value_cache.front_mut().expect("Value cache empty") = det_up_v * det_down_v;
-        *self.grad_cache.front_mut().expect("Gradient cache empty") =
+        *self.value_cache.front_mut().ok_or(EmptyCacheError)? = det_up_v * det_down_v;
+        *self.grad_cache.front_mut().ok_or(EmptyCacheError)? =
             stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
         *self
             .laplacian_cache
             .front_mut()
-            .expect("Laplacian cache empty") = det_up_v * det_down_l + det_down_v * det_up_l;
+            .ok_or(EmptyCacheError)? = det_up_v * det_down_l + det_down_v * det_up_l;
         self.flush_update();
+        Ok(())
     }
 
     fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
@@ -316,7 +319,7 @@ impl<T: BasisSet> JastrowSlater<T> {
 impl<T: BasisSet> Function<f64> for JastrowSlater<T> {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array2<f64>) -> Result<f64> {
         Ok(self.jastrow.value(cfg)? * self.det.value(cfg)?)
     }
 }
@@ -324,12 +327,12 @@ impl<T: BasisSet> Function<f64> for JastrowSlater<T> {
 impl<T: BasisSet> Differentiate for JastrowSlater<T> {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+    fn gradient(&self, cfg: &Array2<f64>) -> Result<Array2<f64>> {
         Ok(self.jastrow.gradient(cfg)? * self.det.value(cfg)?
             + self.jastrow.value(cfg)? * self.det.gradient(cfg)?)
     }
 
-    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64> {
         let det_v = self.det.value(cfg)?;
         let det_g = self.det.gradient(cfg)?;
         let det_l = self.det.laplacian(cfg)?;
@@ -349,20 +352,18 @@ impl<T: BasisSet> WaveFunction for JastrowSlater<T> {
 impl<T: BasisSet> Cache for JastrowSlater<T> {
     type U = usize;
 
-    fn refresh(&mut self, cfg: &Array2<f64>) {
-        self.det.refresh(cfg);
-        self.jastrow.refresh(cfg);
+    fn refresh(&mut self, cfg: &Array2<f64>) -> Result<()> {
+        self.det.refresh(cfg)?;
+        self.jastrow.refresh(cfg)?;
         // TODO get rid of calls to self.value/gradient/laplacian
-        *self.value_cache.front_mut().expect("Value cache empty") = self
-            .value(cfg)
-            .expect("Failed to take Jastrow Slater value");
-        *self.grad_cache.front_mut().expect("Gradient cache empty") = self
-            .gradient(cfg)
-            .expect("Failed to take Jastrow Slater gradient");
-        *self.lapl_cache.front_mut().expect("Laplacian cache empty") = self
-            .laplacian(cfg)
-            .expect("Failed to take Jastrow Slater laplacian");
+        *self.value_cache.front_mut().ok_or(EmptyCacheError)? = self
+            .value(cfg)?;
+        *self.grad_cache.front_mut().ok_or(EmptyCacheError)? = self
+            .gradient(cfg)?;
+        *self.lapl_cache.front_mut().ok_or(EmptyCacheError)? = self
+            .laplacian(cfg)?;
         self.flush_update();
+        Ok(())
     }
 
     fn enqueue_update(&mut self, ud: Self::U, cfg: &Array2<f64>) {
