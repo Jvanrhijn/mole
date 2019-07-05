@@ -67,7 +67,7 @@ where
                 .map(|_| self.sampler.generate_seed())
                 .collect();
 
-            let results: Vec<_> = samplers
+            let results: Result<Vec<_>, _> = samplers
                 .into_par_iter()
                 .enumerate()
                 .zip(seeds.into_par_iter())
@@ -82,7 +82,7 @@ where
                 })
                 .collect();
 
-            let mc_data = Self::concatenate_worker_data(&results);
+            let mc_data = Self::concatenate_worker_data(&results?);
 
             let (averages, errors) = Self::process_monte_carlo_results(&mc_data, block_size)?;
 

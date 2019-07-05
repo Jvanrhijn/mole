@@ -49,7 +49,7 @@ fn hydrogen_molecular_ion_lcao() {
     let sampler = Sampler::new(wave_function, metrop, &obs);
 
     let runner = Runner::new(sampler, MockLogger);
-    let result = runner.run(10000, 100);
+    let result = runner.run(10000, 100).unwrap();
 
     let energy_data = Array1::<f64>::from_vec(
         result

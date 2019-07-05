@@ -13,6 +13,7 @@ use operator::{
     OperatorValue::{self, *},
 };
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
+use errors::Error;
 
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
@@ -79,7 +80,7 @@ where
 {
     type WaveFunc = T;
 
-    fn sample(&mut self) {
+    fn sample(&mut self) -> Result<(), Error> {
         // First sample all observables on the current configuration
         let mut samples: HashMap<String, OperatorValue> = self
             .observables
@@ -89,6 +90,7 @@ where
                     name.clone(),
                     &operator
                         .act_on(&self.wave_function, &self.config)
+                        // TODO: find a way to get rid of this expect
                         .expect("Failed to act on wave function with operator")
                         / &Scalar(self.wave_function.current_value().0),
                 )
@@ -98,6 +100,7 @@ where
         samples
             .drain()
             .for_each(|(name, value)| self.samples.entry(name).or_default().push(value));
+        Ok(())
     }
 
     fn move_state(&mut self) {

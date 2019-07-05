@@ -1,5 +1,6 @@
-use operator::{Operator, OperatorValue};
+use operator::OperatorValue;
 use std::collections::HashMap;
+use errors::Error;
 
 pub struct MonteCarloResult<T> {
     pub wave_function: T,
@@ -11,7 +12,7 @@ pub trait MonteCarloSampler {
     type WaveFunc;
 
     /// Sample observables from the current configuration.
-    fn sample(&mut self);
+    fn sample(&mut self) -> Result<(), Error>;
 
     /// Get the data sampled thus far
     fn data(&self) -> &HashMap<String, Vec<OperatorValue>>;

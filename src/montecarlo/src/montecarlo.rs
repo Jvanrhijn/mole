@@ -3,6 +3,7 @@ use std::collections::HashMap;
 // First party imports
 use crate::traits::*;
 use operator::OperatorValue;
+use errors::Error;
 
 /// Struct for running Monte Carlo integration
 /// Generic over Samplers
@@ -20,7 +21,7 @@ where
         Self { sampler, logger }
     }
 
-    pub fn run(mut self, steps: usize, block_size: usize) -> MonteCarloResult<S::WaveFunc> {
+    pub fn run(mut self, steps: usize, block_size: usize) -> Result<MonteCarloResult<S::WaveFunc>, Error> {
         assert!(steps >= 2 * block_size);
         let blocks = steps / block_size;
         let mut output = String::new();
@@ -29,7 +30,7 @@ where
                 self.sampler.move_state();
                 // Discard first block for equilibration
                 if block_nr > 0 {
-                    self.sampler.sample();
+                    self.sampler.sample()?;
                     output = self.logger.log(self.sampler.data());
                 }
             }
@@ -37,7 +38,7 @@ where
                 println!("{}", output);
             }
         }
-        self.sampler.consume_result()
+        Ok(self.sampler.consume_result())
     }
 
     pub fn data(&self) -> &HashMap<String, Vec<OperatorValue>> {
@@ -87,7 +88,7 @@ mod tests {
         );
         let sampler = Sampler::new(wave_func, metropolis, &obs);
 
-        let sampler = Runner::new(sampler, MockLogger).run(100, 1);
+        let sampler = Runner::new(sampler, MockLogger).run(100, 1).unwrap();
 
         let result = sampler
             .data

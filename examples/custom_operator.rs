@@ -87,7 +87,7 @@ fn main() {
 
     // Perform the MC integration
     let runner = Runner::new(sampler, Logger);
-    let result = runner.run(1000, 1);
+    let result = runner.run(1000, 1).unwrap();
 
     let energy_data = Array1::<f64>::from_vec(
         result
