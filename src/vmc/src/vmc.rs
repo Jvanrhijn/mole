@@ -9,7 +9,7 @@ use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 use ndarray::{Array1, Ix2};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
-use errors::Error;
+use errors::Error::{self, DataAccessError};
 
 struct EmptyLogger;
 impl Log for EmptyLogger {
@@ -84,10 +84,10 @@ where
 
             let mc_data = Self::concatenate_worker_data(&results);
 
-            let (averages, errors) = Self::process_monte_carlo_results(&mc_data, block_size);
+            let (averages, errors) = Self::process_monte_carlo_results(&mc_data, block_size)?;
 
-            energies.push(*averages["Energy"].get_scalar().unwrap());
-            energy_errs.push(*errors["Energy"].get_scalar().unwrap());
+            energies.push(*averages["Energy"].get_scalar()?);
+            energy_errs.push(*errors["Energy"].get_scalar()?);
 
             let deltap = self.optimizer.compute_parameter_update(
                 self.sampler.wave_function().parameters(),
@@ -99,8 +99,8 @@ where
 
             println!(
                 "Energy:      {:.8} +/- {:.9}",
-                energies.last().unwrap(),
-                energy_errs.last().unwrap()
+                energies.last().expect("No samples present"),
+                energy_errs.last().expect("No samples present")
             );
         }
 
@@ -134,10 +134,10 @@ where
     fn process_monte_carlo_results(
         mc_results: &HashMap<String, Vec<OperatorValue>>,
         block_size: usize,
-    ) -> (
+    ) -> Result<(
         HashMap<String, OperatorValue>,
         HashMap<String, OperatorValue>,
-    ) {
+    ), Error> {
         use OperatorValue::Scalar;
         // computes averages of all components of concatenated data
         let averages = mc_results
@@ -149,7 +149,7 @@ where
             .iter()
             .map(|(name, samples)| {
                 // mean of this quantity
-                let mean = averages.get(name).unwrap();
+                let mean = averages.get(name).expect("Given observable not present in results");
                 // split the data into blocks
                 let blocks = samples.chunks(block_size);
                 let nblocks = blocks.len();
@@ -159,12 +159,11 @@ where
                 let block_mean_square =
                     Self::mean(&block_means.clone().map(|x| &x * &x).collect::<Vec<_>>());
                 // compute error
-                let error = ((block_mean_square - mean * mean) / Scalar((nblocks - 1) as f64))
-                    .map(f64::sqrt);
+                let error = ((block_mean_square - mean * mean) / Scalar((nblocks - 1) as f64)).map(f64::sqrt);
                 (name.to_string(), error)
             })
             .collect::<HashMap<_, _>>();
-        (averages, errors)
+        Ok((averages, errors))
     }
 
     fn mean(vec: &[OperatorValue]) -> OperatorValue {
