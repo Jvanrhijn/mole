@@ -222,8 +222,15 @@ impl StochasticReconfiguration {
                 sr_mat -= sr_o_avg[i] * sr_o_avg[j];
             }
         }
+        {
+            // rescale diagonal elements for stabilization
+            // TODO: make scaling factor configurable
+            const EPS: f64 = 1e-1;
+            let mut diag = sr_mat.diag_mut();
+            diag *= 1.0 + EPS;
+        }
         // TODO make diagonal stabilization configurable
-        sr_mat + 0.1 * Array2::eye(nparm)
+        sr_mat
     }
 }
 

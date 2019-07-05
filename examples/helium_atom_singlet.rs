@@ -34,7 +34,7 @@ impl Log for EmptyLogger {
 }
 
 fn main() {
-    let optimal_width = 0.5;
+    let optimal_width = 0.6;
     // setup basis set
     let ion_pos = array![[0.0, 0.0, 0.0]];
 
@@ -54,7 +54,7 @@ fn main() {
     const NITERS: usize = 20;
     const NWORKERS: usize = 4;
 
-    const TOTAL_SAMPLES: usize = 100_000;
+    const TOTAL_SAMPLES: usize = 10_000;
 
     const BLOCK_SIZE: usize = 50;
 
@@ -86,7 +86,7 @@ fn main() {
             //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             //SteepestDescent::new(0.00001),
-            StochasticReconfiguration::new(10.0),
+            StochasticReconfiguration::new(1.5),
             EmptyLogger {
                 block_size: BLOCK_SIZE,
             },
