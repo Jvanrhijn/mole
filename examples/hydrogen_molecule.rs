@@ -98,7 +98,8 @@ fn main() {
 
         // Actually run the VMC optimization
         vmc_runner.run_optimization(NITERS, TOTAL_SAMPLES, BLOCK_SIZE, NWORKERS)
-    };
+    }
+    .unwrap();
 
     // Plot the results
     plot_results(energies.as_slice().unwrap(), errors.as_slice().unwrap());

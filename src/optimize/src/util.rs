@@ -1,3 +1,4 @@
+use errors::Error::{self, DataAccessError, OperatorValueAccessError};
 use ndarray::{Array1, Array2, Axis};
 use operator::OperatorValue;
 use std::collections::HashMap;
@@ -5,25 +6,31 @@ use std::collections::HashMap;
 pub fn compute_energy_gradient(
     mc_data: &HashMap<String, Vec<OperatorValue>>,
     averages: &HashMap<String, OperatorValue>,
-) -> Array1<f64> {
+) -> Result<Array1<f64>, Error> {
     let wf_values = mc_data
         .get("Wavefunction value")
-        .unwrap()
+        .ok_or(DataAccessError)?
         .iter()
-        .map(|x| x.get_scalar().unwrap());
+        .map(|x| x.get_scalar().ok_or(OperatorValueAccessError))
+        .collect::<Result<Vec<_>, _>>()?;
     let wf_grad = mc_data
         .get("Parameter gradient")
-        .unwrap()
+        .ok_or(DataAccessError)?
         .iter()
-        .map(|x| x.get_vector().unwrap())
-        .collect::<Vec<_>>();
+        .map(|x| x.get_vector().ok_or(OperatorValueAccessError))
+        .collect::<Result<Vec<_>, _>>()?;
     let energies = mc_data
         .get("Energy")
-        .unwrap()
+        .ok_or(DataAccessError)?
         .iter()
-        .map(|x| x.get_scalar().unwrap());
+        .map(|x| x.get_scalar().ok_or(OperatorValueAccessError))
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let energy = averages.get("Energy").unwrap().get_scalar().unwrap();
+    let energy = averages
+        .get("Energy")
+        .ok_or(DataAccessError)?
+        .get_scalar()
+        .ok_or(OperatorValueAccessError)?;
 
     let nparm = wf_grad[0].len();
     let nsamples = wf_values.len();
@@ -36,5 +43,5 @@ pub fn compute_energy_gradient(
         row += &(2.0 * &((psi_i / *psi) * (el - energy)));
     }
 
-    local_gradient.mean_axis(Axis(0))
+    Ok(local_gradient.mean_axis(Axis(0)))
 }
