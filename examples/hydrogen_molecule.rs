@@ -50,7 +50,7 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 30;
+    const NITERS: usize = 25;
 
     // threads to use
     const NWORKERS: usize = 4;
@@ -59,7 +59,7 @@ fn main() {
     const TOTAL_SAMPLES: usize = 10_000;
 
     // use a block size of 10
-    const BLOCK_SIZE: usize = 10;
+    const BLOCK_SIZE: usize = 100;
 
     // Use 2 Jastrow factor parameters (b2 and b3)
     const NPARM_JAS: usize = 2;
@@ -92,7 +92,7 @@ fn main() {
             //OnlineLbfgs::new(0.5, 5, NPARM_JAS),
             //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
             //SteepestDescent::new(0.01),
-            StochasticReconfiguration::new(0.1),
+            StochasticReconfiguration::new(0.05),
             EmptyLogger,
         );
 

@@ -29,7 +29,7 @@ impl Log for EmptyLogger {
             .iter()
             .fold(0.0, |a, b| a + b.get_scalar().unwrap())
             / self.block_size as f64;
-        format!("\tLocal energy    {:.8}", energy)
+        format!("\tBlock energy:    {:.8}", energy)
     }
 }
 
@@ -56,7 +56,7 @@ fn main() {
 
     const TOTAL_SAMPLES: usize = 10_000;
 
-    const BLOCK_SIZE: usize = 50;
+    const BLOCK_SIZE: usize = 100;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
