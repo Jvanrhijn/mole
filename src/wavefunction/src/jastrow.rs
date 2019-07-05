@@ -242,15 +242,15 @@ impl Cache for JastrowFactor {
         Ok(())
     }
 
-    fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) {
+    fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) -> Result<()> {
         self.value_queue
-            .push_back(self.value(cfg).expect("Failed to store Jastrow value"));
+            .push_back(self.value(cfg)?);
         self.grad_queue.push_back(
-            self.gradient(cfg)
-                .expect("Failed to store Jastrow gradient"),
+            self.gradient(cfg)?
         );
         self.laplac_queue
-            .push_back(self.laplacian(cfg).expect("Failed to store Laplacian"));
+            .push_back(self.laplacian(cfg)?);
+        Ok(())
     }
 
     fn push_update(&mut self) {

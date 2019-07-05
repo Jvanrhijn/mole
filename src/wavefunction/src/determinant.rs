@@ -176,7 +176,7 @@ where
         Ok(())
     }
 
-    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) {
+    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) -> Result<()> {
         // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
         let data: Vec<(f64, Array1<f64>, f64)> = self
@@ -184,6 +184,7 @@ where
             .iter()
             .map(|phi| {
                 (
+                    // TODO: get rid of these unwraps
                     phi.value(&new.slice(s![ud, ..]).to_owned()).unwrap(),
                     phi.gradient(&new.slice(s![ud, ..]).to_owned()).unwrap(),
                     phi.laplacian(&new.slice(s![ud, ..]).to_owned()).unwrap(),
@@ -199,35 +200,35 @@ where
             &self
                 .inv_matrix_queue
                 .front()
-                .expect("Matrix inverse queue empty")
+                .ok_or(EmptyCacheError)?
                 .slice(s![.., ud]),
         );
         let value = self
             .current_value_queue
             .front()
-            .expect("Determinant value queue empty")
+            .ok_or(EmptyCacheError)?
             * ratio;
 
         // calculate updated matrix, gradient matrix, laplacian matrix, and inverse matrix; only need to update column `ud`
         let mut matrix = self
             .matrix_queue
             .front()
-            .expect("Matrix queue empty")
+            .ok_or(EmptyCacheError)?
             .clone();
         let mut matrix_grad = self
             .matrix_grad_queue
             .front()
-            .expect("Matrix grad queue empty")
+            .ok_or(EmptyCacheError)?
             .clone();
         let mut matrix_laplac = self
             .matrix_laplac_queue
             .front()
-            .expect("Matrix laplacian queue empty")
+            .ok_or(EmptyCacheError)?
             .clone();
         let mut inv_matrix = self
             .inv_matrix_queue
             .front()
-            .expect("Matrix inverse queue empty")
+            .ok_or(EmptyCacheError)?
             .clone();
         for j in 0..self.num_electrons() {
             matrix[[ud, j]] = orbvec[j];
@@ -266,6 +267,8 @@ where
         self.current_value_queue.push_back(value);
         self.current_grad_queue.push_back(current_grad);
         self.current_laplac_queue.push_back(current_laplac);
+
+        Ok(())
     }
 
     fn push_update(&mut self) {

@@ -15,7 +15,7 @@ pub trait Cache {
 
     /// Calculate updated value of the cache given update data and new configuration,
     /// and set this data enqueued
-    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>);
+    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) -> Result<()>;
 
     /// Push enqueued update into cache
     fn push_update(&mut self);

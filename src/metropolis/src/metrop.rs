@@ -221,7 +221,7 @@ mod tests {
     impl Cache for WaveFunctionMock {
         type U = usize;
         fn refresh(&mut self, _new: &Array2<f64>) -> Result<(), Error> { Ok(()) }
-        fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) {}
+        fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) -> Result<(), Error> { Ok(()) }
         fn push_update(&mut self) {}
         fn flush_update(&mut self) {}
         fn current_value(&self) -> Vgl {
