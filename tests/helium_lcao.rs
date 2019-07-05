@@ -52,8 +52,8 @@ fn helium_lcao() {
 
     let sampler = Sampler::new(wave_function, metrop, &obs);
 
-    let runner = Runner::new(sampler, MockLogger).uwrap();
-    let result = runner.run(1000, 100);
+    let runner = Runner::new(sampler, MockLogger);
+    let result = runner.run(1000, 100).unwrap();
 
     let energy_data = Array1::<f64>::from_vec(
         result
