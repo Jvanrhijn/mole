@@ -6,7 +6,6 @@ use wavefunction_traits::{Differentiate, Function};
 pub trait Metropolis<T: Differentiate + Function<f64, D = Ix2> + Clone> {
     /// Rng type to use
     type R;
-    type Seed: Sized + Default + AsMut<[u8]> + From<[u8; 32]>;
     /// Propose a move to a new configuration.
     fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64>;
     /// Test whether a proposed configuration will be accepted.
@@ -17,5 +16,5 @@ pub trait Metropolis<T: Differentiate + Function<f64, D = Ix2> + Clone> {
     // Get a mut ref to the internal rng
     fn rng_mut(&mut self) -> &mut Self::R;
     /// Reseed the internal rng
-    fn reseed_rng(&mut self, s: Self::Seed);
+    fn reseed_rng(&mut self, s: [u8; 32]);
 }

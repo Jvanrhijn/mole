@@ -51,10 +51,10 @@ fn main() {
     //  hamiltonian operator
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![2]);
 
-    const NITERS: usize = 10;
+    const NITERS: usize = 20;
     const NWORKERS: usize = 4;
 
-    const TOTAL_SAMPLES: usize = 10_000;
+    const TOTAL_SAMPLES: usize = 100_000;
 
     const BLOCK_SIZE: usize = 50;
 
@@ -83,10 +83,10 @@ fn main() {
         // and an empty Logger so no output is given during each VMC iteration
         let vmc_runner = VmcRunner::new(
             sampler,
-            //OnlineLbfgs::new(0.001, 5, NPARM_JAS),
+            //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
-            //SteepestDescent::new(0.0001),
-            StochasticReconfiguration::new(100.0),
+            //SteepestDescent::new(0.00001),
+            StochasticReconfiguration::new(10.0),
             EmptyLogger {
                 block_size: BLOCK_SIZE,
             },

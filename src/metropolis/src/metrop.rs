@@ -49,7 +49,6 @@ where
     <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
     type R = R;
-    type Seed = R::Seed;
 
     fn rng_mut(&mut self) -> &mut R {
         &mut self.rng
@@ -87,8 +86,8 @@ where
         }
     }
 
-    fn reseed_rng(&mut self, s: Self::Seed) {
-        self.rng = Self::R::from_seed(s);
+    fn reseed_rng(&mut self, s: [u8; 32]) {
+        self.rng = Self::R::from_seed(s.into());
     }
 }
 
@@ -123,7 +122,6 @@ where
     <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
     type R = R;
-    type Seed = R::Seed;
 
     fn rng_mut(&mut self) -> &mut R {
         &mut self.rng
@@ -175,8 +173,8 @@ where
         }
     }
 
-    fn reseed_rng(&mut self, s: Self::Seed) {
-        self.rng = Self::R::from_seed(s);
+    fn reseed_rng(&mut self, s: [u8; 32]) {
+        self.rng = Self::R::from_seed(s.into());
     }
 }
 

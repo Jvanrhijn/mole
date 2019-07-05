@@ -75,10 +75,9 @@ where
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
-    V: Metropolis<T>,
+    V: Metropolis<T, R: Rng>,
 {
     type WaveFunc = T;
-    type Seed = V::Seed;
 
     fn sample(&mut self) {
         // First sample all observables on the current configuration
@@ -148,7 +147,11 @@ where
         &mut self.wave_function
     }
 
-    fn reseed_rng(&mut self, s: Self::Seed) {
+    fn reseed_rng(&mut self, s: [u8; 32]) {
         self.metropolis.reseed_rng(s);
+    }
+
+    fn generate_seed(&mut self) -> [u8; 32] {
+        self.metropolis.rng_mut().gen::<[u8; 32]>()
     }
 }

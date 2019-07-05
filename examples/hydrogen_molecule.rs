@@ -52,10 +52,10 @@ fn main() {
     // use 100 iterations
     const NITERS: usize = 30;
 
-    // use 8 threads
+    // threads to use
     const NWORKERS: usize = 4;
 
-    // Sample 10_000 data points across all workers
+    // Sample data points across all workers
     const TOTAL_SAMPLES: usize = 10_000;
 
     // use a block size of 10
@@ -89,10 +89,10 @@ fn main() {
         // and an empty Logger so no output is given during each VMC iteration
         let vmc_runner = VmcRunner::new(
             sampler,
-            OnlineLbfgs::new(0.05, 5, NPARM_JAS),
+            //OnlineLbfgs::new(0.5, 5, NPARM_JAS),
             //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
-            //SteepestDescent::new(0.05),
-            //StochasticReconfiguration::new(0.05),
+            //SteepestDescent::new(0.01),
+            StochasticReconfiguration::new(0.1),
             EmptyLogger,
         );
 
