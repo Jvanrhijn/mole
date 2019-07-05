@@ -24,7 +24,7 @@ pub struct VmcRunner<S, L, O> {
 
 impl<S, T, L, O> VmcRunner<S, L, O>
 where
-    O: Optimizer + Send + Sync + Clone + 'static,
+    O: Optimizer + Send + Sync + Clone,
     T: WaveFunction
         + Differentiate
         + Function<f64, D = Ix2>
@@ -32,9 +32,8 @@ where
         + Optimize
         + Clone
         + Send
-        + Sync
-        + 'static,
-    L: Log + Clone + Send + Sync + 'static,
+        + Sync,
+    L: Log + Clone + Send + Sync,
     S: MonteCarloSampler<WaveFunc = T> + Clone + Send + Sync,
 {
     pub fn new(sampler: S, optimizer: O, logger: L) -> Self {
