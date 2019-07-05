@@ -23,6 +23,7 @@ addons:
       - libiberty-dev
       - gfortran
       - libopenblas-dev
+      - liblapack
 
 before_script: |
   wget https://gist.githubusercontent.com/jix/4342dd522a7125a2803c6edeedd8735c/raw/8c9fbe63bee722ff484215479e836ab714de1b9b/rustc-proptest-fix &&
