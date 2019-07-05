@@ -222,8 +222,8 @@ impl StochasticReconfiguration {
                 sr_mat -= sr_o_avg[i] * sr_o_avg[j];
             }
         }
-
-        sr_mat //- &sr_o_avg_mat2
+        // TODO make diagonal stabilization configurable
+        sr_mat + 0.1 * Array2::eye(nparm)
     }
 }
 
