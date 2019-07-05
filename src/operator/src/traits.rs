@@ -30,6 +30,14 @@ impl fmt::Display for OperatorValue {
 }
 
 impl OperatorValue {
+    pub fn map(&self, f: impl Fn(f64) -> f64) -> Self {
+        match self {
+            OperatorValue::Scalar(x) => OperatorValue::Scalar(f(*x)),
+            OperatorValue::Vector(v) => OperatorValue::Vector(v.mapv(f)),
+            OperatorValue::Matrix(m) => OperatorValue::Matrix(m.mapv(f)),
+        }
+    }
+
     pub fn get_scalar(&self) -> Option<&f64> {
         match self {
             OperatorValue::Scalar(value) => Some(value),

@@ -81,11 +81,11 @@ where
 
             let mc_data = Self::concatenate_worker_data(&results);
 
-            let (averages, variance) = Self::process_monte_carlo_results(&mc_data);
+            let (averages, errors) = Self::process_monte_carlo_results(&mc_data, block_size);
 
             energies.push(*averages["Energy"].get_scalar().unwrap());
             energy_errs
-                .push((variance["Energy"].get_scalar().unwrap() / total_samples as f64).sqrt());
+                .push(*errors["Energy"].get_scalar().unwrap());
 
             let deltap = self.optimizer.compute_parameter_update(
                 self.sampler.wave_function().parameters(),
@@ -131,6 +131,7 @@ where
     // average all MC data and compute error bars
     fn process_monte_carlo_results(
         mc_results: &HashMap<String, Vec<OperatorValue>>,
+        block_size: usize,
     ) -> (
         HashMap<String, OperatorValue>,
         HashMap<String, OperatorValue>,
@@ -142,28 +143,35 @@ where
             .map(|(name, samples)| {
                 (
                     name.to_string(),
-                    samples.iter().enumerate().fold(Scalar(0.0), |a, (n, b)| {
-                        &a + &((b - &a) / Scalar((n + 1) as f64))
-                    }),
+                    Self::mean(&samples)
                 )
             })
             .collect::<HashMap<_, _>>();
-        // naive error computation, TODO: replace with better algorithm
-        let variance = mc_results
+        // blocking error computation
+        let errors = mc_results
             .iter()
             .map(|(name, samples)| {
-                let mean_of_squares = samples
-                    .iter()
-                    .map(|x| x * x)
-                    .enumerate()
-                    .fold(Scalar(0.0), |a, (n, b)| {
-                        &a + &((&b - &a) / Scalar((n + 1) as f64))
-                    });
+                // mean of this quantity
                 let mean = averages.get(name).unwrap();
-                let square_of_mean = mean * mean;
-                (name.to_string(), mean_of_squares - square_of_mean)
+                // split the data into blocks
+                let blocks = samples.chunks(block_size);
+                let nblocks = blocks.len();
+                // compute averages of each block
+                let block_means = blocks.map(Self::mean);
+                // compute square of block averages
+                let block_mean_square = Self::mean(&block_means.clone().map(|x| &x * &x).collect::<Vec<_>>());
+                // compute error 
+                let error = ((block_mean_square - mean * mean) / Scalar((nblocks - 1) as f64)).map(f64::sqrt);
+                (name.to_string(), error)
             })
             .collect::<HashMap<_, _>>();
-        (averages, variance)
+        (averages, errors)
+    }
+
+    fn mean(vec: &[OperatorValue]) -> OperatorValue {
+        use OperatorValue::*;
+        vec.iter().enumerate().fold(Scalar(0.0), |a, (n, b)| {
+            &a + &((b - &a) / Scalar((n + 1) as f64))
+        })
     }
 }
