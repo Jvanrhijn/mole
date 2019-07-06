@@ -32,10 +32,10 @@ impl<T> SingleDeterminant<T>
 where
     T: BasisSet,
 {
-    pub fn new(orbs: Vec<Orbital<T>>) -> Self {
-        Self {
-            det: Slater::new(orbs),
-        }
+    pub fn new(orbs: Vec<Orbital<T>>) -> Result<Self> {
+        Ok(Self {
+            det: Slater::new(orbs)?,
+        })
     }
 }
 
@@ -119,17 +119,17 @@ where
 }
 
 impl<T: BasisSet> SpinDeterminantProduct<T> {
-    pub fn new(mut orbitals: Vec<Orbital<T>>, num_up: usize) -> Self {
+    pub fn new(mut orbitals: Vec<Orbital<T>>, num_up: usize) -> Result<Self> {
         let nelec = orbitals.len();
         let orb_up = orbitals.drain(0..num_up).collect();
-        Self {
-            det_up: Slater::new(orb_up),
-            det_down: Slater::new(orbitals),
+        Ok(Self {
+            det_up: Slater::new(orb_up)?,
+            det_down: Slater::new(orbitals)?,
             num_up,
             value_cache: VecDeque::from(vec![1.0]),
             grad_cache: VecDeque::from(vec![Array2::zeros((nelec, 3))]),
             laplacian_cache: VecDeque::from(vec![1.0]),
-        }
+        })
     }
 
     fn split_config(&self, cfg: &Array2<f64>) -> (Array2<f64>, Array2<f64>) {
@@ -278,19 +278,19 @@ pub struct JastrowSlater<T: BasisSet> {
 }
 
 impl<T: BasisSet> JastrowSlater<T> {
-    pub fn new(parms: Array1<f64>, orbitals: Vec<Orbital<T>>, scal: f64, num_up: usize) -> Self {
+    pub fn new(parms: Array1<f64>, orbitals: Vec<Orbital<T>>, scal: f64, num_up: usize) -> Result<Self> {
         let num_elec = orbitals.len();
         let jastrow = JastrowFactor::new(parms, num_elec, scal, num_up);
         let value_cache = VecDeque::from(vec![1.0]);
         let grad_cache = VecDeque::from(vec![Array2::<f64>::ones((num_elec, 3))]);
         let lapl_cache = VecDeque::from(vec![0.0]);
-        Self {
-            det: SpinDeterminantProduct::new(orbitals, num_up),
+        Ok(Self {
+            det: SpinDeterminantProduct::new(orbitals, num_up)?,
             jastrow,
             value_cache,
             grad_cache,
             lapl_cache,
-        }
+        })
     }
 
     pub fn from_components(det: SpinDeterminantProduct<T>, jastrow: JastrowFactor) -> Self {
@@ -440,7 +440,7 @@ mod tests {
         let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
 
         let orbital = Orbital::new(array![[1.0]], basis);
-        let mut wf = SingleDeterminant::new(vec![orbital]);
+        let mut wf = SingleDeterminant::new(vec![orbital]).unwrap();
         let config = array![[1.0, 0.0, 0.0]];
         let config_slice = array![1.0, 0.0, 0.0];
 
@@ -467,7 +467,7 @@ mod tests {
             Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
             Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
         ];
-        let wave_function = JastrowSlater::new(array![1.0, 0.01, 0.01], orbitals, 0.1, 2);
+        let wave_function = JastrowSlater::new(array![1.0, 0.01, 0.01], orbitals, 0.1, 2).unwrap();
 
         let cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
         let (grad_fd, laplac_fd) =
@@ -486,7 +486,7 @@ mod tests {
             Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
             Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
         ];
-        let mut wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2);
+        let mut wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2).unwrap();
 
         let mut cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
 
@@ -528,7 +528,7 @@ mod tests {
             Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
         ];
 
-        let mut wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2);
+        let mut wave_function = JastrowSlater::new(array![1.0], orbitals, 0.1, 2).unwrap();
 
         let mut cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
 

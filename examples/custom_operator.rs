@@ -72,7 +72,7 @@ fn main() {
 
     // Build wave function
     let orbital = Orbital::new(array![[1.0]], basis);
-    let ansatz = SingleDeterminant::new(vec![orbital]);
+    let ansatz = SingleDeterminant::new(vec![orbital]).unwrap();
 
     let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 

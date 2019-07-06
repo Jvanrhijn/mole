@@ -76,7 +76,7 @@ mod tests {
         const ENERGY_EXACT: f64 = -0.5;
         let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
         let orbital = Orbital::new(array![[1.0]], basis_set);
-        let wave_func = SingleDeterminant::new(vec![orbital]);
+        let wave_func = SingleDeterminant::new(vec![orbital]).unwrap();
 
         let local_e = ElectronicHamiltonian::new(
             KineticEnergy::new(),

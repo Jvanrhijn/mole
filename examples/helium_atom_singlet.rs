@@ -63,8 +63,8 @@ fn main() {
         Array1::zeros(NPARM_JAS), // Jastrow factor parameters
         orbitals.clone(),
         0.001, // scale distance
-        1,     // number of electrons with spin up
-    );
+        2,     // number of electrons with spin up
+    ).expect("Bad wave function");
 
     let obs = operators! {
         "Energy" => hamiltonian,
@@ -105,7 +105,7 @@ fn main() {
 fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
     let niters = energy.len();
     let iters: Vec<_> = (0..niters).collect();
-    let exact = vec![-7.28; niters];
+    let exact = vec![-2.903; niters];
 
     let mut fig = Figure::new();
     fig.axes2d()

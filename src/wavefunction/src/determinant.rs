@@ -27,7 +27,7 @@ pub struct Slater<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> {
 }
 
 impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
-    pub fn new(orbs: Vec<T>) -> Self {
+    pub fn new(orbs: Vec<T>) -> Result<Self> {
         let mat_dim = orbs.len();
         let matrix = Array::<f64, Ix2>::eye(mat_dim);
         let matrix_grad = Array::<f64, Ix3>::zeros((mat_dim, mat_dim, mat_dim));
@@ -35,8 +35,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
         // Scale matrix for stability in inversion
         let scale = matrix.iter().fold(0.0_f64, |a, b| a.abs().max(b.abs()));
         let inv = (1.0 / scale * &matrix)
-            .inv()
-            .expect("Failed to take matrix inverse")
+            .inv()?
             / scale;
         // put cached data in queues
         let matrix_queue = VecDeque::from(vec![matrix]);
@@ -47,7 +46,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
         let current_grad_queue = VecDeque::from(vec![Array2::zeros((mat_dim, 3))]);
         let current_laplac_queue = VecDeque::from(vec![0.0]);
         // construct Self
-        Self {
+        Ok(Self {
             orbs,
             matrix_queue,
             matrix_grad_queue,
@@ -56,7 +55,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
             current_value_queue,
             current_grad_queue,
             current_laplac_queue,
-        }
+        })
     }
 
     /// Build matrix of orbital values, gradients and laplacians
@@ -361,7 +360,7 @@ mod tests {
         //let basis: Vec<Box<Func>> = vec![Box::new(|x| hydrogen_1s(x, 1.0))];
         let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
         let orb = Orbital::new(array![[1.0]], basis);
-        let det = Slater::new(vec![orb]);
+        let det = Slater::new(vec![orb]).unwrap();
         let x = array![[1.0, -1.0, 1.0]];
 
         assert!(
@@ -382,7 +381,7 @@ mod tests {
         let orb1 = Orbital::new(array![[1.0, 0.0]], basis.clone());
         let orb2 = Orbital::new(array![[0.0, 1.0]], basis);
         let orbs = vec![orb1, orb2];
-        let det = Slater::new(orbs);
+        let det = Slater::new(orbs).unwrap();
         let x = array![[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]];
         // manually construct orbitals
         let phi11 = hydrogen_1s(&x.slice(s![0, ..]).to_owned(), 1.0).0;
@@ -407,7 +406,7 @@ mod tests {
             Orbital::new(array![[0.0, 1.0, 0.0]], basis.clone()),
             Orbital::new(array![[0.0, 0.0, 1.0]], basis.clone()),
         ];
-        let det = Slater::new(orbitals);
+        let det = Slater::new(orbitals).unwrap();
         let cfg = array![[1.0, 1.0, 3.0], [0.5, 0.02, -0.8], [1.1, -0.5, 0.2]];
         let (grad_fd, laplac_fd) = grad_laplacian_finite_difference(&det, &cfg, 1e-5).unwrap();
 
@@ -427,8 +426,8 @@ mod tests {
             Orbital::new(array![[1.0, 0.0]], basis.clone()),
             Orbital::new(array![[0.0, 1.0]], basis),
         ];
-        let mut cached = Slater::new(orbsc);
-        let not_cached = Slater::new(orbs);
+        let mut cached = Slater::new(orbsc).unwrap();
+        let not_cached = Slater::new(orbs).unwrap();
 
         // arbitrary configuration
         let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
@@ -460,8 +459,8 @@ mod tests {
             Orbital::new(array![[1.0, 0.0]], basis.clone()),
             Orbital::new(array![[0.0, 1.0]], basis),
         ];
-        let mut cached = Slater::new(orbsc);
-        let not_cached = Slater::new(orbs);
+        let mut cached = Slater::new(orbsc).unwrap();
+        let not_cached = Slater::new(orbs).unwrap();
 
         // arbitrary configuration
         let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];

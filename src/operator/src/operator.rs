@@ -207,7 +207,7 @@ mod tests {
             let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
             let hamiltonian = IonicHamiltonian::new(kinetic, potential);
             let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
-            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
 
             let cfg = array![[v[0], v[1], v[2]]];
 
@@ -244,7 +244,7 @@ mod tests {
             let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
             let hamiltonian = IonicHamiltonian::new(kinetic, potential);
             let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
-            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
 
             let cfg = array![[v[0], v[1], v[2]]];
 
