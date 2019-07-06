@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use gnuplot::{AxesCommon, Caption, Color, Figure};
+use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 #[macro_use]
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
@@ -34,27 +34,28 @@ impl Log for EmptyLogger {
 }
 
 fn main() {
-    let optimal_width = 0.6;
+    let optimal_width = 0.5;
     // setup basis set
     let ion_pos = array![[0.0, 0.0, 0.0]];
 
-    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width]);
+    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width, 2.0*optimal_width]);
 
     // construct orbitals
     let orbitals = vec![
-        Orbital::new(array![[1.0]], basis_set.clone()),
-        Orbital::new(array![[1.0]], basis_set.clone()),
+        Orbital::new(array![[1.0, 0.0]], basis_set.clone()),
+        Orbital::new(array![[0.0, 1.0]], basis_set.clone()),
+        Orbital::new(array![[1.0, 0.0]], basis_set.clone()),
     ];
 
     const NPARM_JAS: usize = 2;
 
     //  hamiltonian operator
-    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![2]);
+    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![3]);
 
-    const NITERS: usize = 20;
-    const NWORKERS: usize = 4;
+    const NITERS: usize = 40;
+    const NWORKERS: usize = 8;
 
-    const TOTAL_SAMPLES: usize = 10_000;
+    const TOTAL_SAMPLES: usize = 50_000;
 
     const BLOCK_SIZE: usize = 100;
 
@@ -63,7 +64,7 @@ fn main() {
         Array1::zeros(NPARM_JAS), // Jastrow factor parameters
         orbitals.clone(),
         0.001, // scale distance
-        1,     // number of electrons with spin up
+        2,     // number of electrons with spin up
     );
 
     let obs = operators! {
@@ -75,7 +76,7 @@ fn main() {
     let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0_u8; 32])),
             &obs,
         );
 
@@ -85,8 +86,8 @@ fn main() {
             sampler,
             //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
-            //SteepestDescent::new(0.00001),
-            StochasticReconfiguration::new(1.5),
+            //SteepestDescent::new(0.001),
+            StochasticReconfiguration::new(0.01),
             EmptyLogger {
                 block_size: BLOCK_SIZE,
             },
@@ -98,21 +99,26 @@ fn main() {
     .unwrap();
 
     // Plot the results
-    plot_results(energies.as_slice().unwrap(), errors.as_slice().unwrap());
+    plot_results(&energies, &errors);
 }
 
-fn plot_results(energy: &[f64], error: &[f64]) {
+fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
     let niters = energy.len();
     let iters: Vec<_> = (0..niters).collect();
-    let exact = vec![-2.903; niters];
+    let exact = vec![-7.28; niters];
 
     let mut fig = Figure::new();
     fig.axes2d()
-        .y_error_bars(&iters, energy, error, &[Color("blue")])
+        .fill_between(
+            &iters,
+            &(energy - error),
+            &(energy + error),
+            &[Color("blue"), FillAlpha(0.1)]
+        )
         .lines(
             &iters,
             energy,
-            &[Caption("VMC Energy of H2"), Color("blue")],
+            &[Caption("VMC Energy of He"), Color("blue")],
         )
         .lines(
             &iters,

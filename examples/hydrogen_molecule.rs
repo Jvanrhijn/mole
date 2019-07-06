@@ -3,7 +3,7 @@ use std::collections::HashMap;
 extern crate ndarray;
 use rand::{SeedableRng, StdRng};
 
-use gnuplot::{AxesCommon, Caption, Color, Figure};
+use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 
 use ndarray::Array1;
 
@@ -102,21 +102,26 @@ fn main() {
     .unwrap();
 
     // Plot the results
-    plot_results(energies.as_slice().unwrap(), errors.as_slice().unwrap());
+    plot_results(&energies, &errors);
 }
 
-fn plot_results(energy: &[f64], error: &[f64]) {
+fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
     let niters = energy.len();
     let iters: Vec<_> = (0..niters).collect();
     let exact = vec![-1.175; niters];
 
     let mut fig = Figure::new();
     fig.axes2d()
-        .y_error_bars(&iters, energy, error, &[Color("blue")])
         .lines(
             &iters,
             energy,
             &[Caption("VMC Energy of H2"), Color("blue")],
+        )
+        .fill_between(
+            &iters,
+            &(energy - error),
+            &(energy + error),
+            &[Color("blue"), FillAlpha(0.1)]
         )
         .lines(
             &iters,
