@@ -189,10 +189,8 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         *self.value_cache.front_mut().ok_or(EmptyCacheError)? = det_up_v * det_down_v;
         *self.grad_cache.front_mut().ok_or(EmptyCacheError)? =
             stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
-        *self
-            .laplacian_cache
-            .front_mut()
-            .ok_or(EmptyCacheError)? = det_up_v * det_down_l + det_down_v * det_up_l;
+        *self.laplacian_cache.front_mut().ok_or(EmptyCacheError)? =
+            det_up_v * det_down_l + det_down_v * det_up_l;
         self.flush_update();
         Ok(())
     }
@@ -256,15 +254,9 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
 
     fn enqueued_value(&self) -> Ovgl {
         (
-            self.value_cache
-                .back()
-                .and(Some(*self.value_cache.back().unwrap())),
-            self.grad_cache
-                .back()
-                .and(Some(self.grad_cache.back().unwrap().clone())),
-            self.laplacian_cache
-                .back()
-                .and(Some(*self.laplacian_cache.back().unwrap())),
+            self.value_cache.back().copied(),
+            self.grad_cache.back().cloned(),
+            self.laplacian_cache.back().copied(),
         )
     }
 }
@@ -355,12 +347,9 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         self.det.refresh(cfg)?;
         self.jastrow.refresh(cfg)?;
         // TODO get rid of calls to self.value/gradient/laplacian
-        *self.value_cache.front_mut().ok_or(EmptyCacheError)? = self
-            .value(cfg)?;
-        *self.grad_cache.front_mut().ok_or(EmptyCacheError)? = self
-            .gradient(cfg)?;
-        *self.lapl_cache.front_mut().ok_or(EmptyCacheError)? = self
-            .laplacian(cfg)?;
+        *self.value_cache.front_mut().ok_or(EmptyCacheError)? = self.value(cfg)?;
+        *self.grad_cache.front_mut().ok_or(EmptyCacheError)? = self.gradient(cfg)?;
+        *self.lapl_cache.front_mut().ok_or(EmptyCacheError)? = self.laplacian(cfg)?;
         self.flush_update();
         Ok(())
     }
@@ -416,15 +405,9 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
 
     fn enqueued_value(&self) -> Ovgl {
         (
-            self.value_cache
-                .back()
-                .and(Some(*self.value_cache.back().unwrap())),
-            self.grad_cache
-                .back()
-                .and(Some(self.grad_cache.back().unwrap().clone())),
-            self.lapl_cache
-                .back()
-                .and(Some(*self.lapl_cache.back().unwrap())),
+            self.value_cache.back().copied(),
+            self.grad_cache.back().cloned(),
+            self.lapl_cache.back().copied(),
         )
     }
 }

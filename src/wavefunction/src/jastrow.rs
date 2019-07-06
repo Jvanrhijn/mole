@@ -230,24 +230,17 @@ impl Cache for JastrowFactor {
     type U = usize;
 
     fn refresh(&mut self, cfg: &Array2<f64>) -> Result<()> {
-        *self.value_queue.front_mut().unwrap() =
-            self.value(cfg)?;
-        *self.grad_queue.front_mut().unwrap() =
-            self.gradient(cfg)?;
-        *self.laplac_queue.front_mut().unwrap() = self
-            .laplacian(cfg)?;
+        *self.value_queue.front_mut().unwrap() = self.value(cfg)?;
+        *self.grad_queue.front_mut().unwrap() = self.gradient(cfg)?;
+        *self.laplac_queue.front_mut().unwrap() = self.laplacian(cfg)?;
         self.flush_update();
         Ok(())
     }
 
     fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) -> Result<()> {
-        self.value_queue
-            .push_back(self.value(cfg)?);
-        self.grad_queue.push_back(
-            self.gradient(cfg)?
-        );
-        self.laplac_queue
-            .push_back(self.laplacian(cfg)?);
+        self.value_queue.push_back(self.value(cfg)?);
+        self.grad_queue.push_back(self.gradient(cfg)?);
+        self.laplac_queue.push_back(self.laplacian(cfg)?);
         Ok(())
     }
 
@@ -279,15 +272,9 @@ impl Cache for JastrowFactor {
 
     fn enqueued_value(&self) -> Ovgl {
         (
-            self.value_queue
-                .back()
-                .and(Some(*self.value_queue.back().unwrap())),
-            self.grad_queue
-                .back()
-                .and(Some(self.grad_queue.back().unwrap().clone())),
-            self.laplac_queue
-                .back()
-                .and(Some(*self.laplac_queue.back().unwrap())),
+            self.value_queue.back().copied(),
+            self.grad_queue.back().cloned(),
+            self.laplac_queue.back().copied(),
         )
     }
 }

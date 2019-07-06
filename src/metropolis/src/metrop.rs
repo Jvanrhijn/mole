@@ -5,8 +5,8 @@ use rand::distributions::{Normal, Range};
 use rand::rngs::StdRng;
 use rand::{FromEntropy, Rng, SeedableRng};
 
-use errors::Error;
 use crate::traits::Metropolis;
+use errors::Error;
 use wavefunction_traits::{Cache, Differentiate, Function};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -71,7 +71,12 @@ where
         Ok(config_proposed)
     }
 
-    fn accept_move(&mut self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> Result<bool> {
+    fn accept_move(
+        &mut self,
+        wf: &mut T,
+        _cfg: &Array2<f64>,
+        _cfg_prop: &Array2<f64>,
+    ) -> Result<bool> {
         let wf_value = match wf.enqueued_value() {
             (Some(v), _, _) => v,
             _ => wf.current_value()?.0,
@@ -80,7 +85,12 @@ where
         Ok(acceptance > self.rng.gen::<f64>())
     }
 
-    fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Result<Option<Array2<f64>>> {
+    fn move_state(
+        &mut self,
+        wf: &mut T,
+        cfg: &Array2<f64>,
+        idx: usize,
+    ) -> Result<Option<Array2<f64>>> {
         let cfg_proposed = self.propose_move(wf, cfg, idx)?;
         if self.accept_move(wf, cfg, &cfg_proposed)? {
             Ok(Some(cfg_proposed))
@@ -145,7 +155,12 @@ where
         Ok(config_proposed)
     }
 
-    fn accept_move(&mut self, wf: &mut T, cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> Result<bool> {
+    fn accept_move(
+        &mut self,
+        wf: &mut T,
+        cfg: &Array2<f64>,
+        cfg_prop: &Array2<f64>,
+    ) -> Result<bool> {
         let (wf_value, wf_grad) = match wf.enqueued_value() {
             (Some(v), Some(g), _) => (v, g),
             _ => (wf.current_value()?.0, wf.current_value()?.1),
@@ -167,7 +182,12 @@ where
         Ok(acceptance > self.rng.gen::<f64>())
     }
 
-    fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Result<Option<Array2<f64>>> {
+    fn move_state(
+        &mut self,
+        wf: &mut T,
+        cfg: &Array2<f64>,
+        idx: usize,
+    ) -> Result<Option<Array2<f64>>> {
         let cfg_proposed = self.propose_move(wf, cfg, idx)?;
         if self.accept_move(wf, cfg, &cfg_proposed)? {
             Ok(Some(cfg_proposed))
@@ -223,8 +243,12 @@ mod tests {
 
     impl Cache for WaveFunctionMock {
         type U = usize;
-        fn refresh(&mut self, _new: &Array2<f64>) -> Result<()> { Ok(()) }
-        fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) -> Result<()> { Ok(()) }
+        fn refresh(&mut self, _new: &Array2<f64>) -> Result<()> {
+            Ok(())
+        }
+        fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) -> Result<()> {
+            Ok(())
+        }
         fn push_update(&mut self) {}
         fn flush_update(&mut self) {}
         fn current_value(&self) -> Result<Vgl> {

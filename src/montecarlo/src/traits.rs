@@ -1,6 +1,6 @@
+use errors::Error;
 use operator::OperatorValue;
 use std::collections::HashMap;
-use errors::Error;
 
 pub struct MonteCarloResult<T> {
     pub wave_function: T,

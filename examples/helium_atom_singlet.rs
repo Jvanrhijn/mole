@@ -38,7 +38,7 @@ fn main() {
     // setup basis set
     let ion_pos = array![[0.0, 0.0, 0.0]];
 
-    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width, 2.0*optimal_width]);
+    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width, 2.0 * optimal_width]);
 
     // construct orbitals
     let orbitals = vec![
@@ -113,7 +113,7 @@ fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
             &iters,
             &(energy - error),
             &(energy + error),
-            &[Color("blue"), FillAlpha(0.1)]
+            &[Color("blue"), FillAlpha(0.1)],
         )
         .lines(
             &iters,

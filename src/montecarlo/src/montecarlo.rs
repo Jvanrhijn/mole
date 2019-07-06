@@ -2,8 +2,8 @@
 use std::collections::HashMap;
 // First party imports
 use crate::traits::*;
-use operator::OperatorValue;
 use errors::Error;
+use operator::OperatorValue;
 
 /// Struct for running Monte Carlo integration
 /// Generic over Samplers
@@ -21,7 +21,11 @@ where
         Self { sampler, logger }
     }
 
-    pub fn run(mut self, steps: usize, block_size: usize) -> Result<MonteCarloResult<S::WaveFunc>, Error> {
+    pub fn run(
+        mut self,
+        steps: usize,
+        block_size: usize,
+    ) -> Result<MonteCarloResult<S::WaveFunc>, Error> {
         assert!(steps >= 2 * block_size);
         let blocks = steps / block_size;
         let mut output = String::new();

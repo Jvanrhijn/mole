@@ -146,19 +146,21 @@ where
     type U = usize;
 
     fn refresh(&mut self, new: &Array2<f64>) -> Result<()> {
-        let (values, gradients, laplacians) = self
-            .build_matrices(new)?;
+        let (values, gradients, laplacians) = self.build_matrices(new)?;
         // scale matrix inversion for stability
         let scale = values.iter().fold(0.0_f64, |a, b| a.abs().max(b.abs()));
-        let inv = (1.0 / scale * &values)
-            .inv()?
-            / scale;
+        let inv = (1.0 / scale * &values).inv()? / scale;
         let value = values.det()?;
-        *self.current_value_queue.front_mut().ok_or(EmptyCacheError)? = value;
+        *self
+            .current_value_queue
+            .front_mut()
+            .ok_or(EmptyCacheError)? = value;
         *self.current_grad_queue.front_mut().ok_or(EmptyCacheError)? =
             value * (&gradients * &inv.t().insert_axis(Axis(2))).sum_axis(Axis(1));
-        *self.current_laplac_queue.front_mut().ok_or(EmptyCacheError)? =
-            value * (&laplacians * &inv.t()).scalar_sum();
+        *self
+            .current_laplac_queue
+            .front_mut()
+            .ok_or(EmptyCacheError)? = value * (&laplacians * &inv.t()).scalar_sum();
         *self.matrix_grad_queue.front_mut().ok_or(EmptyCacheError)? = gradients;
 
         for (queue, data) in vec![
@@ -169,8 +171,7 @@ where
         .iter_mut()
         .zip(vec![values, laplacians, inv].into_iter())
         {
-            *queue
-                .front_mut().ok_or(EmptyCacheError)? = data;
+            *queue.front_mut().ok_or(EmptyCacheError)? = data;
         }
         self.flush_update();
         Ok(())
@@ -203,18 +204,10 @@ where
                 .ok_or(EmptyCacheError)?
                 .slice(s![.., ud]),
         );
-        let value = self
-            .current_value_queue
-            .front()
-            .ok_or(EmptyCacheError)?
-            * ratio;
+        let value = self.current_value_queue.front().ok_or(EmptyCacheError)? * ratio;
 
         // calculate updated matrix, gradient matrix, laplacian matrix, and inverse matrix; only need to update column `ud`
-        let mut matrix = self
-            .matrix_queue
-            .front()
-            .ok_or(EmptyCacheError)?
-            .clone();
+        let mut matrix = self.matrix_queue.front().ok_or(EmptyCacheError)?.clone();
         let mut matrix_grad = self
             .matrix_grad_queue
             .front()
@@ -335,22 +328,19 @@ where
         // TODO: find a way to get rid of the call to .clone()
         Ok((
             *self.current_value_queue.front().ok_or(EmptyCacheError)?,
-            self.current_grad_queue.front().ok_or(EmptyCacheError)?.clone(),
+            self.current_grad_queue
+                .front()
+                .ok_or(EmptyCacheError)?
+                .clone(),
             *self.current_laplac_queue.front().ok_or(EmptyCacheError)?,
         ))
     }
 
     fn enqueued_value(&self) -> Ovgl {
         (
-            self.current_value_queue
-                .back()
-                .and(Some(*self.current_value_queue.back().unwrap())),
-            self.current_grad_queue
-                .back()
-                .and(Some(self.current_grad_queue.back().unwrap().clone())),
-            self.current_laplac_queue
-                .back()
-                .and(Some(*self.current_laplac_queue.back().unwrap())),
+            self.current_value_queue.back().copied(),
+            self.current_grad_queue.back().cloned(),
+            self.current_laplac_queue.back().copied(),
         )
     }
 }

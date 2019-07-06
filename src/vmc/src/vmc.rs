@@ -134,10 +134,13 @@ where
     fn process_monte_carlo_results(
         mc_results: &HashMap<String, Vec<OperatorValue>>,
         block_size: usize,
-    ) -> Result<(
-        HashMap<String, OperatorValue>,
-        HashMap<String, OperatorValue>,
-    ), Error> {
+    ) -> Result<
+        (
+            HashMap<String, OperatorValue>,
+            HashMap<String, OperatorValue>,
+        ),
+        Error,
+    > {
         use OperatorValue::Scalar;
         // computes averages of all components of concatenated data
         let averages = mc_results
@@ -149,7 +152,9 @@ where
             .iter()
             .map(|(name, samples)| {
                 // mean of this quantity
-                let mean = averages.get(name).expect("Given observable not present in results");
+                let mean = averages
+                    .get(name)
+                    .expect("Given observable not present in results");
                 // split the data into blocks
                 let blocks = samples.chunks(block_size);
                 let nblocks = blocks.len();
@@ -159,7 +164,8 @@ where
                 let block_mean_square =
                     Self::mean(&block_means.clone().map(|x| &x * &x).collect::<Vec<_>>());
                 // compute error
-                let error = ((block_mean_square - mean * mean) / Scalar((nblocks - 1) as f64)).map(f64::sqrt);
+                let error = ((block_mean_square - mean * mean) / Scalar((nblocks - 1) as f64))
+                    .map(f64::sqrt);
                 (name.to_string(), error)
             })
             .collect::<HashMap<_, _>>();

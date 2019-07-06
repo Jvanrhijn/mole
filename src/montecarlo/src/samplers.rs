@@ -7,13 +7,13 @@ use rand::distributions::Range;
 use rand::Rng;
 // First party imports
 use crate::traits::*;
+use errors::Error;
 use metropolis::Metropolis;
 use operator::{
     Operator,
     OperatorValue::{self, *},
 };
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
-use errors::Error;
 
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
@@ -76,7 +76,7 @@ where
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
-    V: Metropolis<T, R: Rng>,
+    V: Metropolis<T, R = Rng>,
 {
     type WaveFunc = T;
 
@@ -117,7 +117,7 @@ where
                 self.wave_function.flush_update();
             }
         }
-        self.wave_function.refresh(&self.config); 
+        self.wave_function.refresh(&self.config);
         Ok(())
     }
 

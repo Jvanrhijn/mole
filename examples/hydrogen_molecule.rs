@@ -121,7 +121,7 @@ fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
             &iters,
             &(energy - error),
             &(energy + error),
-            &[Color("blue"), FillAlpha(0.1)]
+            &[Color("blue"), FillAlpha(0.1)],
         )
         .lines(
             &iters,
