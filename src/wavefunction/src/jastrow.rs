@@ -1,4 +1,4 @@
-use errors::Error;
+use errors::Error::{self, EmptyCacheError};
 use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use optimize::Optimize;
@@ -132,7 +132,7 @@ impl Differentiate for ElectronElectronTerm {
 }
 
 impl Optimize for ElectronElectronTerm {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
         let num_elec = cfg.shape()[0];
         let mut grad_bp = Array1::<f64>::zeros(self.parms.len());
         for i in 0..num_elec {
@@ -140,16 +140,14 @@ impl Optimize for ElectronElectronTerm {
                 let b1 = self.get_b1(i, j);
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
-                // TODO: figure out where the sign error is in this bit
                 grad_bp[0] -= -b1 * rij_scal.powi(2) * (1.0 + self.parms[0] * rij_scal).powi(-2);
                 let mut grad_rest = grad_bp.slice_mut(s![1..]);
-                // TODO: figure out where the sign error and the off by one error are here
                 grad_rest -= &(3..=self.parms.len() + 1)
                     .map(|p| rij_scal.powi(p as i32 - 1))
                     .collect::<Array1<f64>>();
             }
         }
-        grad_bp
+        Ok(grad_bp)
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -211,8 +209,8 @@ impl Differentiate for JastrowFactor {
 }
 
 impl Optimize for JastrowFactor {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
-        self.fee.parameter_gradient(cfg) * self.current_value().0
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
+        Ok(self.fee.parameter_gradient(cfg)? * self.current_value()?.0)
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -271,15 +269,12 @@ impl Cache for JastrowFactor {
         }
     }
 
-    fn current_value(&self) -> Vgl {
-        match (
-            self.value_queue.front(),
-            self.grad_queue.front(),
-            self.laplac_queue.front(),
-        ) {
-            (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
-            _ => panic!("Attempt to retrieve value from empty queue"),
-        }
+    fn current_value(&self) -> Result<Vgl> {
+        Ok((
+            *self.value_queue.front().ok_or(EmptyCacheError)?,
+            self.grad_queue.front().ok_or(EmptyCacheError)?.clone(),
+            *self.laplac_queue.front().ok_or(EmptyCacheError)?,
+        ))
     }
 
     fn enqueued_value(&self) -> Ovgl {

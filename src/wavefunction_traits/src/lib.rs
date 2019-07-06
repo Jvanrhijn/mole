@@ -24,7 +24,7 @@ pub trait Cache {
     fn flush_update(&mut self);
 
     /// Return the current value of the cached data
-    fn current_value(&self) -> Vgl;
+    fn current_value(&self) -> Result<Vgl>;
 
     /// Return enqueued value
     fn enqueued_value(&self) -> Ovgl;

@@ -27,7 +27,7 @@ where
         let mut output = String::new();
         for block_nr in 0..blocks {
             for _ in 0..block_size {
-                self.sampler.move_state();
+                self.sampler.move_state()?;
                 // Discard first block for equilibration
                 if block_nr > 0 {
                     self.sampler.sample()?;

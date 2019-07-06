@@ -6,7 +6,7 @@ use std::collections::HashMap;
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Optimize {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64>;
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>>;
 
     fn update_parameters(&mut self, deltap: &Array1<f64>);
 

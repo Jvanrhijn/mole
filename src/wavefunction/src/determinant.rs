@@ -331,13 +331,13 @@ where
         }
     }
 
-    fn current_value(&self) -> Vgl {
+    fn current_value(&self) -> Result<Vgl> {
         // TODO: find a way to get rid of the call to .clone()
-        (
-            *self.current_value_queue.front().unwrap(),
-            self.current_grad_queue.front().unwrap().clone(),
-            *self.current_laplac_queue.front().unwrap(),
-        )
+        Ok((
+            *self.current_value_queue.front().ok_or(EmptyCacheError)?,
+            self.current_grad_queue.front().ok_or(EmptyCacheError)?.clone(),
+            *self.current_laplac_queue.front().ok_or(EmptyCacheError)?,
+        ))
     }
 
     fn enqueued_value(&self) -> Ovgl {

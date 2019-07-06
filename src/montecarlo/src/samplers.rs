@@ -92,7 +92,8 @@ where
                         .act_on(&self.wave_function, &self.config)
                         // TODO: find a way to get rid of this expect
                         .expect("Failed to act on wave function with operator")
-                        / &Scalar(self.wave_function.current_value().0),
+                        // TODO: find a way to get rid of this unwrap!!!
+                        / &Scalar(self.wave_function.current_value().unwrap().0),
                 )
             })
             .collect();
@@ -103,11 +104,11 @@ where
         Ok(())
     }
 
-    fn move_state(&mut self) {
+    fn move_state(&mut self) -> Result<(), Error> {
         for e in 0..self.wave_function.num_electrons() {
             if let Some(config) =
                 self.metropolis
-                    .move_state(&mut self.wave_function, &self.config, e)
+                    .move_state(&mut self.wave_function, &self.config, e)?
             {
                 self.config = config;
                 self.wave_function.push_update();
@@ -116,7 +117,8 @@ where
                 self.wave_function.flush_update();
             }
         }
-        self.wave_function.refresh(&self.config);
+        self.wave_function.refresh(&self.config); 
+        Ok(())
     }
 
     fn data(&self) -> &HashMap<String, Vec<OperatorValue>> {

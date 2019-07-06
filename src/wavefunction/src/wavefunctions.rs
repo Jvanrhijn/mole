@@ -96,7 +96,7 @@ where
         self.det.flush_update();
     }
 
-    fn current_value(&self) -> Vgl {
+    fn current_value(&self) -> Result<Vgl> {
         self.det.current_value()
     }
 
@@ -184,8 +184,8 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         self.det_up.refresh(&cfg_up)?;
         self.det_down.refresh(&cfg_down)?;
-        let (det_up_v, det_up_g, det_up_l) = self.det_up.current_value();
-        let (det_down_v, det_down_g, det_down_l) = self.det_down.current_value();
+        let (det_up_v, det_up_g, det_up_l) = self.det_up.current_value()?;
+        let (det_down_v, det_down_g, det_down_l) = self.det_down.current_value()?;
         *self.value_cache.front_mut().ok_or(EmptyCacheError)? = det_up_v * det_down_v;
         *self.grad_cache.front_mut().ok_or(EmptyCacheError)? =
             stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
@@ -206,11 +206,11 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         }
         let (det_up_v, det_up_g, det_up_l) = match self.det_up.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.det_up.current_value(),
+            _ => self.det_up.current_value()?,
         };
         let (det_down_v, det_down_g, det_down_l) = match self.det_down.enqueued_value() {
             (Some(v), Some(g), Some(l)) => (v, g, l),
-            _ => self.det_down.current_value(),
+            _ => self.det_down.current_value()?,
         };
         self.value_cache.push_back(det_up_v * det_down_v);
         self.grad_cache.push_back(stack![
@@ -246,15 +246,12 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         }
     }
 
-    fn current_value(&self) -> Vgl {
-        match (
-            self.value_cache.front(),
-            self.grad_cache.front(),
-            self.laplacian_cache.front(),
-        ) {
-            (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
-            _ => panic!("Attempt to retrieve value from empty cache"),
-        }
+    fn current_value(&self) -> Result<Vgl> {
+        Ok((
+            *self.value_cache.front().ok_or(EmptyCacheError)?,
+            self.grad_cache.front().ok_or(EmptyCacheError)?.clone(),
+            *self.laplacian_cache.front().ok_or(EmptyCacheError)?,
+        ))
     }
 
     fn enqueued_value(&self) -> Ovgl {
@@ -409,15 +406,12 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
         }
     }
 
-    fn current_value(&self) -> Vgl {
-        match (
-            self.value_cache.front(),
-            self.grad_cache.front(),
-            self.lapl_cache.front(),
-        ) {
-            (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
-            _ => panic!("No value stored in JastrowSlater cache"),
-        }
+    fn current_value(&self) -> Result<Vgl> {
+        Ok((
+            *self.value_cache.front().ok_or(EmptyCacheError)?,
+            self.grad_cache.front().ok_or(EmptyCacheError)?.clone(),
+            *self.lapl_cache.front().ok_or(EmptyCacheError)?,
+        ))
     }
 
     fn enqueued_value(&self) -> Ovgl {
@@ -436,7 +430,7 @@ impl<T: BasisSet> Cache for JastrowSlater<T> {
 }
 
 impl<T: BasisSet> Optimize for JastrowSlater<T> {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
         self.jastrow.parameter_gradient(cfg)
     }
 
