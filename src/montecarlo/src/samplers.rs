@@ -41,18 +41,18 @@ where
         mut wave_function: T,
         mut metrop: V,
         observables: &'a HashMap<String, Box<dyn Operator<T>>>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random_using((nelec, 3), Range::new(-1., 1.), metrop.rng_mut());
-        wave_function.refresh(&cfg);
-        Self {
+        wave_function.refresh(&cfg)?;
+        Ok(Self {
             wave_function,
             config: cfg,
             metropolis: metrop,
             observables,
             samples: HashMap::new(),
             acceptance: 0.0,
-        }
+        })
     }
 
     pub fn with_initial_configuration(
@@ -60,16 +60,16 @@ where
         metrop: V,
         observables: &'a HashMap<String, Box<dyn Operator<T>>>,
         cfg: Array2<f64>,
-    ) -> Self {
-        wave_function.refresh(&cfg);
-        Self {
+    ) -> Result<Self, Error> {
+        wave_function.refresh(&cfg)?;
+        Ok(Self {
             wave_function,
             config: cfg,
             metropolis: metrop,
             observables: observables,
             samples: HashMap::new(),
             acceptance: 0.0,
-        }
+        })
     }
 }
 
@@ -117,7 +117,7 @@ where
                 self.wave_function.flush_update();
             }
         }
-        self.wave_function.refresh(&self.config);
+        self.wave_function.refresh(&self.config)?;
         Ok(())
     }
 
