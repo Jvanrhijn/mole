@@ -5,7 +5,7 @@ use std::vec::Vec;
 use ndarray::{Array, Array1, Array2, Array3, Axis, Ix1, Ix2, Ix3};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
-use errors::Error::{self, EmptyCacheError};
+use errors::Error::{self, EmptyCacheError, FuncError};
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -138,7 +138,6 @@ where
     }
 }
 
-// TODO: get rid of all unwraps
 impl<T> Cache for Slater<T>
 where
     T: Function<f64, D = Ix1> + Differentiate<D = Ix1>,
@@ -180,18 +179,23 @@ where
     fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) -> Result<()> {
         // TODO: refactor into smaller functions
         // determinant value: |D(x')| = |D(x)|\sum_{j=1}^N \phi_j (x_i')d_{ji}^{-1}(x)$
-        let data: Vec<(f64, Array1<f64>, f64)> = self
+        let data: Result<Vec<_>> = self
             .orbs
             .iter()
             .map(|phi| {
+                let (val, grad, lap) = 
                 (
-                    // TODO: get rid of these unwraps
-                    phi.value(&new.slice(s![ud, ..]).to_owned()).unwrap(),
-                    phi.gradient(&new.slice(s![ud, ..]).to_owned()).unwrap(),
-                    phi.laplacian(&new.slice(s![ud, ..]).to_owned()).unwrap(),
-                )
+                    phi.value(&new.slice(s![ud, ..]).to_owned()),
+                    phi.gradient(&new.slice(s![ud, ..]).to_owned()),
+                    phi.laplacian(&new.slice(s![ud, ..]).to_owned()),
+                );
+                match (val, grad, lap) {
+                    (Ok(v), Ok(g), Ok(l)) => Ok((v, g, l)),
+                    _ => Err(FuncError)
+                }
             })
             .collect();
+        let data = data?;
         let orbvec = Array1::<f64>::from_vec(data.iter().map(|x| x.0).collect());
         let orbvec_laplac = Array1::<f64>::from_vec(data.iter().map(|x| x.2).collect());
         let orbvec_grad = data.into_iter().map(|x| x.1).collect::<Vec<Array1<f64>>>();

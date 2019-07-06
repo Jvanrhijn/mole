@@ -76,7 +76,7 @@ where
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
-    V: Metropolis<T, R = Rng>,
+    V: Metropolis<T, R: Rng>,
 {
     type WaveFunc = T;
 

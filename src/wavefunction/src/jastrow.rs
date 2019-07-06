@@ -230,9 +230,9 @@ impl Cache for JastrowFactor {
     type U = usize;
 
     fn refresh(&mut self, cfg: &Array2<f64>) -> Result<()> {
-        *self.value_queue.front_mut().unwrap() = self.value(cfg)?;
-        *self.grad_queue.front_mut().unwrap() = self.gradient(cfg)?;
-        *self.laplac_queue.front_mut().unwrap() = self.laplacian(cfg)?;
+        *self.value_queue.front_mut().ok_or(EmptyCacheError)? = self.value(cfg)?;
+        *self.grad_queue.front_mut().ok_or(EmptyCacheError)? = self.gradient(cfg)?;
+        *self.laplac_queue.front_mut().ok_or(EmptyCacheError)? = self.laplacian(cfg)?;
         self.flush_update();
         Ok(())
     }
