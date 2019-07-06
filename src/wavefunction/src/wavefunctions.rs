@@ -446,9 +446,9 @@ mod tests {
 
         wf.refresh(&config);
 
-        let cur_value = wf.current_value().0;
-        let cur_grad = wf.current_value().1;
-        let cur_laplac = wf.current_value().2;
+        let cur_value = wf.current_value().unwrap().0;
+        let cur_grad = wf.current_value().unwrap().1;
+        let cur_laplac = wf.current_value().unwrap().2;
 
         assert!((cur_value - basis::hydrogen_1s(&config_slice, 1.0).0).abs() < 1e-15);
         assert_eq!(
@@ -495,9 +495,9 @@ mod tests {
         let laplacian = wave_function.laplacian(&cfg).unwrap();
         wave_function.refresh(&cfg);
 
-        assert_eq!(wave_function.current_value().0, value);
-        assert_eq!(wave_function.current_value().1, grad);
-        assert_eq!(wave_function.current_value().2, laplacian);
+        assert_eq!(wave_function.current_value().unwrap().0, value);
+        assert_eq!(wave_function.current_value().unwrap().1, grad);
+        assert_eq!(wave_function.current_value().unwrap().2, laplacian);
 
         // change cfg
         cfg[[0, 0]] = 2.0;
@@ -508,9 +508,9 @@ mod tests {
         wave_function.enqueue_update(0, &cfg);
         wave_function.push_update();
 
-        assert!((wave_function.current_value().0 - value).abs() < 1e-14);
-        assert!(wave_function.current_value().1.all_close(&grad, 1e-14));
-        assert!((wave_function.current_value().2 - laplacian).abs() < 1e-14);
+        assert!((wave_function.current_value().unwrap().0 - value).abs() < 1e-14);
+        assert!(wave_function.current_value().unwrap().1.all_close(&grad, 1e-14));
+        assert!((wave_function.current_value().unwrap().2 - laplacian).abs() < 1e-14);
     }
 
     #[test]
@@ -544,7 +544,7 @@ mod tests {
             .all_close(&grad, 1e-10));
         assert!((wave_function.enqueued_value().2.unwrap() - laplacian).abs() < 1e-8);
 
-        assert!(!(wave_function.current_value().1.all_close(&grad, 1e-10)));
-        assert!(!((wave_function.current_value().2 - laplacian).abs() < 1e-8));
+        assert!(!(wave_function.current_value().unwrap().1.all_close(&grad, 1e-10)));
+        assert!(!((wave_function.current_value().unwrap().2 - laplacian).abs() < 1e-8));
     }
 }

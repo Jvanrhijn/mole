@@ -268,7 +268,7 @@ mod tests {
         let cfg = Array2::<f64>::ones((1, 3));
         let mut wf = WaveFunctionMock { value: 1.0 };
         let mut metrop = MetropolisBox::<StdRng>::new(1.0);
-        let new_cfg = metrop.propose_move(&mut wf, &cfg, 0); // should always accept
+        let new_cfg = metrop.propose_move(&mut wf, &cfg, 0).unwrap(); // should always accept
         assert!(metrop.accept_move(&mut wf, &cfg, &new_cfg).unwrap());
     }
 

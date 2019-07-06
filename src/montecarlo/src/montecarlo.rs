@@ -90,7 +90,7 @@ mod tests {
             "Local Energy".to_string(),
             Box::new(local_e) as Box<dyn Operator<_>>,
         );
-        let sampler = Sampler::new(wave_func, metropolis, &obs);
+        let sampler = Sampler::new(wave_func, metropolis, &obs).unwrap();
 
         let sampler = Runner::new(sampler, MockLogger).run(100, 1).unwrap();
 

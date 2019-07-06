@@ -436,7 +436,7 @@ mod tests {
         // initialize cache
         cached.refresh(&x).unwrap();
 
-        let (cval, cgrad, clap) = cached.current_value();
+        let (cval, cgrad, clap) = cached.current_value().unwrap();
         let val = not_cached.value(&x).unwrap();
         let grad = not_cached.gradient(&x).unwrap();
         let lap = not_cached.laplacian(&x).unwrap();
@@ -476,7 +476,7 @@ mod tests {
         cached.push_update();
 
         // retrieve values
-        let (cval, cgrad, clap) = cached.current_value();
+        let (cval, cgrad, clap) = cached.current_value().unwrap();
         let val = not_cached.value(&xmov).unwrap();
         let grad = not_cached.gradient(&xmov).unwrap();
         let lap = not_cached.laplacian(&xmov).unwrap();

@@ -50,7 +50,7 @@ fn helium_lcao() {
         "Energy" => hamiltonian
     };
 
-    let sampler = Sampler::new(wave_function, metrop, &obs);
+    let sampler = Sampler::new(wave_function, metrop, &obs).unwrap();
 
     let runner = Runner::new(sampler, MockLogger);
     let result = runner.run(1000, 100).unwrap();
