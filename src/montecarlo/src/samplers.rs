@@ -82,22 +82,26 @@ where
 
     fn sample(&mut self) -> Result<(), Error> {
         // First sample all observables on the current configuration
-        let mut samples: HashMap<String, OperatorValue> = self
+        let samples: Result<Vec<(String, OperatorValue)>, Error> = self
             .observables
             .iter()
             .map(|(name, operator)| {
-                (
-                    name.clone(),
-                    &operator
-                        .act_on(&self.wave_function, &self.config)
-                        // TODO: find a way to get rid of this expect
-                        .expect("Failed to act on wave function with operator")
-                        // TODO: find a way to get rid of this unwrap!!!
-                        / &Scalar(self.wave_function.current_value().unwrap().0),
+                Ok(
+                    (
+                        name.clone(),
+                        operator
+                            .act_on(&self.wave_function, &self.config)?
+                                / Scalar(self.wave_function().current_value()?.0)
+                    )
                 )
             })
             .collect();
-        // save the sampled values
+        // convert vec of name, value pairs to hashmap IF no sample 
+        // errored
+        // Maybe it would be better to allow failed samplings? Handle
+        // the case of failed samplings by user defined policy...
+        let mut samples: HashMap<_, _> = samples?.into_iter().collect();
+        // append new samples to sample collection
         samples
             .drain()
             .for_each(|(name, value)| self.samples.entry(name).or_default().push(value));
