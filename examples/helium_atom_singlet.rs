@@ -34,28 +34,27 @@ impl Log for EmptyLogger {
 }
 
 fn main() {
-    let optimal_width = 0.5;
+    let width = 0.6;
     // setup basis set
     let ion_pos = array![[0.0, 0.0, 0.0]];
 
-    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width, 2.0 * optimal_width]);
+    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![width]);
 
     // construct orbitals
     let orbitals = vec![
-        Orbital::new(array![[1.0, 0.0]], basis_set.clone()),
-        Orbital::new(array![[0.0, 1.0]], basis_set.clone()),
-        Orbital::new(array![[1.0, 0.0]], basis_set.clone()),
+        Orbital::new(array![[1.0]], basis_set.clone()),
+        Orbital::new(array![[1.0]], basis_set.clone()),
     ];
 
     const NPARM_JAS: usize = 2;
 
     //  hamiltonian operator
-    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![3]);
+    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![2]);
 
-    const NITERS: usize = 40;
+    const NITERS: usize = 20;
     const NWORKERS: usize = 8;
 
-    const TOTAL_SAMPLES: usize = 50_000;
+    const TOTAL_SAMPLES: usize = 10_000;
 
     const BLOCK_SIZE: usize = 100;
 
@@ -64,7 +63,7 @@ fn main() {
         Array1::zeros(NPARM_JAS), // Jastrow factor parameters
         orbitals.clone(),
         0.001, // scale distance
-        2,     // number of electrons with spin up
+        1,     // number of electrons with spin up
     );
 
     let obs = operators! {
@@ -76,9 +75,10 @@ fn main() {
     let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
             &obs,
-        ).expect("Bad initial configuration");
+        )
+        .expect("Bad initial configuration");
 
         // Construct the VMC runner, with Stochastic reconfiguration as optimizer
         // and an empty Logger so no output is given during each VMC iteration
@@ -87,7 +87,7 @@ fn main() {
             //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             //SteepestDescent::new(0.001),
-            StochasticReconfiguration::new(0.01),
+            StochasticReconfiguration::new(0.1),
             EmptyLogger {
                 block_size: BLOCK_SIZE,
             },
@@ -96,7 +96,7 @@ fn main() {
         // Actually run the VMC optimization
         vmc_runner.run_optimization(NITERS, TOTAL_SAMPLES, BLOCK_SIZE, NWORKERS)
     }
-    .unwrap();
+    .expect("VMC optimization failed");
 
     // Plot the results
     plot_results(&energies, &errors);

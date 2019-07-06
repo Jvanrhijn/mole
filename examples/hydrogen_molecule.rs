@@ -83,7 +83,8 @@ fn main() {
             wave_function,
             metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
             &obs,
-        ).expect("Bad initial configuration");
+        )
+        .expect("Bad initial configuration");
 
         // Construct the VMC runner, with Stochastic reconfiguration as optimizer
         // and an empty Logger so no output is given during each VMC iteration

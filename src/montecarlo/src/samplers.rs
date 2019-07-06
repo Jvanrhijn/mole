@@ -76,7 +76,7 @@ where
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
-    V: Metropolis<T, R: Rng>,
+    V: Metropolis<T, R = Rng>,
 {
     type WaveFunc = T;
 
@@ -86,17 +86,14 @@ where
             .observables
             .iter()
             .map(|(name, operator)| {
-                Ok(
-                    (
-                        name.clone(),
-                        operator
-                            .act_on(&self.wave_function, &self.config)?
-                                / Scalar(self.wave_function().current_value()?.0)
-                    )
-                )
+                Ok((
+                    name.clone(),
+                    operator.act_on(&self.wave_function, &self.config)?
+                        / Scalar(self.wave_function().current_value()?.0),
+                ))
             })
             .collect();
-        // convert vec of name, value pairs to hashmap IF no sample 
+        // convert vec of name, value pairs to hashmap IF no sample
         // errored
         // Maybe it would be better to allow failed samplings? Handle
         // the case of failed samplings by user defined policy...

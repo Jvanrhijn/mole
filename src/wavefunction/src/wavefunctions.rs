@@ -509,7 +509,11 @@ mod tests {
         wave_function.push_update();
 
         assert!((wave_function.current_value().unwrap().0 - value).abs() < 1e-14);
-        assert!(wave_function.current_value().unwrap().1.all_close(&grad, 1e-14));
+        assert!(wave_function
+            .current_value()
+            .unwrap()
+            .1
+            .all_close(&grad, 1e-14));
         assert!((wave_function.current_value().unwrap().2 - laplacian).abs() < 1e-14);
     }
 
@@ -544,7 +548,13 @@ mod tests {
             .all_close(&grad, 1e-10));
         assert!((wave_function.enqueued_value().2.unwrap() - laplacian).abs() < 1e-8);
 
-        assert!(!(wave_function.current_value().unwrap().1.all_close(&grad, 1e-10)));
+        assert!(
+            !(wave_function
+                .current_value()
+                .unwrap()
+                .1
+                .all_close(&grad, 1e-10))
+        );
         assert!(!((wave_function.current_value().unwrap().2 - laplacian).abs() < 1e-8));
     }
 }

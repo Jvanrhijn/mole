@@ -183,15 +183,14 @@ where
             .orbs
             .iter()
             .map(|phi| {
-                let (val, grad, lap) = 
-                (
+                let (val, grad, lap) = (
                     phi.value(&new.slice(s![ud, ..]).to_owned()),
                     phi.gradient(&new.slice(s![ud, ..]).to_owned()),
                     phi.laplacian(&new.slice(s![ud, ..]).to_owned()),
                 );
                 match (val, grad, lap) {
                     (Ok(v), Ok(g), Ok(l)) => Ok((v, g, l)),
-                    _ => Err(FuncError)
+                    _ => Err(FuncError),
                 }
             })
             .collect();
