@@ -7,13 +7,13 @@ use rand::distributions::Range;
 use rand::Rng;
 // First party imports
 use crate::traits::*;
+use errors::Error;
 use metropolis::Metropolis;
 use operator::{
     Operator,
     OperatorValue::{self, *},
 };
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
-use errors::Error;
 
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
@@ -41,18 +41,18 @@ where
         mut wave_function: T,
         mut metrop: V,
         observables: &'a HashMap<String, Box<dyn Operator<T>>>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random_using((nelec, 3), Range::new(-1., 1.), metrop.rng_mut());
-        wave_function.refresh(&cfg);
-        Self {
+        wave_function.refresh(&cfg)?;
+        Ok(Self {
             wave_function,
             config: cfg,
             metropolis: metrop,
             observables,
             samples: HashMap::new(),
             acceptance: 0.0,
-        }
+        })
     }
 
     pub fn with_initial_configuration(
@@ -60,16 +60,16 @@ where
         metrop: V,
         observables: &'a HashMap<String, Box<dyn Operator<T>>>,
         cfg: Array2<f64>,
-    ) -> Self {
-        wave_function.refresh(&cfg);
-        Self {
+    ) -> Result<Self, Error> {
+        wave_function.refresh(&cfg)?;
+        Ok(Self {
             wave_function,
             config: cfg,
             metropolis: metrop,
             observables: observables,
             samples: HashMap::new(),
             acceptance: 0.0,
-        }
+        })
     }
 }
 
@@ -82,32 +82,34 @@ where
 
     fn sample(&mut self) -> Result<(), Error> {
         // First sample all observables on the current configuration
-        let mut samples: HashMap<String, OperatorValue> = self
+        let samples: Result<Vec<(String, OperatorValue)>, Error> = self
             .observables
             .iter()
             .map(|(name, operator)| {
-                (
+                Ok((
                     name.clone(),
-                    &operator
-                        .act_on(&self.wave_function, &self.config)
-                        // TODO: find a way to get rid of this expect
-                        .expect("Failed to act on wave function with operator")
-                        / &Scalar(self.wave_function.current_value().0),
-                )
+                    operator.act_on(&self.wave_function, &self.config)?
+                        / Scalar(self.wave_function().current_value()?.0),
+                ))
             })
             .collect();
-        // save the sampled values
+        // convert vec of name, value pairs to hashmap IF no sample
+        // errored
+        // Maybe it would be better to allow failed samplings? Handle
+        // the case of failed samplings by user defined policy...
+        let mut samples: HashMap<_, _> = samples?.into_iter().collect();
+        // append new samples to sample collection
         samples
             .drain()
             .for_each(|(name, value)| self.samples.entry(name).or_default().push(value));
         Ok(())
     }
 
-    fn move_state(&mut self) {
+    fn move_state(&mut self) -> Result<(), Error> {
         for e in 0..self.wave_function.num_electrons() {
             if let Some(config) =
                 self.metropolis
-                    .move_state(&mut self.wave_function, &self.config, e)
+                    .move_state(&mut self.wave_function, &self.config, e)?
             {
                 self.config = config;
                 self.wave_function.push_update();
@@ -116,7 +118,8 @@ where
                 self.wave_function.flush_update();
             }
         }
-        self.wave_function.refresh(&self.config);
+        self.wave_function.refresh(&self.config)?;
+        Ok(())
     }
 
     fn data(&self) -> &HashMap<String, Vec<OperatorValue>> {
@@ -138,6 +141,7 @@ where
     fn consume_result(self) -> MonteCarloResult<Self::WaveFunc> {
         MonteCarloResult {
             wave_function: self.wave_function,
+            acceptance: self.acceptance,
             data: self.samples,
         }
     }

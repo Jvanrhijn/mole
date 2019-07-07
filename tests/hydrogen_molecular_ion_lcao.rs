@@ -32,7 +32,7 @@ fn hydrogen_molecular_ion_lcao() {
 
     let orbitals = vec![Orbital::new(array![[1.0], [1.0]], basis.clone())];
 
-    let wave_function = SingleDeterminant::new(orbitals);
+    let wave_function = SingleDeterminant::new(orbitals).unwrap();
 
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_pos, array![1, 1]);
@@ -46,7 +46,7 @@ fn hydrogen_molecular_ion_lcao() {
         "Energy" => hamiltonian
     };
 
-    let sampler = Sampler::new(wave_function, metrop, &obs);
+    let sampler = Sampler::new(wave_function, metrop, &obs).unwrap();
 
     let runner = Runner::new(sampler, MockLogger);
     let result = runner.run(10000, 100).unwrap();

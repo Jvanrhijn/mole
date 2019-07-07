@@ -2,8 +2,8 @@
 use std::collections::HashMap;
 // First party imports
 use crate::traits::*;
-use operator::OperatorValue;
 use errors::Error;
+use operator::OperatorValue;
 
 /// Struct for running Monte Carlo integration
 /// Generic over Samplers
@@ -21,13 +21,17 @@ where
         Self { sampler, logger }
     }
 
-    pub fn run(mut self, steps: usize, block_size: usize) -> Result<MonteCarloResult<S::WaveFunc>, Error> {
+    pub fn run(
+        mut self,
+        steps: usize,
+        block_size: usize,
+    ) -> Result<MonteCarloResult<S::WaveFunc>, Error> {
         assert!(steps >= 2 * block_size);
         let blocks = steps / block_size;
         let mut output = String::new();
         for block_nr in 0..blocks {
             for _ in 0..block_size {
-                self.sampler.move_state();
+                self.sampler.move_state()?;
                 // Discard first block for equilibration
                 if block_nr > 0 {
                     self.sampler.sample()?;
@@ -72,7 +76,7 @@ mod tests {
         const ENERGY_EXACT: f64 = -0.5;
         let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
         let orbital = Orbital::new(array![[1.0]], basis_set);
-        let wave_func = SingleDeterminant::new(vec![orbital]);
+        let wave_func = SingleDeterminant::new(vec![orbital]).unwrap();
 
         let local_e = ElectronicHamiltonian::new(
             KineticEnergy::new(),
@@ -86,7 +90,7 @@ mod tests {
             "Local Energy".to_string(),
             Box::new(local_e) as Box<dyn Operator<_>>,
         );
-        let sampler = Sampler::new(wave_func, metropolis, &obs);
+        let sampler = Sampler::new(wave_func, metropolis, &obs).unwrap();
 
         let sampler = Runner::new(sampler, MockLogger).run(100, 1).unwrap();
 

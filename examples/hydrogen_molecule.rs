@@ -3,7 +3,7 @@ use std::collections::HashMap;
 extern crate ndarray;
 use rand::{SeedableRng, StdRng};
 
-use gnuplot::{AxesCommon, Caption, Color, Figure};
+use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 
 use ndarray::Array1;
 
@@ -50,16 +50,16 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 25;
+    const NITERS: usize = 10;
 
     // threads to use
-    const NWORKERS: usize = 4;
+    const NWORKERS: usize = 8;
 
     // Sample data points across all workers
-    const TOTAL_SAMPLES: usize = 10_000;
+    const TOTAL_SAMPLES: usize = 1000;
 
     // use a block size of 10
-    const BLOCK_SIZE: usize = 100;
+    const BLOCK_SIZE: usize = 20;
 
     // Use 2 Jastrow factor parameters (b2 and b3)
     const NPARM_JAS: usize = 2;
@@ -70,7 +70,7 @@ fn main() {
         orbitals.clone(),
         0.001, // scale distance
         1,     // number of electrons with spin up
-    );
+    ).unwrap();
 
     let obs = operators! {
         "Energy" => hamiltonian,
@@ -78,21 +78,22 @@ fn main() {
         "Wavefunction value" => WavefunctionValue
     };
 
-    let (wave_function, energies, errors) = {
+    let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0_u8; 32])),
             &obs,
-        );
+        )
+        .expect("Bad initial configuration");
 
         // Construct the VMC runner, with Stochastic reconfiguration as optimizer
         // and an empty Logger so no output is given during each VMC iteration
         let vmc_runner = VmcRunner::new(
             sampler,
-            //OnlineLbfgs::new(0.5, 5, NPARM_JAS),
-            //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
-            //SteepestDescent::new(0.01),
-            StochasticReconfiguration::new(0.05),
+            //OnlineLbfgs::new(1.0, 10, NPARM_JAS),
+            //NesterovMomentum::new(0.1, 0.01, NPARM_JAS),
+            //SteepestDescent::new(0.1),
+            StochasticReconfiguration::new(0.25),
             EmptyLogger,
         );
 
@@ -102,21 +103,26 @@ fn main() {
     .unwrap();
 
     // Plot the results
-    plot_results(energies.as_slice().unwrap(), errors.as_slice().unwrap());
+    plot_results(&energies, &errors);
 }
 
-fn plot_results(energy: &[f64], error: &[f64]) {
+fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
     let niters = energy.len();
     let iters: Vec<_> = (0..niters).collect();
     let exact = vec![-1.175; niters];
 
     let mut fig = Figure::new();
     fig.axes2d()
-        .y_error_bars(&iters, energy, error, &[Color("blue")])
         .lines(
             &iters,
             energy,
             &[Caption("VMC Energy of H2"), Color("blue")],
+        )
+        .fill_between(
+            &iters,
+            &(energy - error),
+            &(energy + error),
+            &[Color("blue"), FillAlpha(0.1)],
         )
         .lines(
             &iters,

@@ -57,7 +57,7 @@ impl IonicPotential {
 
 impl<T: Cache> Operator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(self.value(cfg)? * wf.current_value().0))
+        Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
 }
 
@@ -92,7 +92,7 @@ impl Function<f64> for ElectronicPotential {
 
 impl<T: Cache> Operator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(self.value(cfg)? * wf.current_value().0))
+        Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
 }
 
@@ -120,7 +120,7 @@ where
     T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, _cfg: &Array<f64, Ix2>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(-0.5 * wf.current_value().2))
+        Ok(Scalar(-0.5 * wf.current_value()?.2))
     }
 }
 
@@ -207,7 +207,7 @@ mod tests {
             let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
             let hamiltonian = IonicHamiltonian::new(kinetic, potential);
             let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
-            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
 
             let cfg = array![[v[0], v[1], v[2]]];
 
@@ -244,7 +244,7 @@ mod tests {
             let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
             let hamiltonian = IonicHamiltonian::new(kinetic, potential);
             let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
-            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
 
             let cfg = array![[v[0], v[1], v[2]]];
 

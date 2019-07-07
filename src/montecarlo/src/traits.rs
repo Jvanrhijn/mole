@@ -1,9 +1,10 @@
+use errors::Error;
 use operator::OperatorValue;
 use std::collections::HashMap;
-use errors::Error;
 
 pub struct MonteCarloResult<T> {
     pub wave_function: T,
+    pub acceptance: f64,
     pub data: HashMap<String, Vec<OperatorValue>>,
 }
 
@@ -18,7 +19,7 @@ pub trait MonteCarloSampler {
     fn data(&self) -> &HashMap<String, Vec<OperatorValue>>;
 
     /// Move the current state to a new configuration.
-    fn move_state(&mut self);
+    fn move_state(&mut self) -> Result<(), Error>;
 
     fn num_observables(&self) -> usize;
 

@@ -193,9 +193,7 @@ impl StochasticReconfiguration {
         wf_values: &Vec<OperatorValue>,
     ) -> Result<Array2<f64>> {
         let nsamples = parm_grad.len();
-        let nparm = parm_grad[0]
-            .get_vector()?
-            .len();
+        let nparm = parm_grad[0].get_vector()?.len();
 
         // construct the stochastic reconfiguration matrix
         let mut sr_mat = Array2::<f64>::zeros((nparm, nparm));
@@ -204,10 +202,7 @@ impl StochasticReconfiguration {
         let mut sr_o = Array2::<f64>::zeros((nsamples, nparm));
         for n in 0..nsamples {
             for i in 0..nparm {
-                sr_o[[n, i]] = parm_grad[n]
-                    .get_vector()?[i]
-                    / wf_values[n]
-                        .get_scalar()?;
+                sr_o[[n, i]] = parm_grad[n].get_vector()?[i] / wf_values[n].get_scalar()?;
             }
         }
 

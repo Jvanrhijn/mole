@@ -82,7 +82,7 @@ where
                 })
                 .collect();
 
-            let mc_data = Self::concatenate_worker_data(&results?);
+            let (mc_data, acceptance) = Self::concatenate_worker_data(&results?);
 
             let (averages, errors) = Self::process_monte_carlo_results(&mc_data, block_size)?;
 
@@ -98,9 +98,10 @@ where
             self.sampler.wave_function_mut().update_parameters(&deltap);
 
             println!(
-                "Energy:      {:.8} +/- {:.9}",
+                "Energy:      {:.8} +/- {:.9}    accept: {:.8}",
                 energies.last().expect("No samples present"),
-                energy_errs.last().expect("No samples present")
+                energy_errs.last().expect("No samples present"),
+                acceptance / (total_samples as f64),
             );
         }
 
@@ -113,13 +114,14 @@ where
 
     fn concatenate_worker_data(
         worker_data: &Vec<MonteCarloResult<T>>,
-    ) -> HashMap<String, Vec<OperatorValue>> {
-        // computes energy, energy error, energy gradient over several parallel MC runs
+    ) -> (HashMap<String, Vec<OperatorValue>>, f64) {
         let mut full_data: HashMap<String, Vec<OperatorValue>> = HashMap::new();
         // concatenate all MC worker results
+        let mut accept = 0.0;
         worker_data
             .iter()
-            .for_each(|MonteCarloResult { data, .. }| {
+            .for_each(|MonteCarloResult { wave_function: _, acceptance, data }| {
+                accept += acceptance;
                 data.iter().for_each(|(key, data)| {
                     full_data
                         .entry(key.to_string())
@@ -127,17 +129,20 @@ where
                         .append(&mut (data.clone()));
                 })
             });
-        full_data
+        (full_data, accept)
     }
 
     // average all MC data and compute error bars
     fn process_monte_carlo_results(
         mc_results: &HashMap<String, Vec<OperatorValue>>,
         block_size: usize,
-    ) -> Result<(
-        HashMap<String, OperatorValue>,
-        HashMap<String, OperatorValue>,
-    ), Error> {
+    ) -> Result<
+        (
+            HashMap<String, OperatorValue>,
+            HashMap<String, OperatorValue>,
+        ),
+        Error,
+    > {
         use OperatorValue::Scalar;
         // computes averages of all components of concatenated data
         let averages = mc_results
@@ -149,7 +154,9 @@ where
             .iter()
             .map(|(name, samples)| {
                 // mean of this quantity
-                let mean = averages.get(name).expect("Given observable not present in results");
+                let mean = averages
+                    .get(name)
+                    .expect("Given observable not present in results");
                 // split the data into blocks
                 let blocks = samples.chunks(block_size);
                 let nblocks = blocks.len();
@@ -159,7 +166,8 @@ where
                 let block_mean_square =
                     Self::mean(&block_means.clone().map(|x| &x * &x).collect::<Vec<_>>());
                 // compute error
-                let error = ((block_mean_square - mean * mean) / Scalar((nblocks - 1) as f64)).map(f64::sqrt);
+                let error = ((block_mean_square - mean * mean) / Scalar((nblocks - 1) as f64))
+                    .map(f64::sqrt);
                 (name.to_string(), error)
             })
             .collect::<HashMap<_, _>>();

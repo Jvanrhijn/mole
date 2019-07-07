@@ -36,7 +36,7 @@ fn helium_lcao() {
         Orbital::new(array![[1.0]], basis.clone()),
     ];
 
-    let wave_function = SpinDeterminantProduct::new(orbitals, 1);
+    let wave_function = SpinDeterminantProduct::new(orbitals, 1).unwrap();
 
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_pos, array![2]);
@@ -50,7 +50,7 @@ fn helium_lcao() {
         "Energy" => hamiltonian
     };
 
-    let sampler = Sampler::new(wave_function, metrop, &obs);
+    let sampler = Sampler::new(wave_function, metrop, &obs).unwrap();
 
     let runner = Runner::new(sampler, MockLogger);
     let result = runner.run(1000, 100).unwrap();

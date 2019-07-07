@@ -59,7 +59,7 @@ where
         let ke = self.t.act_on(wf, cfg)?;
         // Potential energy: V = 0.5*m*omega^2*|x|^2
         let pe = OperatorValue::Scalar(
-            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.current_value().0,
+            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.current_value()?.0,
         );
         Ok(&ke + &pe)
     }
@@ -72,7 +72,7 @@ fn main() {
 
     // Build wave function
     let orbital = Orbital::new(array![[1.0]], basis);
-    let ansatz = SingleDeterminant::new(vec![orbital]);
+    let ansatz = SingleDeterminant::new(vec![orbital]).unwrap();
 
     let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 
@@ -83,7 +83,7 @@ fn main() {
         "Energy" => hamiltonian
     };
 
-    let sampler = Sampler::new(ansatz, metrop, &obs);
+    let sampler = Sampler::new(ansatz, metrop, &obs).expect("Bad initial configuration");
 
     // Perform the MC integration
     let runner = Runner::new(sampler, Logger);
