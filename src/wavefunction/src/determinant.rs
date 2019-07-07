@@ -6,6 +6,7 @@ use ndarray::{Array, Array1, Array2, Array3, Axis, Ix1, Ix2, Ix3};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
 use errors::Error::{self, EmptyCacheError, FuncError};
+use optimize::Optimize;
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -344,6 +345,32 @@ where
         )
     }
 }
+
+//impl<T> Optimize for Slater<T> 
+//where
+//    T: Function<f64, D = Ix1> + Differentiate<D = Ix1> + Optimize,
+//{
+//    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
+//        
+//    }
+//
+//    fn num_parameters(&self) -> usize {
+//        self.orbs.iter().fold(0, |n, o| o.num_parameters())
+//    }
+//
+//    fn parameters(&self) -> &Array1<f64> {
+//        // TODO: rework to avoid clone
+//        &Array1::from_vec(self.orbs.iter().fold(Vec::new(), |ps, o| {
+//            ps.append(&mut o.parameters().to_vec());
+//            ps
+//        }))
+//    }
+//
+//    fn update_parameters(&mut self, deltap: &Array1<f64>) {
+//
+//    }
+//
+//}
 
 #[cfg(test)]
 mod tests {
