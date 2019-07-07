@@ -9,7 +9,7 @@ use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 use ndarray::{Array1, Ix2};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
-use errors::Error::{self, DataAccessError};
+use errors::Error;
 
 struct EmptyLogger;
 impl Log for EmptyLogger {

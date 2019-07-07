@@ -7,6 +7,7 @@ use basis::Hydrogen1sBasis;
 use montecarlo::{traits::Log, Sampler};
 use ndarray::Array1;
 use operator::{ElectronicHamiltonian, OperatorValue};
+#[allow(unused_imports)]
 use optimize::{NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration};
 use rand::{SeedableRng, StdRng};
 use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};

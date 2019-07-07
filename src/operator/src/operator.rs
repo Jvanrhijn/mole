@@ -197,8 +197,8 @@ mod tests {
                 .prop_map(|x| {
                     let d = x.iter().map(|c| c.powi(2)).sum::<f64>().sqrt();
                     match d {
-                        (0.0..1e-5) => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
-                        (1e-5..100.0) => x,
+                        _ if d >= 0.0 && d < 1e-5 => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
+                        _ if d >= 1e-5 && d < 100.0 => x,
                         _ => x.iter().map(|c| c / d * 100.0).collect::<Vec<_>>()
                     }
                 })
@@ -211,7 +211,7 @@ mod tests {
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg);
+            wf.refresh(&cfg).unwrap();
             let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
             let wval = wf.value(&cfg).unwrap();
 
@@ -231,10 +231,9 @@ mod tests {
                 v in vec(num::f64::NORMAL, 3)
                 .prop_map(|x| {
                     let d = x.iter().map(|c| c.powi(2)).sum::<f64>().sqrt();
-                    // TODO: refactor this since float matching is deprecated
                     match d {
-                        (0.0..1e-5) => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
-                        (1e-5..100.0) => x,
+                        _ if d >= 0.0 && d < 1e-5 => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
+                        _ if d >= 1e-5 && d < 100.0 => x,
                         _ => x.iter().map(|c| c / d * 100.0).collect::<Vec<_>>()
                     }
                 })
@@ -248,7 +247,7 @@ mod tests {
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg);
+            wf.refresh(&cfg).unwrap();
             let hpsi = *hamiltonian.act_on(&wf, &cfg).unwrap().get_scalar().unwrap();
             let wval = wf.value(&cfg).unwrap();
             let energy = hpsi/wval;

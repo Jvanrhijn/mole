@@ -4,12 +4,12 @@ extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use metropolis::MetropolisBox;
 use montecarlo::{
-    traits::{Log, MonteCarloSampler},
+    traits::Log,
     Runner, Sampler,
 };
 use ndarray::{Array1, Axis};
 use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, Operator,
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy,
     OperatorValue,
 };
 use wavefunction::{Orbital, SingleDeterminant};
@@ -20,7 +20,7 @@ use rand::{SeedableRng, StdRng};
 
 struct MockLogger;
 impl Log for MockLogger {
-    fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+    fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
         String::new()
     }
 }

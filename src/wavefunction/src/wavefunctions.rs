@@ -184,17 +184,6 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
         let (cfg_up, cfg_down) = self.split_config(cfg);
         self.det_up.refresh(&cfg_up)?;
         self.det_down.refresh(&cfg_down)?;
-<<<<<<< HEAD
-        let (det_up_v, det_up_g, det_up_l) = self.det_up.current_value();
-        let (det_down_v, det_down_g, det_down_l) = self.det_down.current_value();
-        *self.value_cache.front_mut().ok_or(EmptyCacheError)? = det_up_v * det_down_v;
-        *self.grad_cache.front_mut().ok_or(EmptyCacheError)? =
-            stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
-        *self
-            .laplacian_cache
-            .front_mut()
-            .ok_or(EmptyCacheError)? = det_up_v * det_down_l + det_down_v * det_up_l;
-=======
         let (det_up_v, det_up_g, det_up_l) = self.det_up.current_value()?;
         let (det_down_v, det_down_g, det_down_l) = self.det_down.current_value()?;
         *self.value_cache.front_mut().ok_or(EmptyCacheError)? = det_up_v * det_down_v;
@@ -202,7 +191,6 @@ impl<T: BasisSet> Cache for SpinDeterminantProduct<T> {
             stack![Axis(0), det_down_v * &det_up_g, det_up_v * &det_down_g];
         *self.laplacian_cache.front_mut().ok_or(EmptyCacheError)? =
             det_up_v * det_down_l + det_down_v * det_up_l;
->>>>>>> 5104ca7acabc5f1b962e2ee5d5d492730e05fc94
         self.flush_update();
         Ok(())
     }
@@ -456,7 +444,7 @@ mod tests {
         let config = array![[1.0, 0.0, 0.0]];
         let config_slice = array![1.0, 0.0, 0.0];
 
-        wf.refresh(&config);
+        wf.refresh(&config).unwrap();
 
         let cur_value = wf.current_value().unwrap().0;
         let cur_grad = wf.current_value().unwrap().1;
@@ -505,7 +493,7 @@ mod tests {
         let value = wave_function.value(&cfg).unwrap();
         let grad = wave_function.gradient(&cfg).unwrap();
         let laplacian = wave_function.laplacian(&cfg).unwrap();
-        wave_function.refresh(&cfg);
+        wave_function.refresh(&cfg).unwrap();
 
         assert_eq!(wave_function.current_value().unwrap().0, value);
         assert_eq!(wave_function.current_value().unwrap().1, grad);
@@ -517,7 +505,7 @@ mod tests {
         let value = wave_function.value(&cfg).unwrap();
         let grad = wave_function.gradient(&cfg).unwrap();
         let laplacian = wave_function.laplacian(&cfg).unwrap();
-        wave_function.enqueue_update(0, &cfg);
+        wave_function.enqueue_update(0, &cfg).unwrap();
         wave_function.push_update();
 
         assert!((wave_function.current_value().unwrap().0 - value).abs() < 1e-14);
@@ -544,14 +532,14 @@ mod tests {
 
         let mut cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
 
-        wave_function.refresh(&cfg);
+        wave_function.refresh(&cfg).unwrap();
 
         cfg[[0, 1]] = -1.0;
 
         let (grad, laplacian) =
             grad_laplacian_finite_difference(&wave_function, &cfg, 1e-3).unwrap();
 
-        wave_function.enqueue_update(0, &cfg);
+        wave_function.enqueue_update(0, &cfg).unwrap();
 
         assert!(wave_function
             .enqueued_value()

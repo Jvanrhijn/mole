@@ -6,7 +6,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 extern crate ndarray_rand;
 
-mod block;
 pub mod montecarlo;
 pub mod samplers;
 pub mod traits;

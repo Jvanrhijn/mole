@@ -10,6 +10,7 @@ use ndarray::Array1;
 use basis::Hydrogen1sBasis;
 use montecarlo::{traits::Log, Sampler};
 use operator::{ElectronicHamiltonian, OperatorValue};
+#[allow(unused_imports)]
 use optimize::{
     MomentumDescent, NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration,
 };

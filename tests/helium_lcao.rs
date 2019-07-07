@@ -4,12 +4,12 @@ extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use metropolis::MetropolisDiffuse;
 use montecarlo::{
-    traits::{Log, MonteCarloSampler},
+    traits::Log,
     Runner, Sampler,
 };
 use ndarray::{Array1, Axis};
 use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, Operator,
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy,
     OperatorValue,
 };
 use rand::{SeedableRng, StdRng};

@@ -465,12 +465,12 @@ mod tests {
         // arbitrary configuration
         let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
         // initialize cache
-        cached.refresh(&x);
+        cached.refresh(&x).unwrap();
 
         // move the first electron
         let xmov = array![[1.0, 2.0, 3.0], [1.0, 0.2, 1.0]];
         // update the cached wave function
-        cached.enqueue_update(0, &xmov);
+        cached.enqueue_update(0, &xmov).unwrap();
         cached.push_update();
 
         // retrieve values

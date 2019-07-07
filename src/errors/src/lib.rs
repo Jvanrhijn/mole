@@ -2,7 +2,6 @@
 use std::convert;
 // Third party imports
 use ndarray_linalg::error::LinalgError;
-use std::fmt;
 
 #[derive(Debug)]
 pub enum Error {

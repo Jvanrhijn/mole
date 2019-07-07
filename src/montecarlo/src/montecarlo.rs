@@ -65,7 +65,7 @@ mod tests {
 
     struct MockLogger;
     impl Log for MockLogger {
-        fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+        fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
             String::new()
         }
     }
