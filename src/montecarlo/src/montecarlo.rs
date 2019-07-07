@@ -58,7 +58,7 @@ mod tests {
     use basis::{self, Hydrogen1sBasis};
     use metropolis::MetropolisBox;
     use operator::{
-        ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, Operator,
+        ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, LocalOperator,
     };
     use rand::rngs::StdRng;
     use wavefunction::{Orbital, SingleDeterminant};
@@ -88,7 +88,7 @@ mod tests {
         let mut obs = HashMap::new();
         obs.insert(
             "Local Energy".to_string(),
-            Box::new(local_e) as Box<dyn Operator<_>>,
+            Box::new(local_e) as Box<dyn LocalOperator<_>>,
         );
         let sampler = Sampler::new(wave_func, metropolis, &obs).unwrap();
 

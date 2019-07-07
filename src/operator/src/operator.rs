@@ -3,7 +3,7 @@ use ndarray::{Array, Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 // First party imports
 use crate::traits::{
-    Operator,
+    LocalOperator,
     OperatorValue::{self, *},
 };
 use errors::Error;
@@ -55,7 +55,7 @@ impl IonicPotential {
     }
 }
 
-impl<T: Cache> Operator<T> for IonicPotential {
+impl<T: Cache> LocalOperator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
@@ -90,7 +90,7 @@ impl Function<f64> for ElectronicPotential {
     }
 }
 
-impl<T: Cache> Operator<T> for ElectronicPotential {
+impl<T: Cache> LocalOperator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
@@ -115,7 +115,7 @@ impl KineticEnergy {
     }
 }
 
-impl<T> Operator<T> for KineticEnergy
+impl<T> LocalOperator<T> for KineticEnergy
 where
     T: Differentiate<D = Ix2> + Cache,
 {
@@ -139,7 +139,7 @@ impl IonicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for IonicHamiltonian
+impl<T> LocalOperator<T> for IonicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
@@ -174,7 +174,7 @@ impl ElectronicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for ElectronicHamiltonian
+impl<T> LocalOperator<T> for ElectronicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
