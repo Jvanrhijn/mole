@@ -56,14 +56,14 @@ fn main() {
 
     const TOTAL_SAMPLES: usize = 10_000;
 
-    const BLOCK_SIZE: usize = 100;
+    const BLOCK_SIZE: usize = 50;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
         Array1::zeros(NPARM_JAS), // Jastrow factor parameters
         orbitals.clone(),
         0.001, // scale distance
-        2,     // number of electrons with spin up
+        1,     // number of electrons with spin up
     ).expect("Bad wave function");
 
     let obs = operators! {
@@ -85,9 +85,9 @@ fn main() {
         let vmc_runner = VmcRunner::new(
             sampler,
             //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
-            //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
+            NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             //SteepestDescent::new(0.001),
-            StochasticReconfiguration::new(0.1),
+            //StochasticReconfiguration::new(10.0),
             EmptyLogger {
                 block_size: BLOCK_SIZE,
             },

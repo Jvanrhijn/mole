@@ -141,6 +141,7 @@ where
     fn consume_result(self) -> MonteCarloResult<Self::WaveFunc> {
         MonteCarloResult {
             wave_function: self.wave_function,
+            acceptance: self.acceptance,
             data: self.samples,
         }
     }

@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 pub struct MonteCarloResult<T> {
     pub wave_function: T,
+    pub acceptance: f64,
     pub data: HashMap<String, Vec<OperatorValue>>,
 }
 

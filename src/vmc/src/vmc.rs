@@ -82,7 +82,7 @@ where
                 })
                 .collect();
 
-            let mc_data = Self::concatenate_worker_data(&results?);
+            let (mc_data, acceptance) = Self::concatenate_worker_data(&results?);
 
             let (averages, errors) = Self::process_monte_carlo_results(&mc_data, block_size)?;
 
@@ -98,9 +98,10 @@ where
             self.sampler.wave_function_mut().update_parameters(&deltap);
 
             println!(
-                "Energy:      {:.8} +/- {:.9}",
+                "Energy:      {:.8} +/- {:.9}    accept: {:.8}",
                 energies.last().expect("No samples present"),
-                energy_errs.last().expect("No samples present")
+                energy_errs.last().expect("No samples present"),
+                acceptance / (total_samples as f64),
             );
         }
 
@@ -113,13 +114,14 @@ where
 
     fn concatenate_worker_data(
         worker_data: &Vec<MonteCarloResult<T>>,
-    ) -> HashMap<String, Vec<OperatorValue>> {
-        // computes energy, energy error, energy gradient over several parallel MC runs
+    ) -> (HashMap<String, Vec<OperatorValue>>, f64) {
         let mut full_data: HashMap<String, Vec<OperatorValue>> = HashMap::new();
         // concatenate all MC worker results
+        let mut accept = 0.0;
         worker_data
             .iter()
-            .for_each(|MonteCarloResult { data, .. }| {
+            .for_each(|MonteCarloResult { wave_function: _, acceptance, data }| {
+                accept += acceptance;
                 data.iter().for_each(|(key, data)| {
                     full_data
                         .entry(key.to_string())
@@ -127,7 +129,7 @@ where
                         .append(&mut (data.clone()));
                 })
             });
-        full_data
+        (full_data, accept)
     }
 
     // average all MC data and compute error bars
