@@ -278,7 +278,12 @@ pub struct JastrowSlater<T: BasisSet> {
 }
 
 impl<T: BasisSet> JastrowSlater<T> {
-    pub fn new(parms: Array1<f64>, orbitals: Vec<Orbital<T>>, scal: f64, num_up: usize) -> Result<Self> {
+    pub fn new(
+        parms: Array1<f64>,
+        orbitals: Vec<Orbital<T>>,
+        scal: f64,
+        num_up: usize,
+    ) -> Result<Self> {
         let num_elec = orbitals.len();
         let jastrow = JastrowFactor::new(parms, num_elec, scal, num_up);
         let value_cache = VecDeque::from(vec![1.0]);

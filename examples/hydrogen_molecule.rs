@@ -71,7 +71,8 @@ fn main() {
         orbitals.clone(),
         0.001, // scale distance
         1,     // number of electrons with spin up
-    ).unwrap();
+    )
+    .unwrap();
 
     let obs = operators! {
         "Energy" => hamiltonian,

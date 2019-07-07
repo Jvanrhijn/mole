@@ -3,14 +3,10 @@ use std::collections::HashMap;
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use metropolis::MetropolisBox;
-use montecarlo::{
-    traits::Log,
-    Runner, Sampler,
-};
+use montecarlo::{traits::Log, Runner, Sampler};
 use ndarray::{Array1, Axis};
 use operator::{
-    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy,
-    OperatorValue,
+    ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
 };
 use wavefunction::{Orbital, SingleDeterminant};
 #[macro_use]

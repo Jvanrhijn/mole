@@ -76,7 +76,7 @@ where
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
-    V: Metropolis<T, R: Rng>,
+    V: Metropolis<T>,
 {
     type WaveFunc = T;
 
@@ -159,6 +159,6 @@ where
     }
 
     fn generate_seed(&mut self) -> [u8; 32] {
-        self.metropolis.rng_mut().gen::<[u8; 32]>()
+        self.metropolis.generate_seed()
     }
 }
