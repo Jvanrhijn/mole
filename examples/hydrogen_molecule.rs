@@ -50,16 +50,16 @@ fn main() {
 
     // Set VMC parameters
     // use 100 iterations
-    const NITERS: usize = 25;
+    const NITERS: usize = 10;
 
     // threads to use
-    const NWORKERS: usize = 4;
+    const NWORKERS: usize = 8;
 
     // Sample data points across all workers
-    const TOTAL_SAMPLES: usize = 10_000;
+    const TOTAL_SAMPLES: usize = 1000;
 
     // use a block size of 10
-    const BLOCK_SIZE: usize = 100;
+    const BLOCK_SIZE: usize = 20;
 
     // Use 2 Jastrow factor parameters (b2 and b3)
     const NPARM_JAS: usize = 2;
@@ -81,7 +81,7 @@ fn main() {
     let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0_u8; 32])),
             &obs,
         )
         .expect("Bad initial configuration");
@@ -90,10 +90,10 @@ fn main() {
         // and an empty Logger so no output is given during each VMC iteration
         let vmc_runner = VmcRunner::new(
             sampler,
-            //OnlineLbfgs::new(0.5, 5, NPARM_JAS),
-            //NesterovMomentum::new(STEP_SIZE, MOMENTUM_PARAMETER, NPARM_JAS),
-            //SteepestDescent::new(0.01),
-            StochasticReconfiguration::new(0.05),
+            //OnlineLbfgs::new(1.0, 10, NPARM_JAS),
+            //NesterovMomentum::new(0.1, 0.01, NPARM_JAS),
+            //SteepestDescent::new(0.1),
+            StochasticReconfiguration::new(0.25),
             EmptyLogger,
         );
 

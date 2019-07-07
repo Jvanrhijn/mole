@@ -75,7 +75,7 @@ fn main() {
     let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.25, StdRng::from_seed([0_u8; 32])),
             &obs,
         )
         .expect("Bad initial configuration");
@@ -85,9 +85,9 @@ fn main() {
         let vmc_runner = VmcRunner::new(
             sampler,
             //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
-            NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
+            //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             //SteepestDescent::new(0.001),
-            //StochasticReconfiguration::new(10.0),
+            StochasticReconfiguration::new(10.0),
             EmptyLogger {
                 block_size: BLOCK_SIZE,
             },
