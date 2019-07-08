@@ -40,6 +40,28 @@ fn linear_combination_general(
     (value, grad, laplacian)
 }
 
+#[allow(dead_code)]
+fn coeff_deriv_general(
+    pos: &Array1<f64>,
+    coeffs: &Array2<f64>,
+    centers: &Array2<f64>,
+    widths: &[f64],
+    func: &dyn Fn(&Array1<f64>, f64) -> Vgl,
+) -> Array2<f64> {
+    let shape = coeffs.shape();
+    let n = shape[0];
+    let m = shape[1];
+    let mut grad = Array2::zeros((n, m));
+    for i in 0..n {
+        for j in 0..m {
+            let center = centers.slice(s![i, ..]);
+            let (v, _, _) = func(&(pos - &center), widths[j]);
+            grad[[i, j]] = v;
+        }
+    }
+    grad
+}
+
 impl GaussianBasis {
     pub fn new(centers: Array2<f64>, widths: Vec<f64>) -> Self {
         Self { centers, widths }
@@ -49,6 +71,10 @@ impl GaussianBasis {
 impl BasisSet for GaussianBasis {
     fn linear_combination(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Vgl {
         linear_combination_general(pos, coeffs, &self.centers, &self.widths, &gaussian)
+    }
+
+    fn coefficient_derivative(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Array2<f64> {
+        coeff_deriv_general(pos, coeffs, &self.centers, &self.widths, &gaussian)
     }
 }
 
@@ -68,6 +94,10 @@ impl BasisSet for Hydrogen1sBasis {
     fn linear_combination(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Vgl {
         linear_combination_general(pos, coeffs, &self.centers, &self.widths, &hydrogen_1s)
     }
+
+    fn coefficient_derivative(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Array2<f64> {
+        coeff_deriv_general(pos, coeffs, &self.centers, &self.widths, &hydrogen_1s)
+    }
 }
 
 #[derive(Clone)]
@@ -85,5 +115,9 @@ impl Hydrogen2sBasis {
 impl BasisSet for Hydrogen2sBasis {
     fn linear_combination(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Vgl {
         linear_combination_general(pos, coeffs, &self.centers, &self.widths, &hydrogen_2s)
+    }
+
+    fn coefficient_derivative(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Array2<f64> {
+        coeff_deriv_general(pos, coeffs, &self.centers, &self.widths, &hydrogen_2s)
     }
 }

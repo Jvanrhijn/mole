@@ -278,7 +278,12 @@ pub struct JastrowSlater<T: BasisSet> {
 }
 
 impl<T: BasisSet> JastrowSlater<T> {
-    pub fn new(parms: Array1<f64>, orbitals: Vec<Orbital<T>>, scal: f64, num_up: usize) -> Result<Self> {
+    pub fn new(
+        parms: Array1<f64>,
+        orbitals: Vec<Orbital<T>>,
+        scal: f64,
+        num_up: usize,
+    ) -> Result<Self> {
         let num_elec = orbitals.len();
         let jastrow = JastrowFactor::new(parms, num_elec, scal, num_up);
         let value_cache = VecDeque::from(vec![1.0]);
@@ -444,7 +449,7 @@ mod tests {
         let config = array![[1.0, 0.0, 0.0]];
         let config_slice = array![1.0, 0.0, 0.0];
 
-        wf.refresh(&config);
+        wf.refresh(&config).unwrap();
 
         let cur_value = wf.current_value().unwrap().0;
         let cur_grad = wf.current_value().unwrap().1;
@@ -493,7 +498,7 @@ mod tests {
         let value = wave_function.value(&cfg).unwrap();
         let grad = wave_function.gradient(&cfg).unwrap();
         let laplacian = wave_function.laplacian(&cfg).unwrap();
-        wave_function.refresh(&cfg);
+        wave_function.refresh(&cfg).unwrap();
 
         assert_eq!(wave_function.current_value().unwrap().0, value);
         assert_eq!(wave_function.current_value().unwrap().1, grad);
@@ -505,7 +510,7 @@ mod tests {
         let value = wave_function.value(&cfg).unwrap();
         let grad = wave_function.gradient(&cfg).unwrap();
         let laplacian = wave_function.laplacian(&cfg).unwrap();
-        wave_function.enqueue_update(0, &cfg);
+        wave_function.enqueue_update(0, &cfg).unwrap();
         wave_function.push_update();
 
         assert!((wave_function.current_value().unwrap().0 - value).abs() < 1e-14);
@@ -532,14 +537,14 @@ mod tests {
 
         let mut cfg = array![[1.0, 2.0, 3.0], [0.1, -0.5, 0.2], [-1.2, -0.8, 0.3]];
 
-        wave_function.refresh(&cfg);
+        wave_function.refresh(&cfg).unwrap();
 
         cfg[[0, 1]] = -1.0;
 
         let (grad, laplacian) =
             grad_laplacian_finite_difference(&wave_function, &cfg, 1e-3).unwrap();
 
-        wave_function.enqueue_update(0, &cfg);
+        wave_function.enqueue_update(0, &cfg).unwrap();
 
         assert!(wave_function
             .enqueued_value()

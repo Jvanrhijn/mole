@@ -3,7 +3,7 @@ use ndarray::{Array, Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 // First party imports
 use crate::traits::{
-    Operator,
+    LocalOperator,
     OperatorValue::{self, *},
 };
 use errors::Error;
@@ -55,7 +55,7 @@ impl IonicPotential {
     }
 }
 
-impl<T: Cache> Operator<T> for IonicPotential {
+impl<T: Cache> LocalOperator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
@@ -90,7 +90,7 @@ impl Function<f64> for ElectronicPotential {
     }
 }
 
-impl<T: Cache> Operator<T> for ElectronicPotential {
+impl<T: Cache> LocalOperator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
@@ -115,7 +115,7 @@ impl KineticEnergy {
     }
 }
 
-impl<T> Operator<T> for KineticEnergy
+impl<T> LocalOperator<T> for KineticEnergy
 where
     T: Differentiate<D = Ix2> + Cache,
 {
@@ -139,7 +139,7 @@ impl IonicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for IonicHamiltonian
+impl<T> LocalOperator<T> for IonicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
@@ -174,7 +174,7 @@ impl ElectronicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for ElectronicHamiltonian
+impl<T> LocalOperator<T> for ElectronicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
@@ -197,8 +197,8 @@ mod tests {
                 .prop_map(|x| {
                     let d = x.iter().map(|c| c.powi(2)).sum::<f64>().sqrt();
                     match d {
-                        (0.0..1e-5) => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
-                        (1e-5..100.0) => x,
+                        _ if d >= 0.0 && d < 1e-5 => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
+                        _ if d >= 1e-5 && d < 100.0 => x,
                         _ => x.iter().map(|c| c / d * 100.0).collect::<Vec<_>>()
                     }
                 })
@@ -211,7 +211,7 @@ mod tests {
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg);
+            wf.refresh(&cfg).unwrap();
             let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
             let wval = wf.value(&cfg).unwrap();
 
@@ -231,10 +231,9 @@ mod tests {
                 v in vec(num::f64::NORMAL, 3)
                 .prop_map(|x| {
                     let d = x.iter().map(|c| c.powi(2)).sum::<f64>().sqrt();
-                    // TODO: refactor this since float matching is deprecated
                     match d {
-                        (0.0..1e-5) => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
-                        (1e-5..100.0) => x,
+                        _ if d >= 0.0 && d < 1e-5 => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
+                        _ if d >= 1e-5 && d < 100.0 => x,
                         _ => x.iter().map(|c| c / d * 100.0).collect::<Vec<_>>()
                     }
                 })
@@ -248,7 +247,7 @@ mod tests {
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg);
+            wf.refresh(&cfg).unwrap();
             let hpsi = *hamiltonian.act_on(&wf, &cfg).unwrap().get_scalar().unwrap();
             let wval = wf.value(&cfg).unwrap();
             let energy = hpsi/wval;

@@ -6,6 +6,7 @@ use ndarray::{Array, Array1, Array2, Array3, Axis, Ix1, Ix2, Ix3};
 use ndarray_linalg::{solve::Determinant, Inverse};
 // First party imports
 use errors::Error::{self, EmptyCacheError, FuncError};
+use optimize::Optimize;
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 
 type Result<T> = std::result::Result<T, Error>;
@@ -34,9 +35,7 @@ impl<T: Function<f64, D = Ix1> + Differentiate<D = Ix1>> Slater<T> {
         let matrix_laplac = Array::<f64, Ix2>::zeros((mat_dim, mat_dim));
         // Scale matrix for stability in inversion
         let scale = matrix.iter().fold(0.0_f64, |a, b| a.abs().max(b.abs()));
-        let inv = (1.0 / scale * &matrix)
-            .inv()?
-            / scale;
+        let inv = (1.0 / scale * &matrix).inv()? / scale;
         // put cached data in queues
         let matrix_queue = VecDeque::from(vec![matrix]);
         let matrix_laplac_queue = VecDeque::from(vec![matrix_laplac]);
@@ -347,6 +346,32 @@ where
     }
 }
 
+//impl<T> Optimize for Slater<T> 
+//where
+//    T: Function<f64, D = Ix1> + Differentiate<D = Ix1> + Optimize,
+//{
+//    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
+//        
+//    }
+//
+//    fn num_parameters(&self) -> usize {
+//        self.orbs.iter().fold(0, |n, o| o.num_parameters())
+//    }
+//
+//    fn parameters(&self) -> &Array1<f64> {
+//        // TODO: rework to avoid clone
+//        &Array1::from_vec(self.orbs.iter().fold(Vec::new(), |ps, o| {
+//            ps.append(&mut o.parameters().to_vec());
+//            ps
+//        }))
+//    }
+//
+//    fn update_parameters(&mut self, deltap: &Array1<f64>) {
+//
+//    }
+//
+//}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -465,12 +490,12 @@ mod tests {
         // arbitrary configuration
         let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
         // initialize cache
-        cached.refresh(&x);
+        cached.refresh(&x).unwrap();
 
         // move the first electron
         let xmov = array![[1.0, 2.0, 3.0], [1.0, 0.2, 1.0]];
         // update the cached wave function
-        cached.enqueue_update(0, &xmov);
+        cached.enqueue_update(0, &xmov).unwrap();
         cached.push_update();
 
         // retrieve values

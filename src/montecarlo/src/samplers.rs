@@ -10,7 +10,7 @@ use crate::traits::*;
 use errors::Error;
 use metropolis::Metropolis;
 use operator::{
-    Operator,
+    LocalOperator,
     OperatorValue::{self, *},
 };
 use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
@@ -26,7 +26,7 @@ where
     wave_function: T,
     config: Array2<f64>,
     metropolis: V,
-    observables: &'a HashMap<String, Box<dyn Operator<T>>>,
+    observables: &'a HashMap<String, Box<dyn LocalOperator<T>>>,
     samples: HashMap<String, Vec<OperatorValue>>,
     acceptance: f64,
 }
@@ -40,7 +40,7 @@ where
     pub fn new(
         mut wave_function: T,
         mut metrop: V,
-        observables: &'a HashMap<String, Box<dyn Operator<T>>>,
+        observables: &'a HashMap<String, Box<dyn LocalOperator<T>>>,
     ) -> Result<Self, Error> {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random_using((nelec, 3), Range::new(-1., 1.), metrop.rng_mut());
@@ -58,7 +58,7 @@ where
     pub fn with_initial_configuration(
         mut wave_function: T,
         metrop: V,
-        observables: &'a HashMap<String, Box<dyn Operator<T>>>,
+        observables: &'a HashMap<String, Box<dyn LocalOperator<T>>>,
         cfg: Array2<f64>,
     ) -> Result<Self, Error> {
         wave_function.refresh(&cfg)?;
@@ -76,7 +76,7 @@ where
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
     T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
-    V: Metropolis<T, R: Rng>,
+    V: Metropolis<T>,
 {
     type WaveFunc = T;
 
@@ -159,6 +159,6 @@ where
     }
 
     fn generate_seed(&mut self) -> [u8; 32] {
-        self.metropolis.rng_mut().gen::<[u8; 32]>()
+        self.metropolis.generate_seed()
     }
 }

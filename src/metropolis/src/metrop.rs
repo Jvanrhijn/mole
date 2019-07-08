@@ -67,7 +67,7 @@ where
                 &mut self.rng,
             );
         }
-        wf.enqueue_update(idx, &config_proposed);
+        wf.enqueue_update(idx, &config_proposed)?;
         Ok(config_proposed)
     }
 
@@ -151,7 +151,7 @@ where
             mov_slice +=
                 &Array1::random_using(3, Normal::new(0.0, self.time_step.sqrt()), &mut self.rng);
         }
-        wf.enqueue_update(idx, &config_proposed);
+        wf.enqueue_update(idx, &config_proposed)?;
         Ok(config_proposed)
     }
 
@@ -204,7 +204,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use errors::Error;
 
     // define stub wave function
     #[derive(Clone)]

@@ -7,7 +7,7 @@ use metropolis::MetropolisBox;
 use montecarlo::{traits::Log, Runner, Sampler};
 use ndarray::{Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
-use operator::{KineticEnergy, Operator, OperatorValue};
+use operator::{KineticEnergy, LocalOperator, OperatorValue};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SingleDeterminant};
 use wavefunction_traits::{Cache, Differentiate};
@@ -50,7 +50,7 @@ impl HarmonicHamiltonian {
 
 // All observables must implement the Operator<T> trait
 // T is the type parameter of the wave function.
-impl<T> Operator<T> for HarmonicHamiltonian
+impl<T> LocalOperator<T> for HarmonicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {

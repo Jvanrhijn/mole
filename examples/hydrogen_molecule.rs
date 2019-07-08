@@ -10,6 +10,7 @@ use ndarray::Array1;
 use basis::Hydrogen1sBasis;
 use montecarlo::{traits::Log, Sampler};
 use operator::{ElectronicHamiltonian, OperatorValue};
+#[allow(unused_imports)]
 use optimize::{
     MomentumDescent, NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration,
 };
@@ -70,7 +71,8 @@ fn main() {
         orbitals.clone(),
         0.001, // scale distance
         1,     // number of electrons with spin up
-    ).unwrap();
+    )
+    .unwrap();
 
     let obs = operators! {
         "Energy" => hamiltonian,

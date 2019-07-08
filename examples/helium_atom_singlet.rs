@@ -7,6 +7,7 @@ use basis::Hydrogen1sBasis;
 use montecarlo::{traits::Log, Sampler};
 use ndarray::{Array1, Array2};
 use operator::{ElectronicHamiltonian, OperatorValue};
+#[allow(unused_imports)]
 use optimize::{Optimizer, NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration};
 use rand::{SeedableRng, StdRng};
 use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};
@@ -59,7 +60,8 @@ fn main() {
         orbitals.clone(),
         0.001, // scale distance
         1,     // number of electrons with spin up
-    ).expect("Bad wave function");
+    )
+    .expect("Bad wave function");
 
     let (energies, errors) = optimize_wave_function(&ion_pos, wave_function, StochasticReconfiguration::new(1.0));
 

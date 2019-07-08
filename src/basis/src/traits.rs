@@ -4,4 +4,6 @@ pub type Vgl = (f64, Array1<f64>, f64);
 
 pub trait BasisSet {
     fn linear_combination(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Vgl;
+
+    fn coefficient_derivative(&self, pos: &Array1<f64>, coeffs: &Array2<f64>) -> Array2<f64>;
 }

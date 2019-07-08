@@ -1,4 +1,4 @@
-use errors::Error::{self, DataAccessError, OperatorValueAccessError};
+use errors::Error::{self, DataAccessError};
 use ndarray::{Array1, Array2, Axis};
 use operator::OperatorValue;
 use std::collections::HashMap;

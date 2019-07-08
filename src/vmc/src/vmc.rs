@@ -9,7 +9,7 @@ use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
 use ndarray::{Array1, Ix2};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 
-use errors::Error::{self, DataAccessError};
+use errors::Error;
 
 struct EmptyLogger;
 impl Log for EmptyLogger {
@@ -118,9 +118,12 @@ where
         let mut full_data: HashMap<String, Vec<OperatorValue>> = HashMap::new();
         // concatenate all MC worker results
         let mut accept = 0.0;
-        worker_data
-            .iter()
-            .for_each(|MonteCarloResult { wave_function: _, acceptance, data }| {
+        worker_data.iter().for_each(
+            |MonteCarloResult {
+                 wave_function: _,
+                 acceptance,
+                 data,
+             }| {
                 accept += acceptance;
                 data.iter().for_each(|(key, data)| {
                     full_data
@@ -128,7 +131,8 @@ where
                         .or_insert_with(|| Vec::new())
                         .append(&mut (data.clone()));
                 })
-            });
+            },
+        );
         (full_data, accept)
     }
 

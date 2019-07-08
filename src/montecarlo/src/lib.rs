@@ -1,4 +1,3 @@
-#![feature(associated_type_bounds)]
 extern crate itertools;
 #[allow(unused_imports)]
 #[macro_use]
@@ -6,7 +5,6 @@ extern crate ndarray;
 extern crate ndarray_linalg;
 extern crate ndarray_rand;
 
-mod block;
 pub mod montecarlo;
 pub mod samplers;
 pub mod traits;
