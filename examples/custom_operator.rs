@@ -2,13 +2,17 @@ use std::collections::HashMap;
 #[macro_use]
 extern crate ndarray;
 use basis::GaussianBasis;
+use errors::Error;
 use metropolis::MetropolisBox;
 use montecarlo::{traits::Log, Runner, Sampler};
 use ndarray::{Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
-use operator::{KineticEnergy, Operator, OperatorValue};
+use operator::{KineticEnergy, LocalOperator, OperatorValue};
 use rand::{SeedableRng, StdRng};
-use wavefunction::{Cache, Differentiate, Error, Orbital, SingleDeterminant};
+use wavefunction::{Orbital, SingleDeterminant};
+use wavefunction_traits::{Cache, Differentiate};
+#[macro_use]
+extern crate util;
 
 // Create a very basic logger
 struct Logger;
@@ -46,7 +50,7 @@ impl HarmonicHamiltonian {
 
 // All observables must implement the Operator<T> trait
 // T is the type parameter of the wave function.
-impl<T> Operator<T> for HarmonicHamiltonian
+impl<T> LocalOperator<T> for HarmonicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
@@ -55,7 +59,7 @@ where
         let ke = self.t.act_on(wf, cfg)?;
         // Potential energy: V = 0.5*m*omega^2*|x|^2
         let pe = OperatorValue::Scalar(
-            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.current_value().0,
+            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.current_value()?.0,
         );
         Ok(&ke + &pe)
     }
@@ -68,23 +72,26 @@ fn main() {
 
     // Build wave function
     let orbital = Orbital::new(array![[1.0]], basis);
-    let ansatz = SingleDeterminant::new(vec![orbital]);
+    let ansatz = SingleDeterminant::new(vec![orbital]).unwrap();
 
     let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 
     // Construct our custom operator
     let hamiltonian = HarmonicHamiltonian::new(1.0);
 
-    let mut sampler = Sampler::new(ansatz, metrop);
-    sampler.add_observable("Energy", hamiltonian);
+    let obs = operators! {
+        "Energy" => hamiltonian
+    };
+
+    let sampler = Sampler::new(ansatz, metrop, &obs).expect("Bad initial configuration");
 
     // Perform the MC integration
-    let mut runner = Runner::new(sampler, Logger);
-    runner.run(1000, 1);
+    let runner = Runner::new(sampler, Logger);
+    let result = runner.run(1000, 1).unwrap();
 
     let energy_data = Array1::<f64>::from_vec(
-        runner
-            .data()
+        result
+            .data
             .get("Energy")
             .unwrap()
             .iter()
@@ -96,7 +103,7 @@ fn main() {
     let energy = *energy_data.mean_axis(Axis(0)).first().unwrap();
     let error = *energy_data.std_axis(Axis(0), 0.0).first().unwrap();
 
-    assert_eq!(energy, 1.5);
+    assert!((energy - 1.5).abs() < 1e-15);
     assert!(error < 1e-15);
 
     println!("\nEnergy:     {} +/- {:.*}", energy, 8, error);

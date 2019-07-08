@@ -3,10 +3,13 @@ use ndarray_linalg::Norm;
 use ndarray_rand::RandomExt;
 use rand::distributions::{Normal, Range};
 use rand::rngs::StdRng;
-use rand::{FromEntropy, Rng};
+use rand::{FromEntropy, Rng, SeedableRng};
 
 use crate::traits::Metropolis;
-use wavefunction::{Cache, Differentiate, Function};
+use errors::Error;
+use wavefunction_traits::{Cache, Differentiate, Function};
+
+type Result<T> = std::result::Result<T, Error>;
 
 #[allow(dead_code)]
 type Vgl = (f64, Array2<f64>, f64);
@@ -15,6 +18,7 @@ type Vgl = (f64, Array2<f64>, f64);
 /// Transition matrix T(x -> x') is constant inside a cubical box,
 /// and zero outside it. This yields an acceptance probability of
 /// $A(x -> x') = \min(\psi(x')^2 / \psi(x)^2, 1)$.
+#[derive(Clone)]
 pub struct MetropolisBox<R>
 where
     R: Rng,
@@ -43,8 +47,9 @@ impl MetropolisBox<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
-    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize>,
-    R: Rng,
+    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize> + Clone,
+    R: Rng + SeedableRng,
+    <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
     type R = R;
 
@@ -52,7 +57,7 @@ where
         &mut self.rng
     }
 
-    fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
+    fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Result<Array2<f64>> {
         let mut config_proposed = cfg.clone();
         {
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
@@ -62,29 +67,44 @@ where
                 &mut self.rng,
             );
         }
-        wf.enqueue_update(idx, &config_proposed);
-        config_proposed
+        wf.enqueue_update(idx, &config_proposed)?;
+        Ok(config_proposed)
     }
 
-    fn accept_move(&mut self, wf: &mut T, _cfg: &Array2<f64>, _cfg_prop: &Array2<f64>) -> bool {
+    fn accept_move(
+        &mut self,
+        wf: &mut T,
+        _cfg: &Array2<f64>,
+        _cfg_prop: &Array2<f64>,
+    ) -> Result<bool> {
         let wf_value = match wf.enqueued_value() {
             (Some(v), _, _) => v,
-            _ => wf.current_value().0,
+            _ => wf.current_value()?.0,
         };
-        let acceptance = (wf_value.powi(2) / wf.current_value().0.powi(2)).min(1.0);
-        acceptance > self.rng.gen::<f64>()
+        let acceptance = (wf_value.powi(2) / wf.current_value()?.0.powi(2)).min(1.0);
+        Ok(acceptance > self.rng.gen::<f64>())
     }
 
-    fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>> {
-        let cfg_proposed = self.propose_move(wf, cfg, idx);
-        if self.accept_move(wf, cfg, &cfg_proposed) {
-            Some(cfg_proposed)
+    fn move_state(
+        &mut self,
+        wf: &mut T,
+        cfg: &Array2<f64>,
+        idx: usize,
+    ) -> Result<Option<Array2<f64>>> {
+        let cfg_proposed = self.propose_move(wf, cfg, idx)?;
+        if self.accept_move(wf, cfg, &cfg_proposed)? {
+            Ok(Some(cfg_proposed))
         } else {
-            None
+            Ok(None)
         }
+    }
+
+    fn reseed_rng(&mut self, s: [u8; 32]) {
+        self.rng = Self::R::from_seed(s.into());
     }
 }
 
+#[derive(Clone)]
 pub struct MetropolisDiffuse<R>
 where
     R: Rng,
@@ -110,8 +130,9 @@ impl MetropolisDiffuse<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
 where
-    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize>,
-    R: Rng,
+    T: Differentiate + Function<f64, D = Ix2> + Cache<U = usize> + Clone,
+    R: Rng + SeedableRng,
+    <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
     type R = R;
 
@@ -119,10 +140,10 @@ where
         &mut self.rng
     }
 
-    fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Array2<f64> {
+    fn propose_move(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Result<Array2<f64>> {
         let mut config_proposed = cfg.clone();
         {
-            let (wf_value, wf_grad, _) = wf.current_value();
+            let (wf_value, wf_grad, _) = wf.current_value()?;
             let drift_velocity = &wf_grad.slice(s![idx, ..]) / wf_value;
 
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
@@ -130,17 +151,22 @@ where
             mov_slice +=
                 &Array1::random_using(3, Normal::new(0.0, self.time_step.sqrt()), &mut self.rng);
         }
-        wf.enqueue_update(idx, &config_proposed);
-        config_proposed
+        wf.enqueue_update(idx, &config_proposed)?;
+        Ok(config_proposed)
     }
 
-    fn accept_move(&mut self, wf: &mut T, cfg: &Array2<f64>, cfg_prop: &Array2<f64>) -> bool {
+    fn accept_move(
+        &mut self,
+        wf: &mut T,
+        cfg: &Array2<f64>,
+        cfg_prop: &Array2<f64>,
+    ) -> Result<bool> {
         let (wf_value, wf_grad) = match wf.enqueued_value() {
             (Some(v), Some(g), _) => (v, g),
-            _ => (wf.current_value().0, wf.current_value().1),
+            _ => (wf.current_value()?.0, wf.current_value()?.1),
         };
         let drift_velocity = &wf_grad / wf_value;
-        let (wf_value_old, wf_grad_old, _) = wf.current_value();
+        let (wf_value_old, wf_grad_old, _) = wf.current_value()?;
         let drift_velocity_old = &wf_grad_old / wf_value_old;
 
         let exponent = -1.0 / (2.0 * self.time_step)
@@ -151,27 +177,36 @@ where
                     * (drift_velocity.norm_l2() - drift_velocity_old.norm_l2()));
 
         let acceptance =
-            (exponent.exp() * wf_value.powi(2) / wf.current_value().0.powi(2)).min(1.0);
+            (exponent.exp() * wf_value.powi(2) / wf.current_value()?.0.powi(2)).min(1.0);
 
-        acceptance > self.rng.gen::<f64>()
+        Ok(acceptance > self.rng.gen::<f64>())
     }
 
-    fn move_state(&mut self, wf: &mut T, cfg: &Array2<f64>, idx: usize) -> Option<Array2<f64>> {
-        let cfg_proposed = self.propose_move(wf, cfg, idx);
-        if self.accept_move(wf, cfg, &cfg_proposed) {
-            Some(cfg_proposed)
+    fn move_state(
+        &mut self,
+        wf: &mut T,
+        cfg: &Array2<f64>,
+        idx: usize,
+    ) -> Result<Option<Array2<f64>>> {
+        let cfg_proposed = self.propose_move(wf, cfg, idx)?;
+        if self.accept_move(wf, cfg, &cfg_proposed)? {
+            Ok(Some(cfg_proposed))
         } else {
-            None
+            Ok(None)
         }
+    }
+
+    fn reseed_rng(&mut self, s: [u8; 32]) {
+        self.rng = Self::R::from_seed(s.into());
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wavefunction::Error;
 
     // define stub wave function
+    #[derive(Clone)]
     struct WaveFunctionMock {
         value: f64,
     }
@@ -186,7 +221,7 @@ mod tests {
     impl Function<f64> for WaveFunctionMock {
         type D = Ix2;
 
-        fn value(&self, _cfg: &Array2<f64>) -> Result<f64, Error> {
+        fn value(&self, _cfg: &Array2<f64>) -> Result<f64> {
             Ok(self.value)
         }
     }
@@ -194,11 +229,11 @@ mod tests {
     impl Differentiate for WaveFunctionMock {
         type D = Ix2;
 
-        fn gradient(&self, _cfg: &Array2<f64>) -> Result<Array2<f64>, Error> {
+        fn gradient(&self, _cfg: &Array2<f64>) -> Result<Array2<f64>> {
             unimplemented!()
         }
 
-        fn laplacian(&self, _cfg: &Array2<f64>) -> Result<f64, Error> {
+        fn laplacian(&self, _cfg: &Array2<f64>) -> Result<f64> {
             Ok(1.0)
         }
     }
@@ -207,12 +242,16 @@ mod tests {
 
     impl Cache for WaveFunctionMock {
         type U = usize;
-        fn refresh(&mut self, _new: &Array2<f64>) {}
-        fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) {}
+        fn refresh(&mut self, _new: &Array2<f64>) -> Result<()> {
+            Ok(())
+        }
+        fn enqueue_update(&mut self, _ud: Self::U, _new: &Array2<f64>) -> Result<()> {
+            Ok(())
+        }
         fn push_update(&mut self) {}
         fn flush_update(&mut self) {}
-        fn current_value(&self) -> Vgl {
-            (self.value, Array2::ones((1, 1)) * self.value, self.value)
+        fn current_value(&self) -> Result<Vgl> {
+            Ok((self.value, Array2::ones((1, 1)) * self.value, self.value))
         }
         fn enqueued_value(&self) -> Ovgl {
             (
@@ -228,8 +267,8 @@ mod tests {
         let cfg = Array2::<f64>::ones((1, 3));
         let mut wf = WaveFunctionMock { value: 1.0 };
         let mut metrop = MetropolisBox::<StdRng>::new(1.0);
-        let new_cfg = metrop.propose_move(&mut wf, &cfg, 0); // should always accept
-        assert!(metrop.accept_move(&mut wf, &cfg, &new_cfg));
+        let new_cfg = metrop.propose_move(&mut wf, &cfg, 0).unwrap(); // should always accept
+        assert!(metrop.accept_move(&mut wf, &cfg, &new_cfg).unwrap());
     }
 
 }

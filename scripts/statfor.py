@@ -4,7 +4,7 @@ import sys
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.mlab as mlab
+import scipy.stats as stats
 
 
 MAX_STEPS = 200
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     means = np.array([b.mean() for b in blocks])
 
     n, bins = ax[1].hist(means, density=True, bins=len(means)//10)[:2]
-    gaussian = mlab.normpdf(bins, means.mean(), np.sqrt(means.var()))
+    gaussian = stats.norm.pdf(bins, means.mean(), np.sqrt(means.var()))
     ax[1].plot(bins, gaussian)
     ax[1].grid()
     ax[1].set_title("Block average histogram")

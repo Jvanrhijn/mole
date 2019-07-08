@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 // First party imports
 use crate::traits::*;
+use errors::Error;
 use operator::OperatorValue;
 
 /// Struct for running Monte Carlo integration
@@ -20,16 +21,20 @@ where
         Self { sampler, logger }
     }
 
-    pub fn run(&mut self, steps: usize, block_size: usize) {
+    pub fn run(
+        mut self,
+        steps: usize,
+        block_size: usize,
+    ) -> Result<MonteCarloResult<S::WaveFunc>, Error> {
         assert!(steps >= 2 * block_size);
         let blocks = steps / block_size;
         let mut output = String::new();
         for block_nr in 0..blocks {
             for _ in 0..block_size {
-                self.sampler.move_state();
+                self.sampler.move_state()?;
                 // Discard first block for equilibration
                 if block_nr > 0 {
-                    self.sampler.sample();
+                    self.sampler.sample()?;
                     output = self.logger.log(self.sampler.data());
                 }
             }
@@ -37,6 +42,7 @@ where
                 println!("{}", output);
             }
         }
+        Ok(self.sampler.consume_result())
     }
 
     pub fn data(&self) -> &HashMap<String, Vec<OperatorValue>> {
@@ -51,13 +57,15 @@ mod tests {
     use crate::traits::Log;
     use basis::{self, Hydrogen1sBasis};
     use metropolis::MetropolisBox;
-    use operator::{ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy};
+    use operator::{
+        ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, LocalOperator,
+    };
     use rand::rngs::StdRng;
     use wavefunction::{Orbital, SingleDeterminant};
 
     struct MockLogger;
     impl Log for MockLogger {
-        fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+        fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
             String::new()
         }
     }
@@ -68,7 +76,7 @@ mod tests {
         const ENERGY_EXACT: f64 = -0.5;
         let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
         let orbital = Orbital::new(array![[1.0]], basis_set);
-        let wave_func = SingleDeterminant::new(vec![orbital]);
+        let wave_func = SingleDeterminant::new(vec![orbital]).unwrap();
 
         let local_e = ElectronicHamiltonian::new(
             KineticEnergy::new(),
@@ -77,14 +85,17 @@ mod tests {
         );
 
         let metropolis = MetropolisBox::<StdRng>::new(1.0);
-        let mut sampler = Sampler::new(wave_func, metropolis);
-        sampler.add_observable("Local Energy", local_e);
+        let mut obs = HashMap::new();
+        obs.insert(
+            "Local Energy".to_string(),
+            Box::new(local_e) as Box<dyn LocalOperator<_>>,
+        );
+        let sampler = Sampler::new(wave_func, metropolis, &obs).unwrap();
 
-        let mut runner = Runner::new(sampler, MockLogger);
-        runner.run(100, 1);
+        let sampler = Runner::new(sampler, MockLogger).run(100, 1).unwrap();
 
-        let result = runner
-            .data()
+        let result = sampler
+            .data
             .get("Local Energy")
             .unwrap()
             .clone()

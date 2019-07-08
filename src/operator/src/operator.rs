@@ -3,11 +3,11 @@ use ndarray::{Array, Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 // First party imports
 use crate::traits::{
-    Operator,
+    LocalOperator,
     OperatorValue::{self, *},
 };
-use optimize::Optimize;
-use wavefunction::{Cache, Differentiate, Error, Function};
+use errors::Error;
+use wavefunction_traits::{Cache, Differentiate, Function};
 
 /// Ionic potential energy operator:
 /// $\hat{V}_{\mathrm{ion}} = -\sum_{i=1}^{N_{\mathrm{ions}}\sum_{j=1}^{\mathrm{e}} \frac{Z_i}{r_{ij}}$.
@@ -55,9 +55,9 @@ impl IonicPotential {
     }
 }
 
-impl<T: Cache> Operator<T> for IonicPotential {
+impl<T: Cache> LocalOperator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(self.value(cfg)? * wf.current_value().0))
+        Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
 }
 
@@ -90,9 +90,9 @@ impl Function<f64> for ElectronicPotential {
     }
 }
 
-impl<T: Cache> Operator<T> for ElectronicPotential {
+impl<T: Cache> LocalOperator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(self.value(cfg)? * wf.current_value().0))
+        Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
     }
 }
 
@@ -115,12 +115,12 @@ impl KineticEnergy {
     }
 }
 
-impl<T> Operator<T> for KineticEnergy
+impl<T> LocalOperator<T> for KineticEnergy
 where
     T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, _cfg: &Array<f64, Ix2>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(-0.5 * wf.current_value().2))
+        Ok(Scalar(-0.5 * wf.current_value()?.2))
     }
 }
 
@@ -139,7 +139,7 @@ impl IonicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for IonicHamiltonian
+impl<T> LocalOperator<T> for IonicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
@@ -174,30 +174,12 @@ impl ElectronicHamiltonian {
     }
 }
 
-impl<T> Operator<T> for ElectronicHamiltonian
+impl<T> LocalOperator<T> for ElectronicHamiltonian
 where
     T: Differentiate<D = Ix2> + Cache,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)
-    }
-}
-
-pub struct ParameterGradient;
-
-impl<T: Optimize + Cache> Operator<T> for ParameterGradient {
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(OperatorValue::Vector(wf.parameter_gradient(cfg)) * Scalar(wf.current_value().0))
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct WavefunctionValue;
-
-impl<T: Cache> Operator<T> for WavefunctionValue {
-    fn act_on(&self, wf: &T, _cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        // need to square this, since "local value" is operator product / wave function value
-        Ok(OperatorValue::Scalar(wf.current_value().0.powi(2)))
     }
 }
 
@@ -215,8 +197,8 @@ mod tests {
                 .prop_map(|x| {
                     let d = x.iter().map(|c| c.powi(2)).sum::<f64>().sqrt();
                     match d {
-                        (0.0..1e-5) => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
-                        (1e-5..100.0) => x,
+                        _ if d >= 0.0 && d < 1e-5 => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
+                        _ if d >= 1e-5 && d < 100.0 => x,
                         _ => x.iter().map(|c| c / d * 100.0).collect::<Vec<_>>()
                     }
                 })
@@ -225,11 +207,11 @@ mod tests {
             let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
             let hamiltonian = IonicHamiltonian::new(kinetic, potential);
             let basis_set = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
-            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg);
+            wf.refresh(&cfg).unwrap();
             let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
             let wval = wf.value(&cfg).unwrap();
 
@@ -249,10 +231,9 @@ mod tests {
                 v in vec(num::f64::NORMAL, 3)
                 .prop_map(|x| {
                     let d = x.iter().map(|c| c.powi(2)).sum::<f64>().sqrt();
-                    // TODO: refactor this since float matching is deprecated
                     match d {
-                        (0.0..1e-5) => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
-                        (1e-5..100.0) => x,
+                        _ if d >= 0.0 && d < 1e-5 => x.iter().map(|c| c + 1e-5).collect::<Vec<_>>(),
+                        _ if d >= 1e-5 && d < 100.0 => x,
                         _ => x.iter().map(|c| c / d * 100.0).collect::<Vec<_>>()
                     }
                 })
@@ -262,11 +243,11 @@ mod tests {
             let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
             let hamiltonian = IonicHamiltonian::new(kinetic, potential);
             let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
-            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]);
+            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg);
+            wf.refresh(&cfg).unwrap();
             let hpsi = *hamiltonian.act_on(&wf, &cfg).unwrap().get_scalar().unwrap();
             let wval = wf.value(&cfg).unwrap();
             let energy = hpsi/wval;

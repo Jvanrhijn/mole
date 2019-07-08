@@ -52,9 +52,10 @@ See the examples folder for detailed example usage.
 
 The figure below shows the result of optimizing a Jastrow-Slater wave function with two
 Jastrow e-e parameters and STO-populated Slater determinant, on a hydrogen molecule (H2)
-Hamiltonian. See `examples/hydrogen_molecule`.
+Hamiltonian. The figure compares a vanilla steepest descent optimization with
+the stochastic reconfiguration algorithm by Sorella. See `examples/hydrogen_molecule`.
 
-[![optimization demo](https://i.imgur.com/YtLT54M.png)](https://i.imgur.com/YtLT54M.png)
+[![optimization demo](https://i.imgur.com/vxJlrNS.png)](https://i.imgur.com/vxJlrNS.png)
 
 ### Goals
 

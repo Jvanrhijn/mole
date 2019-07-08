@@ -10,6 +10,8 @@ use operator::{
 };
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SpinDeterminantProduct};
+#[macro_use]
+extern crate util;
 
 struct MockLogger;
 impl Log for MockLogger {
@@ -30,7 +32,7 @@ fn helium_lcao() {
         Orbital::new(array![[1.0]], basis.clone()),
     ];
 
-    let wave_function = SpinDeterminantProduct::new(orbitals, 1);
+    let wave_function = SpinDeterminantProduct::new(orbitals, 1).unwrap();
 
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_pos, array![2]);
@@ -40,15 +42,18 @@ fn helium_lcao() {
     let rng = StdRng::from_seed([0u8; 32]);
     let metrop = MetropolisDiffuse::from_rng(0.1, rng);
 
-    let mut sampler = Sampler::new(wave_function, metrop);
-    sampler.add_observable("Energy", hamiltonian);
+    let obs = operators! {
+        "Energy" => hamiltonian
+    };
 
-    let mut runner = Runner::new(sampler, MockLogger);
-    runner.run(1000, 100);
+    let sampler = Sampler::new(wave_function, metrop, &obs).unwrap();
+
+    let runner = Runner::new(sampler, MockLogger);
+    let result = runner.run(1000, 100).unwrap();
 
     let energy_data = Array1::<f64>::from_vec(
-        runner
-            .data()
+        result
+            .data
             .get("Energy")
             .unwrap()
             .iter()

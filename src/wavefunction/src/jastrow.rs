@@ -1,12 +1,14 @@
-use crate::error::Error;
-use crate::traits::{Cache, Differentiate, Function};
+use errors::Error::{self, EmptyCacheError};
 use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use optimize::Optimize;
 use std::collections::VecDeque;
+use wavefunction_traits::{Cache, Differentiate, Function};
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
+
+type Result<T> = std::result::Result<T, Error>;
 
 // f_ee in notes
 // full Jastrow is then exp(f_ee)
@@ -40,7 +42,7 @@ impl ElectronElectronTerm {
 impl Function<f64> for ElectronElectronTerm {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let num_elec = cfg.shape()[0];
         let nparm = self.parms.len();
         let mut value = 0.0;
@@ -64,7 +66,7 @@ impl Function<f64> for ElectronElectronTerm {
 impl Differentiate for ElectronElectronTerm {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>, Error> {
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array<f64, Self::D>> {
         let nelec = cfg.shape()[0];
         let nparm = self.parms.len();
         let mut grad = Array2::<f64>::zeros((nelec, 3));
@@ -97,7 +99,7 @@ impl Differentiate for ElectronElectronTerm {
         Ok(grad)
     }
 
-    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let mut laplacian = 0.0;
         let nparm = self.parms.len();
         let nelec = cfg.shape()[0];
@@ -130,7 +132,7 @@ impl Differentiate for ElectronElectronTerm {
 }
 
 impl Optimize for ElectronElectronTerm {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
         let num_elec = cfg.shape()[0];
         let mut grad_bp = Array1::<f64>::zeros(self.parms.len());
         for i in 0..num_elec {
@@ -138,20 +140,26 @@ impl Optimize for ElectronElectronTerm {
                 let b1 = self.get_b1(i, j);
                 let rij: f64 = (&cfg.slice(s![i, ..]) - &cfg.slice(s![j, ..])).norm_l2();
                 let rij_scal = (1.0 - (-self.scal * rij).exp()) / self.scal;
-                // TODO: figure out where the sign error is in this bit
                 grad_bp[0] -= -b1 * rij_scal.powi(2) * (1.0 + self.parms[0] * rij_scal).powi(-2);
                 let mut grad_rest = grad_bp.slice_mut(s![1..]);
-                // TODO: figure out where the sign error and the off by one error are here
-                grad_rest += &(3..=self.parms.len() + 1)
+                grad_rest -= &(3..=self.parms.len() + 1)
                     .map(|p| rij_scal.powi(p as i32 - 1))
                     .collect::<Array1<f64>>();
             }
         }
-        grad_bp
+        Ok(grad_bp)
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
         self.parms += deltap;
+    }
+
+    fn parameters(&self) -> &Array1<f64> {
+        &self.parms
+    }
+
+    fn num_parameters(&self) -> usize {
+        self.parms.len()
     }
 }
 
@@ -180,7 +188,7 @@ impl JastrowFactor {
 impl Function<f64> for JastrowFactor {
     type D = Ix2;
 
-    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn value(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         Ok(self.fee.value(cfg)?.exp())
     }
 }
@@ -189,50 +197,51 @@ impl Function<f64> for JastrowFactor {
 impl Differentiate for JastrowFactor {
     type D = Ix2;
 
-    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array2<f64>, Error> {
+    fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array2<f64>> {
         let value = self.value(cfg)?;
         Ok(self.fee.gradient(cfg)? * value)
     }
 
-    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64, Error> {
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let value = self.value(cfg)?;
         Ok(value * (self.fee.laplacian(cfg)? + self.fee.gradient(cfg)?.norm_l2().powi(2)))
     }
 }
 
 impl Optimize for JastrowFactor {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64> {
-        self.fee.parameter_gradient(cfg) * self.current_value().0
+    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
+        Ok(self.fee.parameter_gradient(cfg)? * self.current_value()?.0)
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
         self.fee.update_parameters(deltap);
+    }
+
+    fn parameters(&self) -> &Array1<f64> {
+        self.fee.parameters()
+    }
+
+    fn num_parameters(&self) -> usize {
+        self.fee.num_parameters()
     }
 }
 
 impl Cache for JastrowFactor {
     type U = usize;
 
-    fn refresh(&mut self, cfg: &Array2<f64>) {
-        *self.value_queue.front_mut().unwrap() =
-            self.value(cfg).expect("Failed to compute Jastrow value");
-        *self.grad_queue.front_mut().unwrap() =
-            self.gradient(cfg).expect("Failed to take Jastrow gradient");
-        *self.laplac_queue.front_mut().unwrap() = self
-            .laplacian(cfg)
-            .expect("Failed to compute Jastrow Laplacian");
+    fn refresh(&mut self, cfg: &Array2<f64>) -> Result<()> {
+        *self.value_queue.front_mut().ok_or(EmptyCacheError)? = self.value(cfg)?;
+        *self.grad_queue.front_mut().ok_or(EmptyCacheError)? = self.gradient(cfg)?;
+        *self.laplac_queue.front_mut().ok_or(EmptyCacheError)? = self.laplacian(cfg)?;
         self.flush_update();
+        Ok(())
     }
 
-    fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) {
-        self.value_queue
-            .push_back(self.value(cfg).expect("Failed to store Jastrow value"));
-        self.grad_queue.push_back(
-            self.gradient(cfg)
-                .expect("Failed to store Jastrow gradient"),
-        );
-        self.laplac_queue
-            .push_back(self.laplacian(cfg).expect("Failed to store Laplacian"));
+    fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) -> Result<()> {
+        self.value_queue.push_back(self.value(cfg)?);
+        self.grad_queue.push_back(self.gradient(cfg)?);
+        self.laplac_queue.push_back(self.laplacian(cfg)?);
+        Ok(())
     }
 
     fn push_update(&mut self) {
@@ -253,28 +262,19 @@ impl Cache for JastrowFactor {
         }
     }
 
-    fn current_value(&self) -> Vgl {
-        match (
-            self.value_queue.front(),
-            self.grad_queue.front(),
-            self.laplac_queue.front(),
-        ) {
-            (Some(&v), Some(g), Some(&l)) => (v, g.clone(), l),
-            _ => panic!("Attempt to retrieve value from empty queue"),
-        }
+    fn current_value(&self) -> Result<Vgl> {
+        Ok((
+            *self.value_queue.front().ok_or(EmptyCacheError)?,
+            self.grad_queue.front().ok_or(EmptyCacheError)?.clone(),
+            *self.laplac_queue.front().ok_or(EmptyCacheError)?,
+        ))
     }
 
     fn enqueued_value(&self) -> Ovgl {
         (
-            self.value_queue
-                .back()
-                .and(Some(*self.value_queue.back().unwrap())),
-            self.grad_queue
-                .back()
-                .and(Some(self.grad_queue.back().unwrap().clone())),
-            self.laplac_queue
-                .back()
-                .and(Some(*self.laplac_queue.back().unwrap())),
+            self.value_queue.back().copied(),
+            self.grad_queue.back().cloned(),
+            self.laplac_queue.back().copied(),
         )
     }
 }

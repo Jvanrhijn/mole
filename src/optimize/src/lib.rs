@@ -1,7 +1,13 @@
-use ndarray::{Array1, Array2};
+#[macro_use]
+extern crate itertools;
+#[macro_use]
+extern crate ndarray;
+extern crate ndarray_linalg;
 
-pub trait Optimize {
-    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Array1<f64>;
+pub mod optimizers;
+pub mod traits;
 
-    fn update_parameters(&mut self, deltap: &Array1<f64>);
-}
+mod util;
+
+pub use crate::optimizers::*;
+pub use crate::traits::*;

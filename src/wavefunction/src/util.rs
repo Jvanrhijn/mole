@@ -1,6 +1,6 @@
-use crate::error::Error;
-use crate::traits::{Differentiate, Function};
+use errors::Error;
 use ndarray::{Array2, Ix2};
+use wavefunction_traits::{Differentiate, Function};
 
 #[allow(dead_code)]
 pub fn grad_laplacian_finite_difference<T>(

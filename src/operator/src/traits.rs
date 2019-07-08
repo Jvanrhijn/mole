@@ -3,8 +3,10 @@ use std::fmt;
 use std::iter::Sum;
 use std::ops::{Add, Div, Mul, Sub};
 // Third party imports
+use errors::Error::{self, OperatorValueAccessError};
 use ndarray::{Array1, Array2};
-use wavefunction::Error;
+
+type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OperatorValue {
@@ -24,30 +26,38 @@ impl fmt::Display for OperatorValue {
                 }
                 write!(f, "{}", output)
             }
-            _ => unimplemented!(),
+            _ => panic!("Display not implemented for Matrix values"),
         }
     }
 }
 
 impl OperatorValue {
-    pub fn get_scalar(&self) -> Option<&f64> {
+    pub fn map(&self, f: impl Fn(f64) -> f64) -> Self {
         match self {
-            OperatorValue::Scalar(value) => Some(value),
-            _ => None,
+            OperatorValue::Scalar(x) => OperatorValue::Scalar(f(*x)),
+            OperatorValue::Vector(v) => OperatorValue::Vector(v.mapv(f)),
+            OperatorValue::Matrix(m) => OperatorValue::Matrix(m.mapv(f)),
         }
     }
 
-    pub fn get_vector(&self) -> Option<&Array1<f64>> {
+    pub fn get_scalar(&self) -> Result<&f64> {
         match self {
-            OperatorValue::Vector(value) => Some(value),
-            _ => None,
+            OperatorValue::Scalar(value) => Ok(value),
+            _ => Err(OperatorValueAccessError),
         }
     }
 
-    pub fn get_matrix(&self) -> Option<&Array2<f64>> {
+    pub fn get_vector(&self) -> Result<&Array1<f64>> {
         match self {
-            OperatorValue::Matrix(value) => Some(value),
-            _ => None,
+            OperatorValue::Vector(value) => Ok(value),
+            _ => Err(OperatorValueAccessError),
+        }
+    }
+
+    pub fn get_matrix(&self) -> Result<&Array2<f64>> {
+        match self {
+            OperatorValue::Matrix(value) => Ok(value),
+            _ => Err(OperatorValueAccessError),
         }
     }
 }
@@ -65,10 +75,12 @@ impl Add for OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(value_other + value),
+                Vector(value_other) => Vector(value + value_other),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
                 Scalar(value_other) => Matrix(value_other + value),
+                Matrix(value_other) => Matrix(value_other + value),
                 _ => unimplemented!(),
             },
         }
@@ -88,6 +100,7 @@ impl Sub for OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(value_other - value),
+                Vector(value_other) => Vector(value_other - value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -111,6 +124,7 @@ impl Mul for OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(value_other * value),
+                Vector(value_other) => Vector(value_other * value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -157,6 +171,7 @@ impl Add for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other + value),
+                Vector(value_other) => Vector(value_other + value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -180,6 +195,7 @@ impl Sub for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other - value),
+                Vector(value_other) => Vector(value_other - value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -203,6 +219,7 @@ impl Mul for &OperatorValue {
             },
             Vector(value) => match other {
                 Scalar(value_other) => Vector(*value_other * value),
+                Vector(value_other) => Vector(value_other * value),
                 _ => unimplemented!(),
             },
             Matrix(value) => match other {
@@ -243,8 +260,8 @@ impl Sum for OperatorValue {
 }
 
 /// Interface for creating quantum operators that act on Function types.
-pub trait Operator<T> {
-    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error>;
+pub trait LocalOperator<T>: Send + Sync {
+    fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue>;
 }
 
 #[cfg(test)]

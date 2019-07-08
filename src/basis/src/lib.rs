@@ -1,4 +1,6 @@
 #![feature(slice_patterns)]
+#[macro_use]
+extern crate ndarray;
 mod basis;
 mod functions;
 mod traits;
