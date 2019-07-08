@@ -23,7 +23,20 @@ extern crate util;
 #[derive(Clone)]
 struct Logger {
     block_size: usize,
+    energy: f64,
+    iter: usize,
 }
+
+impl Logger {
+    pub fn new(block_size: usize) -> Self {
+        Self { block_size, energy: 0.0, iter: 1 }
+    }
+
+    fn update_energy(&mut self, new_sample: f64) {
+        self.energy += (new_sample - self.energy) / self.iter as f64;
+    }
+}
+
 impl Log for Logger {
     fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
         let energy = data
@@ -35,7 +48,13 @@ impl Log for Logger {
             .iter()
             .fold(0.0, |a, b| a + b.get_scalar().unwrap())
             / self.block_size as f64;
-        format!("\tBlock energy:    {:.8}", energy)
+        if self.iter == 0 {
+            self.energy = energy;
+        } else {
+            self.update_energy(energy);
+        }
+        self.iter += 1;
+        format!("\tBlock energy:    {:.8}    {:.8}", energy, self.energy)
     }
 }
 
@@ -49,7 +68,7 @@ static TOTAL_SAMPLES: usize = 5000;
 // Block size for blocking analysis. Effective number of
 // samples, assuming unit correlation time:
 // TOTAL_SAMPLES - BLOCK_SIZE * NWORKERS
-static BLOCK_SIZE: usize = 50;
+static BLOCK_SIZE: usize = 10;
 // Number of Jastrow factor parameters
 static NPARM_JAS: usize = 2;
 
@@ -122,9 +141,7 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
         let vmc_runner = VmcRunner::new(
             sampler,
             opt,
-            Logger {
-                block_size: BLOCK_SIZE,
-            },
+            Logger::new(BLOCK_SIZE),
         );
 
         // Actually run the VMC optimization

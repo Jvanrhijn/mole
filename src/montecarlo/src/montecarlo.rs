@@ -35,11 +35,13 @@ where
                 // Discard first block for equilibration
                 if block_nr > 0 {
                     self.sampler.sample()?;
-                    output = self.logger.log(self.sampler.data());
                 }
             }
-            if !output.is_empty() {
-                println!("{}", output);
+            if block_nr > 0 {
+                output = self.logger.log(self.sampler.data());
+                if !output.is_empty() {
+                    println!("{}", output);
+                }
             }
         }
         Ok(self.sampler.consume_result())
