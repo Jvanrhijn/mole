@@ -5,9 +5,9 @@ use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use montecarlo::{traits::Log, Sampler};
-use ndarray::Array1;
+use ndarray::{Array1, Array2};
 use operator::{ElectronicHamiltonian, OperatorValue};
-use optimize::{NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration};
+use optimize::{Optimizer, NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration};
 use rand::{SeedableRng, StdRng};
 use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};
 use wavefunction::{JastrowSlater, Orbital};
@@ -33,6 +33,12 @@ impl Log for EmptyLogger {
     }
 }
 
+static NITERS: usize = 20;
+static NWORKERS: usize = 8;
+static TOTAL_SAMPLES: usize = 10_000;
+static BLOCK_SIZE: usize = 50;
+static NPARM_JAS: usize = 2;
+
 fn main() {
     let width = 0.6;
     // setup basis set
@@ -46,17 +52,6 @@ fn main() {
         Orbital::new(array![[1.0]], basis_set.clone()),
     ];
 
-    const NPARM_JAS: usize = 2;
-
-    //  hamiltonian operator
-    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos, array![2]);
-
-    const NITERS: usize = 20;
-    const NWORKERS: usize = 8;
-
-    const TOTAL_SAMPLES: usize = 10_000;
-
-    const BLOCK_SIZE: usize = 50;
 
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
@@ -65,6 +60,18 @@ fn main() {
         0.001, // scale distance
         1,     // number of electrons with spin up
     ).expect("Bad wave function");
+
+    let (energies, errors) = optimize_wave_function(&ion_pos, wave_function, StochasticReconfiguration::new(1.0));
+
+    // Plot the results
+    plot_results(&energies, &errors);
+}
+
+fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(ion_pos: &Array2<f64>, wave_function: JastrowSlater<Hydrogen1sBasis>, opt: O) 
+    -> (Array1<f64>, Array1<f64>)
+{
+    //  hamiltonian operator
+    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![2]);
 
     let obs = operators! {
         "Energy" => hamiltonian,
@@ -87,7 +94,7 @@ fn main() {
             //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             //SteepestDescent::new(0.001),
-            StochasticReconfiguration::new(10.0),
+            opt,
             EmptyLogger {
                 block_size: BLOCK_SIZE,
             },
@@ -98,8 +105,7 @@ fn main() {
     }
     .expect("VMC optimization failed");
 
-    // Plot the results
-    plot_results(&energies, &errors);
+    (energies, errors)
 }
 
 fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
