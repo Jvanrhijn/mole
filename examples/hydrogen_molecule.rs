@@ -1,78 +1,107 @@
 use std::collections::HashMap;
+
 #[macro_use]
-extern crate ndarray;
-use rand::{SeedableRng, StdRng};
+extern crate itertools;
 
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-
-use ndarray::Array1;
-
+#[macro_use]
+extern crate ndarray;
 use basis::Hydrogen1sBasis;
 use montecarlo::{traits::Log, Sampler};
+use ndarray::{Array1, Array2};
 use operator::{ElectronicHamiltonian, OperatorValue};
 #[allow(unused_imports)]
 use optimize::{
-    MomentumDescent, NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration,
+    NesterovMomentum, OnlineLbfgs, Optimizer, SteepestDescent, StochasticReconfiguration,
 };
+use rand::{SeedableRng, StdRng};
 use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};
-
 use wavefunction::{JastrowSlater, Orbital};
 #[macro_use]
 extern crate util;
 
 #[derive(Clone)]
-struct EmptyLogger;
-impl Log for EmptyLogger {
-    fn log(&mut self, _data: &HashMap<String, Vec<OperatorValue>>) -> String {
-        String::new()
+struct Logger {
+    block_size: usize,
+}
+impl Log for Logger {
+    fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
+        let energy = data
+            .get("Energy")
+            .unwrap()
+            .chunks(self.block_size)
+            .last()
+            .unwrap()
+            .iter()
+            .fold(0.0, |a, b| a + b.get_scalar().unwrap())
+            / self.block_size as f64;
+        format!("\tBlock energy:    {:.8}", energy)
     }
 }
 
+// Number of VMC iterations
+static NITERS: usize = 20;
+// Number of threads
+static NWORKERS: usize = 8;
+// Total number of MC samples, distributed over workers
+// samples per worker is TOTAL_SAMPLES / NWORKERS
+static TOTAL_SAMPLES: usize = 5000;
+// Block size for blocking analysis. Effective number of
+// samples, assuming unit correlation time:
+// TOTAL_SAMPLES - BLOCK_SIZE * NWORKERS
+static BLOCK_SIZE: usize = 50;
+// Number of Jastrow factor parameters
+static NPARM_JAS: usize = 2;
+
 fn main() {
-    // First, set up the problem
+    let width = 1.0;
 
-    // Equilibrium H2 geometry
-    let ion_positions = array![[-0.7, 0.0, 0.0], [0.7, 0.0, 0.0]];
+    // H2 equilibrium geometry
+    let ion_pos = array![[-0.7, 0.0, 0.0], [0.7, 0.0, 0.0]];
 
-    // Use STO basis set, with one basis function centered on
-    // each proton
-    let basis_set = Hydrogen1sBasis::new(ion_positions.clone(), vec![1.0]);
+    // setup STO basis set
+    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![width, width]);
 
-    // Construct two orbitals from basis, both equally centered
-    // on each atom -- allowed since the electrons have opposite spin
-    // according to Hund's rule
+    // construct orbitals
     let orbitals = vec![
         Orbital::new(array![[1.0], [1.0]], basis_set.clone()),
         Orbital::new(array![[1.0], [1.0]], basis_set.clone()),
     ];
 
-    // Build the Electronic hamiltonian from the ion positions
-    let hamiltonian = ElectronicHamiltonian::from_ions(ion_positions, array![1, 1]);
-
-    // Set VMC parameters
-    // use 100 iterations
-    const NITERS: usize = 10;
-
-    // threads to use
-    const NWORKERS: usize = 8;
-
-    // Sample data points across all workers
-    const TOTAL_SAMPLES: usize = 1000;
-
-    // use a block size of 10
-    const BLOCK_SIZE: usize = 20;
-
-    // Use 2 Jastrow factor parameters (b2 and b3)
-    const NPARM_JAS: usize = 2;
-
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
-        Array1::zeros(NPARM_JAS),
+        Array1::zeros(NPARM_JAS), // Jastrow factor parameters
         orbitals.clone(),
         0.001, // scale distance
         1,     // number of electrons with spin up
     )
-    .unwrap();
+    .expect("Bad wave function");
+
+    // run optimization for two different optimizers
+    let (energies_sr, errors_sr) = optimize_wave_function(
+        &ion_pos,
+        wave_function.clone(),
+        StochasticReconfiguration::new(0.25),
+    );
+    let (energies_sd, errors_sd) =
+        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(0.05));
+
+    // Plot the results
+    plot_results(
+        &[energies_sr, energies_sd],
+        &[errors_sr, errors_sd],
+        &["blue", "red"],
+        &["Stochastic Refonfiguration", "Steepest Descent"],
+    );
+}
+
+fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
+    ion_pos: &Array2<f64>,
+    wave_function: JastrowSlater<Hydrogen1sBasis>,
+    opt: O,
+) -> (Array1<f64>, Array1<f64>) {
+    //  hamiltonian operator
+    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
 
     let obs = operators! {
         "Energy" => hamiltonian,
@@ -83,7 +112,7 @@ fn main() {
     let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.25, StdRng::from_seed([0_u8; 32])),
             &obs,
         )
         .expect("Bad initial configuration");
@@ -92,49 +121,50 @@ fn main() {
         // and an empty Logger so no output is given during each VMC iteration
         let vmc_runner = VmcRunner::new(
             sampler,
-            //OnlineLbfgs::new(1.0, 10, NPARM_JAS),
-            //NesterovMomentum::new(0.1, 0.01, NPARM_JAS),
-            //SteepestDescent::new(0.1),
-            StochasticReconfiguration::new(0.25),
-            EmptyLogger,
+            opt,
+            Logger {
+                block_size: BLOCK_SIZE,
+            },
         );
 
         // Actually run the VMC optimization
         vmc_runner.run_optimization(NITERS, TOTAL_SAMPLES, BLOCK_SIZE, NWORKERS)
     }
-    .unwrap();
+    .expect("VMC optimization failed");
 
-    // Plot the results
-    plot_results(&energies, &errors);
+    (energies, errors)
 }
 
-fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
-    let niters = energy.len();
+fn plot_results(
+    energies: &[Array1<f64>],
+    errors: &[Array1<f64>],
+    colors: &[&str],
+    labels: &[&str],
+) {
+    let niters = energies[0].len();
     let iters: Vec<_> = (0..niters).collect();
     let exact = vec![-1.175; niters];
 
     let mut fig = Figure::new();
-    fig.axes2d()
-        .lines(
-            &iters,
-            energy,
-            &[Caption("VMC Energy of H2"), Color("blue")],
-        )
-        .fill_between(
+    let axes = fig.axes2d();
+    for (energy, error, color, label) in izip!(energies, errors, colors, labels) {
+        axes.fill_between(
             &iters,
             &(energy - error),
             &(energy + error),
-            &[Color("blue"), FillAlpha(0.1)],
+            &[Color(color), FillAlpha(0.1)],
         )
-        .lines(
-            &iters,
-            &exact,
-            &[Caption("Best ground state energy"), Color("red")],
-        )
-        .set_x_label("Iteration", &[])
-        .set_y_label("VMC Energy (Hartree)", &[])
-        .set_x_grid(true)
-        .set_y_grid(true);
+        .lines(&iters, energy, &[Caption(label), Color(color)]);
+    }
+    axes.lines(
+        &iters,
+        &exact,
+        &[Caption("Best ground state energy, H2"), Color("black")],
+    )
+    .set_x_label("Iteration", &[])
+    .set_y_label("VMC Energy (Hartree)", &[])
+    .set_x_grid(true)
+    .set_y_grid(true);
 
     fig.show();
 }

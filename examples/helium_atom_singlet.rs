@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+#[macro_use]
+extern crate itertools;
+
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 #[macro_use]
 extern crate ndarray;
@@ -8,7 +11,9 @@ use montecarlo::{traits::Log, Sampler};
 use ndarray::{Array1, Array2};
 use operator::{ElectronicHamiltonian, OperatorValue};
 #[allow(unused_imports)]
-use optimize::{Optimizer, NesterovMomentum, OnlineLbfgs, SteepestDescent, StochasticReconfiguration};
+use optimize::{
+    NesterovMomentum, OnlineLbfgs, Optimizer, SteepestDescent, StochasticReconfiguration,
+};
 use rand::{SeedableRng, StdRng};
 use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};
 use wavefunction::{JastrowSlater, Orbital};
@@ -53,7 +58,6 @@ fn main() {
         Orbital::new(array![[1.0]], basis_set.clone()),
     ];
 
-
     // construct Jastrow-Slater wave function
     let wave_function = JastrowSlater::new(
         Array1::zeros(NPARM_JAS), // Jastrow factor parameters
@@ -63,15 +67,29 @@ fn main() {
     )
     .expect("Bad wave function");
 
-    let (energies, errors) = optimize_wave_function(&ion_pos, wave_function, StochasticReconfiguration::new(1.0));
+    // run optimization
+    let (energies_sr, errors_sr) = optimize_wave_function(
+        &ion_pos,
+        wave_function.clone(),
+        StochasticReconfiguration::new(10.0),
+    );
+    let (energies_sd, errors_sd) =
+        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(0.001));
 
     // Plot the results
-    plot_results(&energies, &errors);
+    plot_results(
+        &[energies_sr, energies_sd],
+        &[errors_sr, errors_sd],
+        &["blue", "red"],
+        &["SR", "SD"],
+    );
 }
 
-fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(ion_pos: &Array2<f64>, wave_function: JastrowSlater<Hydrogen1sBasis>, opt: O) 
-    -> (Array1<f64>, Array1<f64>)
-{
+fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
+    ion_pos: &Array2<f64>,
+    wave_function: JastrowSlater<Hydrogen1sBasis>,
+    opt: O,
+) -> (Array1<f64>, Array1<f64>) {
     //  hamiltonian operator
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![2]);
 
@@ -95,7 +113,6 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(ion_pos: &Array2<f
             sampler,
             //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
             //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
-            //SteepestDescent::new(0.001),
             opt,
             EmptyLogger {
                 block_size: BLOCK_SIZE,
@@ -110,33 +127,36 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(ion_pos: &Array2<f
     (energies, errors)
 }
 
-fn plot_results(energy: &Array1<f64>, error: &Array1<f64>) {
-    let niters = energy.len();
+fn plot_results(
+    energies: &[Array1<f64>],
+    errors: &[Array1<f64>],
+    colors: &[&str],
+    labels: &[&str],
+) {
+    let niters = energies[0].len();
     let iters: Vec<_> = (0..niters).collect();
     let exact = vec![-2.903; niters];
 
     let mut fig = Figure::new();
-    fig.axes2d()
-        .fill_between(
+    let axes = fig.axes2d();
+    for (energy, error, color, label) in izip!(energies, errors, colors, labels) {
+        axes.fill_between(
             &iters,
             &(energy - error),
             &(energy + error),
-            &[Color("blue"), FillAlpha(0.1)],
+            &[Color(color), FillAlpha(0.1)],
         )
-        .lines(
-            &iters,
-            energy,
-            &[Caption("VMC Energy of He"), Color("blue")],
-        )
-        .lines(
-            &iters,
-            &exact,
-            &[Caption("Best ground state energy"), Color("red")],
-        )
-        .set_x_label("Iteration", &[])
-        .set_y_label("VMC Energy (Hartree)", &[])
-        .set_x_grid(true)
-        .set_y_grid(true);
+        .lines(&iters, energy, &[Caption(label), Color(color)]);
+    }
+    axes.lines(
+        &iters,
+        &exact,
+        &[Caption("Best ground state energy, Helium"), Color("black")],
+    )
+    .set_x_label("Iteration", &[])
+    .set_y_label("VMC Energy (Hartree)", &[])
+    .set_x_grid(true)
+    .set_y_grid(true);
 
     fig.show();
 }

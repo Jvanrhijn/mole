@@ -346,12 +346,12 @@ where
     }
 }
 
-//impl<T> Optimize for Slater<T> 
+//impl<T> Optimize for Slater<T>
 //where
 //    T: Function<f64, D = Ix1> + Differentiate<D = Ix1> + Optimize,
 //{
 //    fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
-//        
+//
 //    }
 //
 //    fn num_parameters(&self) -> usize {
