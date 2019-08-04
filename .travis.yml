@@ -1,12 +1,21 @@
 language: rust
 
 sudo: required
+dist: trusty
+cache: cargo
 
-rust:
-  - nightly
+matrix:
+  include:
+    - rust: nightly
+      env:
+        RUSTC=rustc-proptest-fix
 
-cache:
-  - cargo
+env:
+  - global:
+    - SCCACHE_CACHE_SIZE="1G"
+    - SCCACHE_DIR=$TRAVIS_HOME/.cache/sccache
+    - PATH=$PATH:$TRAVIS_HOME/bin
+    - RUSTC_WRAPPER="sccache"
 
 script:
   - RUSTC=rustc-proptest-fix cargo test --all
@@ -23,16 +32,21 @@ addons:
       - libiberty-dev
       - gfortran
 
-before_script: |
-  wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB &&
-  sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB &&
-  sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list' &&
-  sudo apt-get update &&
-  sudo apt-get install intel-mkl-64bit-2018.2-046 &&
-  source /opt/intel/parallel_studio_xe_2018/compilers_and_libraries_2018/linux/bin/compilervars_global.sh intel64 &&
-  wget https://gist.githubusercontent.com/jix/4342dd522a7125a2803c6edeedd8735c/raw/8c9fbe63bee722ff484215479e836ab714de1b9b/rustc-proptest-fix &&
-  chmod +x rustc-proptest-fix &&
-  PATH=$PATH:$(pwd)
+before_cache:
+  # noop hack to avoid cache deletion
+
+before_script:
+  - ./scripts/get-sccache.sh
+  - sccache --version
+  - wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  - apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+  - sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
+  - sudo apt-get update
+  - sudo apt-get install intel-mkl-64bit-2018.2-046
+  - source /opt/intel/parallel_studio_xe_2018/compilers_and_libraries_2018/linux/bin/compilervars_global.sh intel64
+  - wget https://gist.githubusercontent.com/jix/4342dd522a7125a2803c6edeedd8735c/raw/8c9fbe63bee722ff484215479e836ab714de1b9b/rustc-proptest-fix
+  - chmod +x rustc-proptest-fix
+  - PATH=$PATH:$(pwd)
 
 after_success: |
   wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
