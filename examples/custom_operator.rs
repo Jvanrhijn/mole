@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-#[macro_use]
-extern crate ndarray;
+use ndarray::array;
+
 use basis::GaussianBasis;
 use errors::Error;
 use metropolis::MetropolisBox;
@@ -11,8 +11,7 @@ use operator::{KineticEnergy, LocalOperator, OperatorValue};
 use rand::{SeedableRng, StdRng};
 use wavefunction::{Orbital, SingleDeterminant};
 use wavefunction_traits::{Cache, Differentiate};
-#[macro_use]
-extern crate util;
+use util::operators;
 
 // Create a very basic logger
 struct Logger;

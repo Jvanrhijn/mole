@@ -2,23 +2,11 @@ use std::collections::HashMap;
 
 #[macro_use]
 extern crate itertools;
-
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-#[macro_use]
-extern crate ndarray;
-use basis::Hydrogen1sBasis;
-use montecarlo::{traits::Log, Sampler};
-use ndarray::{Array1, Array2};
-use operator::{ElectronicHamiltonian, OperatorValue};
-#[allow(unused_imports)]
-use optimize::{
-    NesterovMomentum, OnlineLbfgs, Optimizer, SteepestDescent, StochasticReconfiguration,
-};
-use rand::{SeedableRng, StdRng};
-use vmc::{ParameterGradient, VmcRunner, WavefunctionValue};
-use wavefunction::{JastrowSlater, Orbital};
-#[macro_use]
-extern crate util;
+use ndarray::{Array1, Array2, array};
+use rand::{StdRng, SeedableRng};
+
+use mole::prelude::*;
 
 #[derive(Clone)]
 struct EmptyLogger {
