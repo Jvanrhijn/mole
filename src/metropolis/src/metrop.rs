@@ -204,6 +204,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::{collection::vec, num, prelude::*};
 
     // define stub wave function
     #[derive(Clone)]
@@ -262,13 +263,15 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_uniform_wf() {
-        let cfg = Array2::<f64>::ones((1, 3));
-        let mut wf = WaveFunctionMock { value: 1.0 };
-        let mut metrop = MetropolisBox::<StdRng>::new(1.0);
-        let new_cfg = metrop.propose_move(&mut wf, &cfg, 0).unwrap(); // should always accept
-        assert!(metrop.accept_move(&mut wf, &cfg, &new_cfg).unwrap());
+    proptest! {
+        #[test]
+        fn test_uniform_wf(v in vec(num::f64::NORMAL, 3)) {
+            //let cfg = Array2::<f64>::ones((1, 3));
+            let cfg = Array2::<f64>::from_shape_vec((1, 3), v).unwrap();
+            let mut wf = WaveFunctionMock { value: 1.0 };
+            let mut metrop = MetropolisBox::<StdRng>::new(1.0);
+            let new_cfg = metrop.propose_move(&mut wf, &cfg, 0).unwrap(); // should always accept
+            assert!(metrop.accept_move(&mut wf, &cfg, &new_cfg).unwrap());
+        }
     }
-
 }

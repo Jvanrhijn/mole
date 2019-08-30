@@ -312,5 +312,4 @@ mod tests {
             assert!((laplac_fd - jas_ee.laplacian(&cfg).unwrap()).abs() < 1e-4);
         }
     }
-
 }

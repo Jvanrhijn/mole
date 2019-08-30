@@ -62,57 +62,68 @@ pub fn gaussian(pos: &Array1<f64>, width: f64) -> Vgl {
 mod tests {
     use super::*;
     use crate::util::grad_laplacian_finite_difference;
-    use ndarray_rand::RandomExt;
-    use rand::distributions::Range;
+    use proptest::{prelude::*, num, collection::vec};
 
+    proptest! {
     #[test]
-    fn hydrogen_1s_vgl() {
-        const NUM_TESTS: usize = 100;
-
-        for _ in 0..NUM_TESTS {
-            let center = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
-            let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
+        fn hydrogen_1s_vgl(v in vec(num::f64::NORMAL, 3)
+                           .prop_filter("Valid Slater domain", |x| {
+                               x.iter().map(|y| f64::abs(*y)).sum::<f64>() < 1.0
+                          }),
+                          w in vec(num::f64::NORMAL, 3)
+                          .prop_filter("Valid Slater domain", |x| {
+                              x.iter().map(|y| f64::abs(*y)).sum::<f64>() < 1.0
+                          })) {
+            let center = Array1::<f64>::from_vec(v);
+            let cfg = Array1::<f64>::from_vec(w);
             let width = rand::random::<f64>();
             let func = |x: &Array1<f64>| hydrogen_1s(&(x - &center), width);
             let (_, g, l) = func(&cfg);
             let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
-            assert!(g.all_close(&g_fd, 1e-5));
-            //assert_eq!(g, g_fd);
-            assert!((l - l_fd).abs() < 1e-5);
+            prop_assert!(g.all_close(&g_fd, 1e-5));
+            prop_assert!((l - l_fd).abs() < 1e-5);
         }
     }
 
-    #[test]
-    fn hydrogen_2s_vgl() {
-        const NUM_TESTS: usize = 100;
-
-        for _ in 0..NUM_TESTS {
-            let center = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
-            let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
+    proptest! {
+        #[test]
+        fn hydrogen_2s_vgl(v in vec(num::f64::NORMAL, 3)
+                           .prop_filter("Valid Slater domain", |x| {
+                               x.iter().map(|y| f64::abs(*y)).sum::<f64>() < 1.0
+                          }),
+                          w in vec(num::f64::NORMAL, 3)
+                          .prop_filter("Valid Slater domain", |x| {
+                              x.iter().map(|y| f64::abs(*y)).sum::<f64>() < 1.0
+                          })) {
+            let center = Array1::<f64>::from_vec(v);
+            let cfg = Array1::<f64>::from_vec(w);
             let width = rand::random::<f64>();
             let func = |x: &Array1<f64>| hydrogen_2s(&(x - &center), width);
             let (_, g, l) = func(&cfg);
             let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
-            assert!(g.all_close(&g_fd, 1e-5));
-            //assert_eq!(g, g_fd);
-            assert!((l - l_fd).abs() < 1e-5);
+            prop_assert!(g.all_close(&g_fd, 1e-5));
+            prop_assert!((l - l_fd).abs() < 1e-5);
         }
     }
 
-    #[test]
-    fn gaussian_vgl() {
-        const NUM_TESTS: usize = 100;
-
-        for _ in 0..NUM_TESTS {
-            let center = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
-            let cfg = Array1::<f64>::random(3, Range::new(-1.0, 1.0));
+    proptest! {
+        #[test]
+        fn gaussian_vgl(v in vec(num::f64::NORMAL, 3)
+                        .prop_filter("Valid Slater domain", |x| {
+                            x.iter().map(|y| f64::abs(*y)).sum::<f64>() < 1.0
+                        }),
+                        w in vec(num::f64::NORMAL, 3)
+                          .prop_filter("Valid Slater domain", |x| {
+                              x.iter().map(|y| f64::abs(*y)).sum::<f64>() < 1.0
+                          })) {
+            let center = Array1::from_vec(v);
+            let cfg = Array1::from_vec(w);
             let width = rand::random::<f64>();
             let func = |x: &Array1<f64>| gaussian(&(x - &center), width);
             let (_, g, l) = func(&cfg);
             let (g_fd, l_fd) = grad_laplacian_finite_difference(&func, &cfg, 1e-3);
-            assert!(g.all_close(&g_fd, 1e-5));
-            //assert_eq!(g, g_fd);
-            assert!((l - l_fd).abs() < 1e-5);
+            prop_assert!(g.all_close(&g_fd, 1e-5));
+            prop_assert!((l - l_fd).abs() < 1e-5);
         }
     }
 

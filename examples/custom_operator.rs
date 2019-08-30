@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use ndarray::array;
+use std::collections::HashMap;
 
 use basis::GaussianBasis;
 use errors::Error;
@@ -9,9 +9,9 @@ use ndarray::{Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 use operator::{KineticEnergy, LocalOperator, OperatorValue};
 use rand::{SeedableRng, StdRng};
+use util::operators;
 use wavefunction::{Orbital, SingleDeterminant};
 use wavefunction_traits::{Cache, Differentiate};
-use util::operators;
 
 // Create a very basic logger
 struct Logger;

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 #[macro_use]
 extern crate itertools;
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-use ndarray::{Array1, Array2, array};
-use rand::{StdRng, SeedableRng};
+use ndarray::{array, Array1, Array2};
+use rand::{SeedableRng, StdRng};
 
 use mole::prelude::*;
 

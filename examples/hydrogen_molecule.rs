@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 #[macro_use]
 extern crate itertools;
-use rand::{StdRng, SeedableRng};
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 use ndarray::{array, Array1, Array2};
+use rand::{SeedableRng, StdRng};
 
 #[allow(unused_imports)]
 use mole::prelude::*;

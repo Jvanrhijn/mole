@@ -508,5 +508,4 @@ mod tests {
         assert!(cgrad.all_close(&grad, EPS));
         assert!((clap - lap).abs() < EPS);
     }
-
 }

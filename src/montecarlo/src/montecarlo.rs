@@ -105,5 +105,4 @@ mod tests {
 
         assert!((result.get_scalar().unwrap() - ENERGY_EXACT).abs() < 1e-15);
     }
-
 }
