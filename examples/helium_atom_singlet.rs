@@ -9,10 +9,6 @@ use rand::{SeedableRng, StdRng};
 
 use mole::prelude::*;
 use mole::optimize::Optimize;
-use mole::errors::Error::EmptyCacheError;
-
-type Vgl = (f64, Array2<f64>, f64);
-type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
 
 #[derive(Clone)]
 struct EmptyLogger {
@@ -95,95 +91,12 @@ impl Differentiate for HeliumAtomWaveFunction {
         let (alpha, beta) = (self.params[0], self.params[1]);
         let x1 = cfg.slice(s![0, ..]).to_owned();
         let x2 = cfg.slice(s![1, ..]).to_owned();
-        let grad = self.gradient(cfg)?;
-        let grad_x1 = grad.slice(s![0, ..]);
-        let grad_x2 = grad.slice(s![1, ..]);
         let val = self.value(cfg)?;
         let x1norm = x1.norm_l2();
         let x2norm = x2.norm_l2();
         Ok(
             alpha/x1norm * val * (alpha*x1norm - 2.0)
             + beta/x2norm * val * (beta*x2norm - 2.0)
-        )
-    }
-}
-
-impl Cache for HeliumAtomWaveFunction {
-    type U = usize;
-
-    /// Refresh the cached data
-    fn refresh(&mut self, new: &Array2<f64>) -> Result<()> {
-        *self
-            .current_value_queue
-            .front_mut()
-            .ok_or(EmptyCacheError)? = self.value(new)?;
-        *self
-            .current_grad_queue
-            .front_mut()
-            .ok_or(EmptyCacheError)? = self.gradient(new)?;
-        *self.current_laplac_queue
-            .front_mut()
-            .ok_or(EmptyCacheError)? = self.laplacian(new)?;
-        Ok(()) 
-    }
-
-    /// Calculate updated value of the cache given update data and new configuration,
-    /// and set this data enqueued
-    fn enqueue_update(&mut self, ud: Self::U, new: &Array2<f64>) -> Result<()> {
-        self.current_value_queue.push_back(self.value(new)?);
-        self.current_grad_queue.push_back(self.gradient(new)?);
-        self.current_laplac_queue.push_back(self.laplacian(new)?);
-        Ok(())
-    }
-
-    /// Push enqueued update into cache
-    fn push_update(&mut self) {
-        for q in [
-            &mut self.current_value_queue,
-            &mut self.current_laplac_queue,
-        ]
-        .iter_mut()
-        {
-            if q.len() == 2 {
-                q.pop_front();
-            }
-        }
-        if self.current_grad_queue.len() == 2 {
-            self.current_grad_queue.pop_front();
-        }
-    }
-
-    /// Flush the enqueued update data
-    fn flush_update(&mut self) {
-        for q in [
-            &mut self.current_value_queue,
-            &mut self.current_laplac_queue,
-        ]
-        .iter_mut()
-        {
-            if q.len() == 2 {
-                q.pop_back();
-            }
-        }
-        if self.current_grad_queue.len() == 2 {
-            self.current_grad_queue.pop_back();
-        }
-    }
-
-    /// Return the current value of the cached data
-    fn current_value(&self) -> Result<Vgl> {
-        Ok((
-            *self.current_value_queue.front().ok_or(EmptyCacheError)?,
-            self.current_grad_queue.front().ok_or(EmptyCacheError)?.clone(),
-            *self.current_laplac_queue.front().ok_or(EmptyCacheError)?,
-        ))
-    }
-
-    fn enqueued_value(&self) -> Ovgl {
-        (
-            self.current_value_queue.back().copied(),
-            self.current_grad_queue.back().cloned(),
-            self.current_laplac_queue.back().copied(),
         )
     }
 }

@@ -4,7 +4,7 @@ use montecarlo::traits::{Log, MonteCarloResult, MonteCarloSampler};
 use montecarlo::Runner;
 use operator::OperatorValue;
 use optimize::{Optimize, Optimizer};
-use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
+use wavefunction_traits::{Differentiate, Function, WaveFunction};
 
 use ndarray::{Array1, Ix2};
 use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
@@ -30,7 +30,6 @@ where
     T: WaveFunction
         + Differentiate
         + Function<f64, D = Ix2>
-        + Cache
         + Optimize
         + Clone
         + Send

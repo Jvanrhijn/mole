@@ -11,7 +11,7 @@ use operator::{KineticEnergy, LocalOperator, OperatorValue};
 use rand::{SeedableRng, StdRng};
 use util::operators;
 use wavefunction::{Orbital, SingleDeterminant};
-use wavefunction_traits::{Cache, Differentiate};
+use wavefunction_traits::{Function, Differentiate};
 
 // Create a very basic logger
 struct Logger;
@@ -51,14 +51,14 @@ impl HarmonicHamiltonian {
 // T is the type parameter of the wave function.
 impl<T> LocalOperator<T> for HarmonicHamiltonian
 where
-    T: Differentiate<D = Ix2> + Cache,
+    T: Function<f64, D=Ix2> + Differentiate<D = Ix2>,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         // Kinetic energy
         let ke = self.t.act_on(wf, cfg)?;
         // Potential energy: V = 0.5*m*omega^2*|x|^2
         let pe = OperatorValue::Scalar(
-            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.current_value()?.0,
+            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.value(cfg)?,
         );
         Ok(&ke + &pe)
     }

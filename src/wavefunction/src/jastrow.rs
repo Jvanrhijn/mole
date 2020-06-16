@@ -3,7 +3,7 @@ use ndarray::{Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use optimize::Optimize;
 use std::collections::VecDeque;
-use wavefunction_traits::{Cache, Differentiate, Function};
+use wavefunction_traits::{Differentiate, Function};
 
 type Vgl = (f64, Array2<f64>, f64);
 type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);
@@ -210,7 +210,7 @@ impl Differentiate for JastrowFactor {
 
 impl Optimize for JastrowFactor {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
-        Ok(self.fee.parameter_gradient(cfg)? * self.current_value()?.0)
+        Ok(self.fee.parameter_gradient(cfg)? * self.value(cfg)?)
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -223,59 +223,6 @@ impl Optimize for JastrowFactor {
 
     fn num_parameters(&self) -> usize {
         self.fee.num_parameters()
-    }
-}
-
-impl Cache for JastrowFactor {
-    type U = usize;
-
-    fn refresh(&mut self, cfg: &Array2<f64>) -> Result<()> {
-        *self.value_queue.front_mut().ok_or(EmptyCacheError)? = self.value(cfg)?;
-        *self.grad_queue.front_mut().ok_or(EmptyCacheError)? = self.gradient(cfg)?;
-        *self.laplac_queue.front_mut().ok_or(EmptyCacheError)? = self.laplacian(cfg)?;
-        self.flush_update();
-        Ok(())
-    }
-
-    fn enqueue_update(&mut self, _ud: Self::U, cfg: &Array2<f64>) -> Result<()> {
-        self.value_queue.push_back(self.value(cfg)?);
-        self.grad_queue.push_back(self.gradient(cfg)?);
-        self.laplac_queue.push_back(self.laplacian(cfg)?);
-        Ok(())
-    }
-
-    fn push_update(&mut self) {
-        self.value_queue.pop_front();
-        self.grad_queue.pop_front();
-        self.laplac_queue.pop_front();
-    }
-
-    fn flush_update(&mut self) {
-        if self.value_queue.len() == 2 {
-            self.value_queue.pop_back();
-        }
-        if self.grad_queue.len() == 2 {
-            self.grad_queue.pop_back();
-        }
-        if self.laplac_queue.len() == 2 {
-            self.laplac_queue.pop_back();
-        }
-    }
-
-    fn current_value(&self) -> Result<Vgl> {
-        Ok((
-            *self.value_queue.front().ok_or(EmptyCacheError)?,
-            self.grad_queue.front().ok_or(EmptyCacheError)?.clone(),
-            *self.laplac_queue.front().ok_or(EmptyCacheError)?,
-        ))
-    }
-
-    fn enqueued_value(&self) -> Ovgl {
-        (
-            self.value_queue.back().copied(),
-            self.grad_queue.back().cloned(),
-            self.laplac_queue.back().copied(),
-        )
     }
 }
 

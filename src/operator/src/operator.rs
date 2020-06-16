@@ -7,7 +7,7 @@ use crate::traits::{
     OperatorValue::{self, *},
 };
 use errors::Error;
-use wavefunction_traits::{Cache, Differentiate, Function};
+use wavefunction_traits::{Differentiate, Function};
 
 /// Ionic potential energy operator:
 /// $\hat{V}_{\mathrm{ion}} = -\sum_{i=1}^{N_{\mathrm{ions}}\sum_{j=1}^{\mathrm{e}} \frac{Z_i}{r_{ij}}$.
@@ -55,9 +55,9 @@ impl IonicPotential {
     }
 }
 
-impl<T: Cache> LocalOperator<T> for IonicPotential {
+impl<T: Function<f64, D=Ix2>> LocalOperator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
+        Ok(Scalar(self.value(cfg)? * wf.value(cfg)?))
     }
 }
 
@@ -90,9 +90,9 @@ impl Function<f64> for ElectronicPotential {
     }
 }
 
-impl<T: Cache> LocalOperator<T> for ElectronicPotential {
+impl<T: Function<f64, D=Ix2>> LocalOperator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(self.value(cfg)? * wf.current_value()?.0))
+        Ok(Scalar(self.value(cfg)? * wf.value(cfg)?))
     }
 }
 
@@ -117,10 +117,10 @@ impl KineticEnergy {
 
 impl<T> LocalOperator<T> for KineticEnergy
 where
-    T: Differentiate<D = Ix2> + Cache,
+    T: Differentiate<D = Ix2>
 {
-    fn act_on(&self, wf: &T, _cfg: &Array<f64, Ix2>) -> Result<OperatorValue, Error> {
-        Ok(Scalar(-0.5 * wf.current_value()?.2))
+    fn act_on(&self, wf: &T, cfg: &Array<f64, Ix2>) -> Result<OperatorValue, Error> {
+        Ok(Scalar(-0.5 * wf.laplacian(cfg)?))
     }
 }
 
@@ -141,7 +141,7 @@ impl IonicHamiltonian {
 
 impl<T> LocalOperator<T> for IonicHamiltonian
 where
-    T: Differentiate<D = Ix2> + Cache,
+    T: Differentiate<D = Ix2> + Function<f64, D=Ix2>
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
@@ -176,7 +176,7 @@ impl ElectronicHamiltonian {
 
 impl<T> LocalOperator<T> for ElectronicHamiltonian
 where
-    T: Differentiate<D = Ix2> + Cache,
+    T: Differentiate<D = Ix2> + Function<f64, D=Ix2>
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)

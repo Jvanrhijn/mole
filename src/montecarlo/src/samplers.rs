@@ -13,14 +13,14 @@ use operator::{
     LocalOperator,
     OperatorValue::{self, *},
 };
-use wavefunction_traits::{Cache, Differentiate, Function, WaveFunction};
+use wavefunction_traits::{Differentiate, Function, WaveFunction};
 
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
 #[derive(Clone)]
 pub struct Sampler<'a, T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + Cache + Clone,
+    T: Function<f64, D = Ix2> + Differentiate + Clone,
     V: Metropolis<T>,
 {
     wave_function: T,
@@ -33,18 +33,17 @@ where
 
 impl<'a, T, V> Sampler<'a, T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
+    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Clone,
     V: Metropolis<T>,
     <V as Metropolis<T>>::R: Rng,
 {
     pub fn new(
-        mut wave_function: T,
+        wave_function: T,
         mut metrop: V,
         observables: &'a HashMap<String, Box<dyn LocalOperator<T>>>,
     ) -> Result<Self, Error> {
         let nelec = wave_function.num_electrons();
         let cfg = Array2::<f64>::random_using((nelec, 3), Range::new(-1., 1.), metrop.rng_mut());
-        wave_function.refresh(&cfg)?;
         Ok(Self {
             wave_function,
             config: cfg,
@@ -56,12 +55,11 @@ where
     }
 
     pub fn with_initial_configuration(
-        mut wave_function: T,
+        wave_function: T,
         metrop: V,
         observables: &'a HashMap<String, Box<dyn LocalOperator<T>>>,
         cfg: Array2<f64>,
     ) -> Result<Self, Error> {
-        wave_function.refresh(&cfg)?;
         Ok(Self {
             wave_function,
             config: cfg,
@@ -75,7 +73,7 @@ where
 
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Cache + Clone,
+    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Clone,
     V: Metropolis<T>,
 {
     type WaveFunc = T;
@@ -89,7 +87,7 @@ where
                 Ok((
                     name.clone(),
                     operator.act_on(&self.wave_function, &self.config)?
-                        / Scalar(self.wave_function().current_value()?.0),
+                        / Scalar(self.wave_function().value(&self.config)?),
                 ))
             })
             .collect();
@@ -112,13 +110,9 @@ where
                     .move_state(&mut self.wave_function, &self.config, e)?
             {
                 self.config = config;
-                self.wave_function.push_update();
                 self.acceptance += 1.0 / self.wave_function.num_electrons() as f64;
-            } else {
-                self.wave_function.flush_update();
-            }
+            } 
         }
-        self.wave_function.refresh(&self.config)?;
         Ok(())
     }
 
