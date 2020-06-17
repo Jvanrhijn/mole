@@ -13,14 +13,14 @@ use operator::{
     LocalOperator,
     OperatorValue::{self, *},
 };
-use wavefunction_traits::{Differentiate, Function, WaveFunction};
+use wavefunction_traits::{Function, WaveFunction};
 
 /// Simple Monte Carlo sampler
 /// Performs Metropolis step and keeps list of observables to sample
 #[derive(Clone)]
 pub struct Sampler<'a, T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + Clone,
+    T: Function<f64, D = Ix2> + Clone,
     V: Metropolis<T>,
 {
     wave_function: T,
@@ -33,7 +33,7 @@ where
 
 impl<'a, T, V> Sampler<'a, T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Clone,
+    T: Function<f64, D = Ix2> + WaveFunction + Clone,
     V: Metropolis<T>,
     <V as Metropolis<T>>::R: Rng,
 {
@@ -73,7 +73,7 @@ where
 
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
-    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Clone,
+    T: Function<f64, D = Ix2> +  WaveFunction + Clone,
     V: Metropolis<T>,
 {
     type WaveFunc = T;

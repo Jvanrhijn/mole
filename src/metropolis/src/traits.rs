@@ -7,7 +7,7 @@ type Result<T> = std::result::Result<T, Error>;
 
 /// Interface for implementing Metropolis algorithms that generate
 /// Markov chains of configurations.
-pub trait Metropolis<T: Differentiate + Function<f64, D = Ix2> + Clone> {
+pub trait Metropolis<T: Function<f64, D = Ix2> + Clone> {
     /// Rng type to use
     type R: Rng;
     /// Propose a move to a new configuration.

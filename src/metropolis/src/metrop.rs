@@ -47,7 +47,7 @@ impl MetropolisBox<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
-    T: Differentiate + Function<f64, D = Ix2> + Clone,
+    T: Function<f64, D = Ix2> + Clone,
     R: Rng + SeedableRng,
     <R as SeedableRng>::Seed: From<[u8; 32]>,
 {

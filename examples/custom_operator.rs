@@ -65,13 +65,8 @@ where
 }
 
 fn main() {
-    // Exact ground state of Harmonic oscillator
-    let basis = GaussianBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0]);
-    // the rest is the same as with other operators
-
     // Build wave function
-    let orbital = Orbital::new(array![[1.0]], basis);
-    let ansatz = SingleDeterminant::new(vec![orbital]).unwrap();
+    // TODO
 
     let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 

@@ -15,7 +15,3 @@ ndarray-linalg = "0.10.0"
 ndarray-rand = "0.8.0"
 num-traits = "0.2"
 itertools = "0.7"
-
-[dev-dependencies]
-basis = {path = "../basis" }
-wavefunction = { path = "../wavefunction" }

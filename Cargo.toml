@@ -6,11 +6,9 @@ edition = "2018"
 
 [workspace]
 members = [
-  "src/basis",
   "src/metropolis",
   "src/montecarlo",
   "src/operator",
-  "src/wavefunction",
   "src/wavefunction_traits",
   "src/optimize",
   "src/vmc",
@@ -20,11 +18,9 @@ members = [
 
 [dependencies]
 montecarlo = { path = "src/montecarlo" }
-wavefunction = { path = "src/wavefunction" }
 wavefunction_traits = { path = "src/wavefunction_traits" }
 metropolis = { path = "src/metropolis" }
 operator = { path = "src/operator" }
-basis = { path = "src/basis" }
 optimize = { path = "src/optimize" }
 vmc = { path = "src/vmc" }
 errors = { path = "src/errors" }
