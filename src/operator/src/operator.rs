@@ -211,7 +211,6 @@ mod tests {
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg).unwrap();
             let hpsi = hamiltonian.act_on(&wf, &cfg).unwrap();
             let wval = wf.value(&cfg).unwrap();
 
@@ -243,11 +242,10 @@ mod tests {
             let potential = IonicPotential::new(array![[0., 0., 0.]], array![1]);
             let hamiltonian = IonicHamiltonian::new(kinetic, potential);
             let basis_set = Hydrogen2sBasis::new(array![[0.0, 0.0, 0.0]], vec![2.0]);
-            let mut wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
+            let wf = SingleDeterminant::new(vec![Orbital::new(array![[1.0]], basis_set)]).unwrap();
 
             let cfg = array![[v[0], v[1], v[2]]];
 
-            wf.refresh(&cfg).unwrap();
             let hpsi = *hamiltonian.act_on(&wf, &cfg).unwrap().get_scalar().unwrap();
             let wval = wf.value(&cfg).unwrap();
             let energy = hpsi/wval;

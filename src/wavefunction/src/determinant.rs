@@ -166,7 +166,7 @@ where
 mod tests {
     use super::*;
     use crate::orbitals::Orbital;
-    use basis::{hydrogen_1s, hydrogen_2s, Func, GaussianBasis, Hydrogen1sBasis};
+    use basis::{hydrogen_1s, hydrogen_2s, GaussianBasis, Hydrogen1sBasis};
 
     static EPS: f64 = 1e-15;
 
@@ -229,73 +229,4 @@ mod tests {
         assert!((det.laplacian(&cfg).unwrap() - laplac_fd).abs() < 1e-5);
     }
 
-    #[test]
-    fn cache() {
-        let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 0.5]);
-
-        let orbsc = vec![
-            Orbital::new(array![[1.0, 0.0]], basis.clone()),
-            Orbital::new(array![[0.0, 1.0]], basis.clone()),
-        ];
-        let orbs = vec![
-            Orbital::new(array![[1.0, 0.0]], basis.clone()),
-            Orbital::new(array![[0.0, 1.0]], basis),
-        ];
-        let mut cached = Slater::new(orbsc).unwrap();
-        let not_cached = Slater::new(orbs).unwrap();
-
-        // arbitrary configuration
-        let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
-        // initialize cache
-        cached.refresh(&x).unwrap();
-
-        let (cval, cgrad, clap) = cached.current_value().unwrap();
-        let val = not_cached.value(&x).unwrap();
-        let grad = not_cached.gradient(&x).unwrap();
-        let lap = not_cached.laplacian(&x).unwrap();
-
-        assert!((cval - val).abs() < 1e-10);
-        assert!(grad.all_close(&cgrad, EPS));
-        assert!((clap - lap).abs() < 1e-10);
-    }
-
-    #[test]
-    fn update_cache() {
-        let _basis: Vec<Box<Func>> = vec![
-            Box::new(|x| hydrogen_1s(&x, 1.0)),
-            Box::new(|x| hydrogen_2s(&x, 0.5)),
-        ];
-        let basis = Hydrogen1sBasis::new(array![[0.0, 0.0, 0.0]], vec![1.0, 0.5]);
-        let orbsc = vec![
-            Orbital::new(array![[1.0, 0.0]], basis.clone()),
-            Orbital::new(array![[0.0, 1.0]], basis.clone()),
-        ];
-        let orbs = vec![
-            Orbital::new(array![[1.0, 0.0]], basis.clone()),
-            Orbital::new(array![[0.0, 1.0]], basis),
-        ];
-        let mut cached = Slater::new(orbsc).unwrap();
-        let not_cached = Slater::new(orbs).unwrap();
-
-        // arbitrary configuration
-        let x = array![[-1.0, 0.5, 0.0], [1.0, 0.2, 1.0]];
-        // initialize cache
-        cached.refresh(&x).unwrap();
-
-        // move the first electron
-        let xmov = array![[1.0, 2.0, 3.0], [1.0, 0.2, 1.0]];
-        // update the cached wave function
-        cached.enqueue_update(0, &xmov).unwrap();
-        cached.push_update();
-
-        // retrieve values
-        let (cval, cgrad, clap) = cached.current_value().unwrap();
-        let val = not_cached.value(&xmov).unwrap();
-        let grad = not_cached.gradient(&xmov).unwrap();
-        let lap = not_cached.laplacian(&xmov).unwrap();
-
-        assert!((cval - val).abs() < EPS);
-        assert!(cgrad.all_close(&grad, EPS));
-        assert!((clap - lap).abs() < EPS);
-    }
 }

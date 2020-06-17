@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 #[macro_use]
 extern crate itertools;
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-use ndarray::{array, Array1, Array2, Array, Ix2, s, stack, Axis};
+use ndarray::{array, Array1, Array2, Array, Ix2, s};
 use ndarray_linalg::Norm;
 use rand::{SeedableRng, StdRng};
 
@@ -39,13 +39,17 @@ struct HeliumAtomWaveFunction {
 }
 
 impl HeliumAtomWaveFunction {
-    pub fn new(alpha: f64, beta: f64) -> Self {
+    pub fn new(alpha: f64) -> Self {
         Self {
-            params: Array1::from_vec(vec![alpha, beta]),
+            params: Array1::from_vec(vec![alpha]),
             current_value_queue: VecDeque::from(vec![0.0]),
             current_grad_queue: VecDeque::from(vec![Array2::zeros((2, 3))]),
             current_laplac_queue: VecDeque::from(vec![0.0]),
         }
+    }
+
+    fn extract_config(cfg: &Array2<f64>) -> (Array1<f64>, Array1<f64>) {
+        (cfg.slice(s![0, ..]).to_owned(), cfg.slice(s![1, ..]).to_owned())
     }
 }
 
@@ -62,10 +66,9 @@ impl Function<f64> for HeliumAtomWaveFunction {
         // as ansatz, we use a product of STOs
         // with adjustable exponents:
         // $\psi(x_1, x_1) = \exp(-\alpha |x_1| - \beta |x_2|)$
-        let (alpha, beta) = (self.params[0], self.params[1]);
-        let x1 = cfg.slice(s![0, ..]);
-        let x2 = cfg.slice(s![1, ..]);
-        Ok(f64::exp(-alpha*x1.norm_l2() -beta*x2.norm_l2()))
+        let alpha = self.params[0];
+        let (x1, x2) = Self::extract_config(cfg);
+        Ok(f64::exp(-alpha*(x1.norm_l2() + x2.norm_l2())))
     }
 }
 
@@ -73,12 +76,11 @@ impl Differentiate for HeliumAtomWaveFunction {
     type D = Ix2;
 
     fn gradient(&self, cfg: &Array<f64, Self::D>) -> Result<Array2<f64>> {
-        let (alpha, beta) = (self.params[0], self.params[1]);
-        let x1 = cfg.slice(s![0, ..]);
-        let x2 = cfg.slice(s![1, ..]);
+        let alpha = self.params[0];
+        let (x1, x2) = Self::extract_config(cfg);
         let value = self.value(cfg)?;
         let grad_x1 = -alpha/x1.norm_l2() * value * &x1;
-        let grad_x2 = -beta/x2.norm_l2()* value * &x2;
+        let grad_x2 = -alpha/x2.norm_l2()* value * &x2;
         let mut out = Array2::<f64>::zeros(cfg.dim());
         let mut first_comp = out.slice_mut(s![0, ..]);
         first_comp += &grad_x1;
@@ -88,31 +90,27 @@ impl Differentiate for HeliumAtomWaveFunction {
     }
 
     fn laplacian(&self, cfg:&Array<f64, Self::D>) -> Result<f64> {
-        let (alpha, beta) = (self.params[0], self.params[1]);
-        let x1 = cfg.slice(s![0, ..]).to_owned();
-        let x2 = cfg.slice(s![1, ..]).to_owned();
+        let alpha = self.params[0];
+        let (x1, x2) = Self::extract_config(cfg);
         let val = self.value(cfg)?;
         let x1norm = x1.norm_l2();
         let x2norm = x2.norm_l2();
         Ok(
             alpha/x1norm * val * (alpha*x1norm - 2.0)
-            + beta/x2norm * val * (beta*x2norm - 2.0)
+            + alpha/x2norm * val * (alpha*x2norm - 2.0)
         )
     }
 }
 
 impl Optimize for HeliumAtomWaveFunction {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
-        let x1 = cfg.slice(s![0, ..]);
-        let x2 = cfg.slice(s![1, ..]);
-        Ok(self.value(cfg)? * Array1::from_vec(vec![
-            -x1.norm_l2(),
-            -x2.norm_l2()
+        let (x1, x2) = Self::extract_config(cfg);
+        Ok(-self.value(cfg)? * Array1::from_vec(vec![
+            x1.norm_l2() + x2.norm_l2()
         ]))
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
-        dbg!(deltap);
         self.params += deltap;
     }
 
@@ -127,48 +125,30 @@ impl Optimize for HeliumAtomWaveFunction {
 }
 
 
-static NITERS: usize = 20;
+static NITERS: usize = 10;
 static NWORKERS: usize = 8;
 static TOTAL_SAMPLES: usize = 10_000;
-static BLOCK_SIZE: usize = 50;
-static NPARM_JAS: usize = 2;
+static BLOCK_SIZE: usize = 10;
+
 
 fn main() {
-    let width = 0.6;
-    // setup basis set
     let ion_pos = array![[0.0, 0.0, 0.0]];
 
-    let basis_set = Hydrogen1sBasis::new(ion_pos.clone(), vec![width]);
-
-    // construct orbitals
-    let orbitals = vec![
-        Orbital::new(array![[1.0]], basis_set.clone()),
-        Orbital::new(array![[1.0]], basis_set.clone()),
-    ];
-
-    // construct Jastrow-Slater wave function
-    //let wave_function = JastrowSlater::new(
-    //    Array1::zeros(NPARM_JAS), // Jastrow factor parameters
-    //    orbitals.clone(),
-    //    0.001, // scale distance
-    //    1,     // number of electrons with spin up
-    //)
-    //.expect("Bad wave function");
-    let wave_function = HeliumAtomWaveFunction::new(0.3, 0.1);
+    let wave_function = HeliumAtomWaveFunction::new(0.5);
 
     // run optimization
     let (energies_sr, errors_sr) = optimize_wave_function(
         &ion_pos,
         wave_function.clone(),
-        StochasticReconfiguration::new(2500.0),
+        StochasticReconfiguration::new(100_000.0),
     );
     let (energies_sd, errors_sd) =
         optimize_wave_function(
             &ion_pos, 
             wave_function.clone(), 
-            SteepestDescent::new(1e-6),
-            //NesterovMomentum::new(1e-4, 1e-4, 2)
-            //OnlineLbfgs::new(-1.0, 10, 2)
+            SteepestDescent::new(1e-5),
+            //NesterovMomentum::new(1e-5, 1e-3, 1)
+            //OnlineLbfgs::new(1.0, 5, 1)
     );
 
     // Plot the results
@@ -207,8 +187,6 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
         // and an empty Logger so no output is given during each VMC iteration
         let vmc_runner = VmcRunner::new(
             sampler,
-            //OnlineLbfgs::new(0.1, 10, NPARM_JAS),
-            //NesterovMomentum::new(0.01, 0.00001, NPARM_JAS),
             opt,
             EmptyLogger {
                 block_size: BLOCK_SIZE,
