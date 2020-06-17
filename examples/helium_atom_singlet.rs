@@ -171,7 +171,8 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
     let obs = operators! {
         "Energy" => hamiltonian,
         "Parameter gradient" => ParameterGradient,
-        "Wavefunction value" => WavefunctionValue
+        "Wavefunction value" => WavefunctionValue,
+        "Kin. Energy" => KineticEnergy::new()
     };
 
     let (_wave_function, energies, errors) = {
