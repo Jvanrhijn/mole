@@ -12,10 +12,10 @@ script:
   - export CARGO_INCREMENTAL=0
   - export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
   - export RUSTDOCFLAGS="-Cpanic=abort"
-  - RUSTC=rustc-proptest-fix cargo test --all $CARGO_OPTIONS
+  - cargo build $CARGO_OPTIONS
+  - cargo test --all --verbose $CARGO_OPTIONS
   - |
-      zip -0 ccov.zip `find . \( -name "mole.gc*" \) -print`;
-      ./grcov ccov.zip -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info;
+      ./grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info;
       bash <(curl -s https://codecov.io/bash) -f lcov.info;
 
 addons:
@@ -59,6 +59,3 @@ before_script: |
   #  for file in target/debug/*-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
   #  bash <(curl -s https://codecov.io/bash) &&
   #  echo "Uploaded code coverage"
-
-env:
-  - RUSTFLAGS="-C link-dead-code"

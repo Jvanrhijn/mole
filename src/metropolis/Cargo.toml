@@ -14,4 +14,4 @@ errors = { path = "../errors" }
 
 [dev-dependencies]
 errors = { path = "../errors" }
-proptest = "0.9.4"
+proptest = "*"
