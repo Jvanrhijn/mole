@@ -34,18 +34,12 @@ impl Log for EmptyLogger {
 #[derive(Clone)]
 struct HeliumAtomWaveFunction {
     params: Array1<f64>,
-    current_value_queue: VecDeque<f64>,
-    current_grad_queue: VecDeque<Array2<f64>>,
-    current_laplac_queue: VecDeque<f64>,
 }
 
 impl HeliumAtomWaveFunction {
     pub fn new(alpha: f64) -> Self {
         Self {
             params: Array1::from_vec(vec![alpha]),
-            current_value_queue: VecDeque::from(vec![0.0]),
-            current_grad_queue: VecDeque::from(vec![Array2::zeros((2, 3))]),
-            current_laplac_queue: VecDeque::from(vec![0.0]),
         }
     }
 
