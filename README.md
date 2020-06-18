@@ -64,7 +64,7 @@ Jastrow e-e parameters and STO-populated Slater determinant, on a hydrogen molec
 Hamiltonian. The figure compares a vanilla steepest descent optimization with
 the stochastic reconfiguration algorithm by Sorella. See `examples/hydrogen_molecule`.
 
-[![optimization demo](https://i.imgur.com/vxJlrNS.png)](https://i.imgur.com/vxJlrNS.png)
+[![optimization demo](https://i.imgur.com/TyHauh0.png)](https://i.imgur.com/TyHauh0.png)
 
 ### Goals
 

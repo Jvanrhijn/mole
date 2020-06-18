@@ -225,7 +225,7 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
     let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.25, StdRng::from_seed([0_u8; 32])),
             &obs,
         )
         .expect("Bad initial configuration");
