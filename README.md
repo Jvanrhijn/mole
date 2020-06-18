@@ -28,23 +28,32 @@ $ cargo run --example hydrogen_atom
 
 ### Usage
 
-Currently, Mole supports VMC optimization of all-electron wave functions. Provided wave functions
-are Jastrow-Slater wave functions with two-body correlation Jastrow factor, and a single
-Slater determinant. The Slater determinant can be populated with either STO or Gaussian
-orbitals. Optimization is at this point in time only supported for the Jastrow parameters.
+Currently, Mole supports VMC optimization of all-electron wave functions. No wave functions
+are provided, so they must be implemented by the user; Mole simply provides the
+tools required to optimize the wave functions and compute expectation values in
+a VMC framework. Wave function implementations may be provided in a separate
+crate in the future.
 
-VMC optimization is very crude and must essentially be done manually. A suitable
-abstraction will be implemented soon.
+Operators can be added by implementing the `Operator<T>` trait; see
+`examples/custom_operator.rs` for an example. Some observables are
+provided, including a local energy operator as well as certain
+molecular potentials.
 
-Adding new operators and wave functions is simply a matter of creating a new type and
-implementing the relevant traits. In order to create a new operator, one should implement
-the `Operator<T>` trait (see `src/operator`). For a new wave function, implement **at least**
+To implement a wave function, one should implement
 
-* `Function` (see `src/wavefunction/src/traits`)
-* `Cache` (see `src/wavefuction/src/traits`)
+* `Function`,
+* `WaveFunction`.
 
-Other traits that are likely required are `Optimize` and `Differentiate`, but this depends
-on the type of computation being done.
+If one wishes to compute energies, the trait
+
+* `Differentiate`
+
+should also be implemented, as it provides a `laplacian` function.
+Finally, VMC optimization additionally requires an implementation of
+
+* `Optimize`,
+
+which requires a function to compute parameter gradients.
 
 See the examples folder for detailed example usage.
 
@@ -75,12 +84,7 @@ Rust is such a young language.
 
 ### Planned Features
 
-* Variational and diffusion QMC capabilities
-* Jastrow-Slater wave functions
-* Various optimization schemes
-* Concurrency
-* Serde integration for storing optimized wave functions
-* 
+* DMC capabilities
 
 ### Dependencies
 
@@ -90,4 +94,3 @@ Rust is such a young language.
 * ndarray-linalg 0.10.0
 * num-traits 0.2.0
 * itertools 0.7.0
-* intel-mkl
