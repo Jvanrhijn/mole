@@ -59,8 +59,8 @@ See the examples folder for detailed example usage.
 
 ### Example result
 
-The figure below shows the result of optimizing a Jastrow-Slater wave function with two
-Jastrow e-e parameters and STO-populated Slater determinant, on a hydrogen molecule (H2)
+The figure below shows the result of optimizing a product of Slater type
+orbitals, on a hydrogen molecule (H2)
 Hamiltonian. The figure compares a vanilla steepest descent optimization with
 the stochastic reconfiguration algorithm by Sorella. See `examples/hydrogen_molecule`.
 
