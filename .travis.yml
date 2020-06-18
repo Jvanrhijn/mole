@@ -9,7 +9,14 @@ cache:
   - cargo
 
 script:
-  - RUSTC=rustc-proptest-fix cargo test --all
+  - export CARGO_INCREMENTAL=0
+  - export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+  - export RUSTDOCFLAGS="-Cpanic=abort"
+  - RUSTC=rustc-proptest-fix cargo test --all $CARGO_OPTIONS
+   - |
+      zip -0 ccov.zip `find . \( -name "mole.gc*" \) -print`;
+      ./grcov ccov.zip -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info;
+      bash <(curl -s https://codecov.io/bash) -f lcov.info;
 
 addons:
   apt:
@@ -23,6 +30,10 @@ addons:
       - libiberty-dev
       - gfortran
 
+before_install:
+      - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+
+
 before_script: |
   wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB &&
   sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB &&
@@ -34,20 +45,20 @@ before_script: |
   chmod +x rustc-proptest-fix &&
   PATH=$PATH:$(pwd)
 
-after_success: |
-  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
-  tar xzf master.tar.gz &&
-  cd kcov-master &&
-  mkdir build &&
-  cd build &&
-  cmake .. &&
-  make &&
-  make install DESTDIR=../../kcov-build &&
-  cd ../.. &&
-  rm -rf kcov-master &&
-  for file in target/debug/*-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
-  bash <(curl -s https://codecov.io/bash) &&
-  echo "Uploaded code coverage"
+  #after_success: |
+  #  wget https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
+  #  tar xzf master.tar.gz &&
+  #  cd kcov-master &&
+  #  mkdir build &&
+  #  cd build &&
+  #  cmake .. &&
+  #  make &&
+  #  make install DESTDIR=../../kcov-build &&
+  #  cd ../.. &&
+  #  rm -rf kcov-master &&
+  #  for file in target/debug/*-*[^\.d]; do mkdir -p "target/cov/$(basename $file)"; ./kcov-build/usr/local/bin/kcov --exclude-pattern=/.cargo,/usr/lib --verify "target/cov/$(basename $file)" "$file"; done &&
+  #  bash <(curl -s https://codecov.io/bash) &&
+  #  echo "Uploaded code coverage"
 
 env:
   - RUSTFLAGS="-C link-dead-code"
