@@ -25,7 +25,8 @@ impl Log for EmptyLogger {
             .iter()
             .fold(0.0, |a, b| a + b.get_scalar().unwrap())
             / self.block_size as f64;
-        format!("\tBlock energy:    {:.8}", energy)
+        //format!("\tBlock energy:    {:.8}", energy)
+        String::new()
     }
 }
 
@@ -137,18 +138,18 @@ fn main() {
     let wave_function = HeliumAtomWaveFunction::new(0.5);
 
     // run optimization
+    println!("STOCHASTIC RECONFIGURATION");
     let (energies_sr, errors_sr) = optimize_wave_function(
         &ion_pos,
         wave_function.clone(),
         StochasticReconfiguration::new(100_000.0),
     );
+    println!("\nSTEEPEST DESCENT");
     let (energies_sd, errors_sd) =
         optimize_wave_function(
             &ion_pos, 
             wave_function.clone(), 
             SteepestDescent::new(1e-5),
-            //NesterovMomentum::new(1e-5, 1e-3, 1)
-            //OnlineLbfgs::new(1.0, 5, 1)
     );
 
     // Plot the results

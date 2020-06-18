@@ -225,7 +225,7 @@ impl StochasticReconfiguration {
         {
             // rescale diagonal elements for stabilization
             // TODO: make scaling factor configurable
-            const EPS: f64 = 1e-1;
+            const EPS: f64 = 1e-2;
             let mut diag = sr_mat.diag_mut();
             diag *= 1.0 + EPS;
         }

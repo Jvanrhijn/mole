@@ -25,7 +25,8 @@ impl Log for Logger {
             .iter()
             .fold(0.0, |a, b| a + b.get_scalar().unwrap())
             / self.block_size as f64;
-        format!("\tBlock energy:    {:.8}", energy)
+        //format!("\tBlock energy:    {:.8}", energy)
+        String::new()
     }
 }
 
@@ -61,82 +62,19 @@ impl STO {
 }
 
 #[derive(Clone)]
-struct Jastrow {
-    b: f64,
-}
-
-impl Jastrow {
-    pub fn new(b: f64) -> Self {
-        Self { b }
-    }
-
-    pub fn uvalue(&self, r: f64) -> f64 {
-        r / (2.0 * (1.0 + self.b*r))
-    }
-
-    pub fn uderiv(&self, r: f64) -> f64 {
-        1.0 / (2.0*(self.b*r + 1.0).powi(2))
-    }
-
-    pub fn uderiv2(&self, r: f64) -> f64 {
-        -self.b / (self.b*r + 1.0).powi(3)
-    }
-
-    pub fn value(&self, cfg: &Array2<f64>) -> f64 {
-        let x1 = cfg.slice(s![0, ..]);
-        let x2 = cfg.slice(s![1, ..]);
-        let x12 = (&x1 - &x2).norm_l2();
-        f64::exp(self.uvalue(x12))
-    }
-
-    pub fn gradient(&self, cfg: &Array2<f64>) -> Array2<f64> {
-        let x1 = cfg.slice(s![0, ..]);
-        let x2 = cfg.slice(s![1, ..]);
-        let x12 = (&x1 - &x2).norm_l2();
-        let mut out = Array2::<f64>::zeros((2, 3));
-        let mut grad1 = out.slice_mut(s![0, ..]);
-        grad1 += &(self.uderiv(x12) / x12 * &x1);
-        let mut grad2 = out.slice_mut(s![1, ..]);
-        grad2 += &(self.uderiv(x12) / x12 * &x2);
-        self.value(cfg)*out
-    }
-
-    pub fn laplacian(&self, cfg: &Array2<f64>) -> f64 {
-        let x1: ArrayView<_, Ix1> = cfg.slice(s![0, ..]);
-        let x2: ArrayView<_, Ix1> = cfg.slice(s![1, ..]);
-        let x12 = (&x1 - &x2).norm_l2();
-        // first coordinate
-        let lapl1 = self.uderiv(x12)*(3.0/x12 - x1.dot(&(&x1 - &x2))) + self.uderiv2(x12) * x1.norm_l2()/x12;
-        let lapl2 = self.uderiv(x12)*(3.0/x12 - x2.dot(&(&x1 - &x2))) + self.uderiv2(x12) * x2.norm_l2()/x12;
-        let laplu = lapl1 + lapl2;
-        self.value(cfg) * laplu + self.gradient(cfg).norm_l2().powi(2) / self.value(cfg)
-    }
-
-    pub fn parameter_gradient(&self, cfg: &Array2<f64>) -> f64 {
-        let x1: ArrayView<_, Ix1> = cfg.slice(s![0, ..]);
-        let x2: ArrayView<_, Ix1> = cfg.slice(s![1, ..]);
-        let x12 = (&x1 - &x2).norm_l2();
-        self.value(cfg)*(-x12.powi(2)/(2.0*(1.0 + self.b*x12).powi(2)))
-    }
-}
-
-#[derive(Clone)]
 struct HydrogenMoleculeWaveFunction {
     nuclear_separation: f64,
     params: Array1<f64>,
     phi: STO,
-    jastrow: Jastrow,
 }
 
 impl HydrogenMoleculeWaveFunction {
     pub fn new(nuclear_separation: f64, params: Array1<f64>) -> Self {
         let alpha = params[0];
-        let b = params[1];
         Self {
             nuclear_separation,
             params,
             phi: STO::new(alpha),
-            jastrow: Jastrow::new(b),
         }
     }
 }
@@ -155,8 +93,8 @@ impl Function<f64> for HydrogenMoleculeWaveFunction {
         let x2 = cfg.slice(s![1, ..]);
         // parameters
         let r = Array1::<f64>::from_vec(vec![self.nuclear_separation, 0.0, 0.0]);
-        Ok(self.jastrow.value(cfg)*(self.phi.value(&(&x1 - &(0.5*&r)))*self.phi.value(&(&x2 + &(0.5*&r)))
-            + self.phi.value(&(&x1 + &(0.5*&r)))*self.phi.value(&(&x2 - &(0.5*&r)))))
+        Ok(self.phi.value(&(&x1 - &(0.5*&r)))*self.phi.value(&(&x2 + &(0.5*&r)))
+            + self.phi.value(&(&x1 + &(0.5*&r)))*self.phi.value(&(&x2 - &(0.5*&r))))
     }
 }
 
@@ -178,7 +116,7 @@ impl Differentiate for HydrogenMoleculeWaveFunction {
         gradx2 += &(self.phi.value(&(&x1 + &(0.5*&r))) * self.phi.gradient(&(&x2 - &(0.5*&r)))
                 + self.phi.value(&(&x1 - &(0.5*&r))) * self.phi.gradient(&(&x2 + &(0.5*&r))));
 
-        Ok(grad*self.jastrow.value(cfg) + self.value(cfg)?*self.jastrow.gradient(cfg))
+        Ok(grad)
     }
 
     fn laplacian(&self, cfg: &Array2<f64>) -> Result<f64> {
@@ -190,12 +128,8 @@ impl Differentiate for HydrogenMoleculeWaveFunction {
                 + self.phi.value(&(&x2 - &(0.5*&r))) * self.phi.laplacian(&(&x1 + &(0.5*&r))))
                 + &(self.phi.value(&(&x1 + &(0.5*&r))) * self.phi.laplacian(&(&x2 - &(0.5*&r)))
                 + self.phi.value(&(&x1 - &(0.5*&r))) * self.phi.laplacian(&(&x2 + &(0.5*&r))));
-        let laplj = self.jastrow.laplacian(cfg);
-        let gradpsi = self.gradient(cfg)?;
-        let gradj = self.jastrow.gradient(cfg);
-        //dbg!((&gradpsi * &gradj).sum());
         Ok(
-            laplpsi*self.jastrow.value(cfg) + self.value(cfg)?*laplj + 2.0*(&gradpsi * &gradj).sum()
+            laplpsi
         )
     }
 }
@@ -210,8 +144,7 @@ impl Optimize for HydrogenMoleculeWaveFunction {
             self.phi.value(&(&x1 - &(0.5*&r)))*self.phi.parameter_gradient(&(&x2 + &(0.5*&r)))
             + self.phi.parameter_gradient(&(&x1 - &(0.5*&r)))*self.phi.value(&(&x2 + &(0.5*&r)))
             + self.phi.value(&(&x1 + &(0.5*&r)))*self.phi.parameter_gradient(&(&x2 - &(0.5*&r)))
-            + self.phi.parameter_gradient(&(&x1 + &(0.5*&r)))*self.phi.value(&(&x2 - &(0.5*&r))),
-            self.jastrow.parameter_gradient(cfg)
+            + self.phi.parameter_gradient(&(&x1 + &(0.5*&r)))*self.phi.value(&(&x2 - &(0.5*&r)))
         ]
         )
     }
@@ -236,11 +169,11 @@ static NITERS: usize = 10;
 static NWORKERS: usize = 8;
 // Total number of MC samples, distributed over workers
 // samples per worker is TOTAL_SAMPLES / NWORKERS
-static TOTAL_SAMPLES: usize = 10_000;
+static TOTAL_SAMPLES: usize = 20_000;
 // Block size for blocking analysis. Effective number of
 // samples, assuming unit correlation time:
 // TOTAL_SAMPLES - BLOCK_SIZE * NWORKERS
-static BLOCK_SIZE: usize = 50;
+static BLOCK_SIZE: usize = 10;
 
 
 fn main() {
@@ -249,20 +182,22 @@ fn main() {
     let sep = ion_pos[[1, 0]] - ion_pos[[0, 0]];
 
     // construct  wave function
-    let wave_function = HydrogenMoleculeWaveFunction::new(sep, array![0.5, 0.8]);
+    let wave_function = HydrogenMoleculeWaveFunction::new(sep, array![0.5]);
 
     // run optimization for two different optimizers
+    println!("STOCHASTIC RECONFIGURATION");
     let (energies_sr, errors_sr) = optimize_wave_function(
         &ion_pos,
         wave_function.clone(),
-        StochasticReconfiguration::new(1.0),
+        StochasticReconfiguration::new(50_000.0),
     );
+    println!("\nSTEEPEST DESCENT");
     let (energies_sd, errors_sd) =
         optimize_wave_function(
             &ion_pos, 
             wave_function.clone(), 
-            SteepestDescent::new(0.0),
-    );
+            SteepestDescent::new(1e-5),
+        );
 
     // Plot the results
     plot_results(
@@ -290,7 +225,7 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
     let (_wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
-            metropolis::MetropolisDiffuse::from_rng(1.0, StdRng::from_seed([0_u8; 32])),
+            metropolis::MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32])),
             &obs,
         )
         .expect("Bad initial configuration");
