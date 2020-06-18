@@ -13,7 +13,7 @@ script:
   - export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
   - export RUSTDOCFLAGS="-Cpanic=abort"
   - RUSTC=rustc-proptest-fix cargo test --all $CARGO_OPTIONS
-   - |
+  - |
       zip -0 ccov.zip `find . \( -name "mole.gc*" \) -print`;
       ./grcov ccov.zip -s . -t lcov --llvm --branch --ignore-not-existing --ignore "/*" -o lcov.info;
       bash <(curl -s https://codecov.io/bash) -f lcov.info;
