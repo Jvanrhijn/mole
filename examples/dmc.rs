@@ -128,13 +128,13 @@ fn main() {
     // now do a DMC run
 
     // first, extract the standard deviation
-    // of the probability density |psi^2|:guiding_wf
+    // of the probability density |psi^2|
     let alpha = guiding_wf.parameters()[0];
     let stdev = alpha/2.0;
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 4000;
+    let num_confs = 10_000;
     const TAU: f64 = 0.05;
     const DMC_ITERS: usize = 100;
 
@@ -155,17 +155,24 @@ fn main() {
         let mut energy_acc = 0.0;
         let mut branch_acc = 0.0;
 
+        let mut to_kill = vec![];
+        let mut to_birth = vec![];
+
         // for each configuration
-        for i in 0..num_confs {
+        for i in 0..confs.len() {
             // propose electron move using metropolis diffusion algorithm
             let conf = &confs[i];
-            let new_conf = if let Some(x) = metrop.move_state(&mut guiding_wf, &conf, 0).unwrap() {
+            let mut new_conf = if let Some(x) = metrop.move_state(&mut guiding_wf, &conf, 0).unwrap() {
                 x
             } else {
                 conf.clone()
             };
 
-            // skip FN approximation since there are no nodes
+            // apply FN approximation (not really needed here but i'll do it anyway)
+            if guiding_wf.value(conf).unwrap().signum() != guiding_wf.value(&new_conf).unwrap().signum() {
+                new_conf = conf.clone();
+            }
+
 
             // branching factor
             let local_e = hamiltonian.act_on(&guiding_wf, &conf).unwrap().get_scalar().unwrap()/guiding_wf.value(&conf).unwrap();
@@ -176,21 +183,34 @@ fn main() {
             energy_acc += local_e_new;
 
             // clone configuration according to branching algorithm
-            let num_copies = (branch_factor + rng.gen::<f64>()) as usize;
+            let num_copies = ((branch_factor + rng.gen::<f64>()) as usize).min(3);
 
-            for _ in 0..num_copies {
-                confs.push(new_conf.clone());
+            if num_copies > 0 {
+                for _ in 1..num_copies {
+                    to_birth.push(new_conf.clone());
+                }
+            } else {
+                to_kill.push(i);
             }
         }
+        // kill walkers
+        for i in to_kill.iter().rev() {
+            confs.remove(*i);
+        }
+
+        // copy walkers
+        confs.extend(to_birth);
+
         energy_acc /= branch_acc;
-        // update trial energy
-        trial_energy = energy_acc;
+        // update trial energy, taking birth-death into account
+        //trial_energy = energy_acc;
+        trial_energy = energy_acc + (1.0 - confs.len() as f64 / num_confs as f64)/TAU;
    
         // randomly delete a number of walkers
-        let excess = confs.len() - num_confs;
-        for _ in 0..excess {
-            confs.remove(rng.gen_range(0, confs.len()));
-        }
+        //let excess = confs.len() - num_confs;
+        //for _ in 0..excess {
+        //    confs.remove(rng.gen_range(0, confs.len()));
+        //}
 
         println!("DMC Energy:   {:.8}", trial_energy);
     }

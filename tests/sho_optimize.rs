@@ -133,7 +133,7 @@ fn sho_optimize() {
 
     let vmc = VmcRunner::new(sampler, SteepestDescent::new(1e-5), EmptyLogger);
 
-    let (_, energies, _) = vmc.run_optimization(ITERS, SAMPLES, BLOCK_SIZE, 1).unwrap();
+    let (_, energies, _) = vmc.run_optimization(ITERS, SAMPLES, BLOCK_SIZE, 4).unwrap();
 
     let energy = energies.iter().last().unwrap();
 
