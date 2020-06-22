@@ -4,8 +4,8 @@ use ndarray_linalg::Norm;
 use std::collections::HashMap;
 use rand::{SeedableRng, StdRng};
 
-use rand::distributions::{Normal, Range, Uniform};
-use rand::{FromEntropy, Rng};
+use rand::distributions::{Normal, Uniform, WeightedChoice, Weighted, Distribution};
+use rand::{FromEntropy, Rng, RngCore};
 use ndarray_rand::RandomExt;
 
 // DMC test for hydrogen atom,
@@ -120,10 +120,10 @@ fn main() {
     let (mut guiding_wf, energies, errors) = vmc.run_optimization(ITERS, TOTAL_SAMPLES, BLOCK_SIZE, 4)
                                             .expect("VMC run failed");
 
-    let energy = energies.iter().last().unwrap();
+    let vmc_energy = energies.iter().last().unwrap();
     let error = errors.iter().last().unwrap();
 
-    println!("\nVMC Energy:     {} +/- {:.*}\n", energy, 8, error);
+    println!("\nVMC Energy:     {} +/- {:.*}\n", vmc_energy, 8, error);
 
     // now do a DMC run
 
@@ -134,34 +134,34 @@ fn main() {
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 10_000;
-    const TAU: f64 = 0.05;
-    const DMC_ITERS: usize = 100;
+    let num_confs = 16_000;
+    const TAU: f64 = 0.001;
+    const DMC_ITERS: usize = 25000;
+    const EQ_ITERS: usize = DMC_ITERS / 10;
 
-    //let mut confs = Array2::random_using((num_confs, 3), Normal::new(0.0, stdev), &mut StdRng::from_seed([1_u8; 32]));
     let mut rng = StdRng::from_seed([1_u8; 32]);
     let mut confs = vec![];
     for _ in 0..num_confs {
-        confs.push(Array2::random_using((1, 3), Normal::new(0.0, stdev), &mut rng));
+        confs.push((1.0, Array2::random_using((1, 3), Normal::new(0.0, stdev), &mut rng)));
     }
 
     // initialize trial energy
-    let mut trial_energy = *energy;
+    let mut trial_energy = *vmc_energy;
     // initialize dmc energy
+    let mut dmc_energy = trial_energy;
+    let mut dmc_energy_variance = 0.0;
+    
     let mut metrop = MetropolisDiffuse::from_rng(TAU, rng.clone());
+
 
     // for the number of dmc iterations
     for j in 0..DMC_ITERS {
         let mut energy_acc = 0.0;
-        let mut branch_acc = 0.0;
-
-        let mut to_kill = vec![];
-        let mut to_birth = vec![];
 
         // for each configuration
         for i in 0..confs.len() {
             // propose electron move using metropolis diffusion algorithm
-            let conf = &confs[i];
+            let (mut weight, conf) = &confs[i];
             let mut new_conf = if let Some(x) = metrop.move_state(&mut guiding_wf, &conf, 0).unwrap() {
                 x
             } else {
@@ -173,45 +173,48 @@ fn main() {
                 new_conf = conf.clone();
             }
 
-
             // branching factor
             let local_e = hamiltonian.act_on(&guiding_wf, &conf).unwrap().get_scalar().unwrap()/guiding_wf.value(&conf).unwrap();
-            let local_e_new = hamiltonian.act_on(&guiding_wf, &new_conf).unwrap().get_scalar().unwrap()/guiding_wf.value(&conf).unwrap();
+            let local_e_new = hamiltonian.act_on(&guiding_wf, &new_conf).unwrap().get_scalar().unwrap()/guiding_wf.value(&new_conf).unwrap();
         
-            let branch_factor = f64::exp(-TAU * (0.5*(local_e + local_e_new) - trial_energy));
-            branch_acc += branch_factor;
-            energy_acc += local_e_new;
-
-            // clone configuration according to branching algorithm
-            let num_copies = ((branch_factor + rng.gen::<f64>()) as usize).min(3);
-
-            if num_copies > 0 {
-                for _ in 1..num_copies {
-                    to_birth.push(new_conf.clone());
-                }
-            } else {
-                to_kill.push(i);
-            }
-        }
-        // kill walkers
-        for i in to_kill.iter().rev() {
-            confs.remove(*i);
+            weight *= f64::exp(-TAU * (0.5*(local_e + local_e_new) - trial_energy));
+            confs[i].0 = weight;
+            confs[i].1 = new_conf;
+            energy_acc += weight*local_e_new;
         }
 
-        // copy walkers
-        confs.extend(to_birth);
+        let global_weight = confs.iter().fold(0.0, |acc, (weight, _)| acc + *weight);
 
-        energy_acc /= branch_acc;
-        // update trial energy, taking birth-death into account
-        //trial_energy = energy_acc;
-        trial_energy = energy_acc + (1.0 - confs.len() as f64 / num_confs as f64)/TAU;
-   
-        // randomly delete a number of walkers
-        //let excess = confs.len() - num_confs;
-        //for _ in 0..excess {
-        //    confs.remove(rng.gen_range(0, confs.len()));
-        //}
+        energy_acc /= global_weight;
 
-        println!("DMC Energy:   {:.8}", trial_energy);
+        // update trial energy
+        trial_energy = (energy_acc  + trial_energy) / 2.0;
+
+        // Perform stochastic reconfiguration
+        let new_weight = global_weight / num_confs as f64;
+        // construct list of weighed configurations
+        let mut confs_weighted: Vec<_> = confs.iter()
+                                  .map(|(w, c)| Weighted { weight: (w*100.0) as u32, item: c })
+                                  .collect();
+        let wc = WeightedChoice::new(&mut confs_weighted);
+        // construct new configurations
+        let mut new_confs = vec![];
+        for _ in 0..num_confs {
+            new_confs.push((new_weight, wc.sample(&mut rng).clone()))
+        }
+
+        confs = new_confs;
+
+        // update DMC energy after equilibrating
+        if j > EQ_ITERS {
+            let dmc_energy_prev = dmc_energy;
+            dmc_energy += (trial_energy - dmc_energy) / ((j - EQ_ITERS) + 1) as f64;
+            dmc_energy_variance += ((trial_energy - dmc_energy_prev)*(trial_energy - dmc_energy) - dmc_energy_variance)
+                /(j - EQ_ITERS + 1) as f64;
+        }
+
+        println!("Reference Energy:   {:.8}    DMC Energy:   {:.8} +/- {:.8}", trial_energy, dmc_energy, dmc_energy_variance.sqrt());
     }
+
+    println!("DMC Energy:   {:.8} +/- {:.8}", dmc_energy, dmc_energy_variance.sqrt());
 }
