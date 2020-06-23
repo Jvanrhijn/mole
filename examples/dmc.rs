@@ -7,6 +7,8 @@ use rand::{SeedableRng, StdRng};
 use rand::distributions::{Normal, Uniform, WeightedChoice, Weighted, Distribution};
 use rand::{FromEntropy, Rng, RngCore};
 use ndarray_rand::RandomExt;
+use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
+use itertools::izip;
 
 // DMC test for hydrogen atom,
 // testing ground for library integration of
@@ -117,7 +119,7 @@ fn main() {
     // first do a VMC run to obtain a variationally optimized wave function
     let vmc = VmcRunner::new(sampler, SteepestDescent::new(1e-5), Logger);
 
-    let (mut guiding_wf, energies, errors) = vmc.run_optimization(ITERS, TOTAL_SAMPLES, BLOCK_SIZE, 4)
+    let (guiding_wf, energies, errors) = vmc.run_optimization(ITERS, TOTAL_SAMPLES, BLOCK_SIZE, 4)
                                             .expect("VMC run failed");
 
     let vmc_energy = energies.iter().last().unwrap();
@@ -125,96 +127,56 @@ fn main() {
 
     println!("\nVMC Energy:     {} +/- {:.*}\n", vmc_energy, 8, error);
 
-    // now do a DMC run
-
-    // first, extract the standard deviation
-    // of the probability density |psi^2|
-    let alpha = guiding_wf.parameters()[0];
-    let stdev = alpha/2.0;
+    // Improve the energy by DMC
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 16_000;
-    const TAU: f64 = 0.001;
-    const DMC_ITERS: usize = 25000;
+    let num_confs = 1600;
+    const TAU: f64 = 1e-3;
+    const DMC_ITERS: usize = 100_000;
     const EQ_ITERS: usize = DMC_ITERS / 10;
 
-    let mut rng = StdRng::from_seed([1_u8; 32]);
-    let mut confs = vec![];
-    for _ in 0..num_confs {
-        confs.push((1.0, Array2::random_using((1, 3), Normal::new(0.0, stdev), &mut rng)));
-    }
-
     // initialize trial energy
-    let mut trial_energy = *vmc_energy;
-    // initialize dmc energy
-    let mut dmc_energy = trial_energy;
-    let mut dmc_energy_variance = 0.0;
-    
-    let mut metrop = MetropolisDiffuse::from_rng(TAU, rng.clone());
+    let trial_energy = *vmc_energy;
 
+    let rng = StdRng::from_seed([1_u8; 32]);
+    let mut dmc = DmcRunner::with_rng(guiding_wf, num_confs, trial_energy, hamiltonian, rng);
 
-    // for the number of dmc iterations
-    for j in 0..DMC_ITERS {
-        let mut energy_acc = 0.0;
+    let (dmc_energy, dmc_vars) = dmc.diffuse(TAU, DMC_ITERS, EQ_ITERS);
+  
 
-        // for each configuration
-        for i in 0..confs.len() {
-            // propose electron move using metropolis diffusion algorithm
-            let (mut weight, conf) = &confs[i];
-            let mut new_conf = if let Some(x) = metrop.move_state(&mut guiding_wf, &conf, 0).unwrap() {
-                x
-            } else {
-                conf.clone()
-            };
+    println!("\nDMC Energy:   {:.8} +/- {:.8}", dmc_energy.last().unwrap(), dmc_vars.last().unwrap().sqrt()); 
 
-            // apply FN approximation (not really needed here but i'll do it anyway)
-            if guiding_wf.value(conf).unwrap().signum() != guiding_wf.value(&new_conf).unwrap().signum() {
-                new_conf = conf.clone();
-            }
+    plot_results(&dmc_energy.into(), &dmc_vars.iter().map(|x| x.sqrt()/((DMC_ITERS - EQ_ITERS) as f64).sqrt()).collect::<Array1<f64>>(), "blue");
+}
 
-            // branching factor
-            let local_e = hamiltonian.act_on(&guiding_wf, &conf).unwrap().get_scalar().unwrap()/guiding_wf.value(&conf).unwrap();
-            let local_e_new = hamiltonian.act_on(&guiding_wf, &new_conf).unwrap().get_scalar().unwrap()/guiding_wf.value(&new_conf).unwrap();
-        
-            weight *= f64::exp(-TAU * (0.5*(local_e + local_e_new) - trial_energy));
-            confs[i].0 = weight;
-            confs[i].1 = new_conf;
-            energy_acc += weight*local_e_new;
-        }
+fn plot_results(
+    energies: &Array1<f64>,
+    errors: &Array1<f64>,
+    color: &str,
+) {
+    let niters = energies.len();
+    let iters: Vec<_> = (0..niters).collect();
+    let exact = vec![-0.5; niters];
 
-        let global_weight = confs.iter().fold(0.0, |acc, (weight, _)| acc + *weight);
+    let mut fig = Figure::new();
+    let axes = fig.axes2d();
+    axes.fill_between(
+        &iters,
+        &(energies - errors),
+        &(energies + errors),
+        &[Color(color), FillAlpha(0.1)],
+    )
+    .lines(&iters, energies, &[Caption("DMC energy"), Color(color)]);
+    axes.lines(
+        &iters,
+        &exact,
+        &[Caption("Best ground state energy, Helium"), Color("black")],
+    )
+    .set_x_label("Iteration", &[])
+    .set_y_label("Exact energy (Hartree)", &[])
+    .set_x_grid(true)
+    .set_y_grid(true);
 
-        energy_acc /= global_weight;
-
-        // update trial energy
-        trial_energy = (energy_acc  + trial_energy) / 2.0;
-
-        // Perform stochastic reconfiguration
-        let new_weight = global_weight / num_confs as f64;
-        // construct list of weighed configurations
-        let mut confs_weighted: Vec<_> = confs.iter()
-                                  .map(|(w, c)| Weighted { weight: (w*100.0) as u32, item: c })
-                                  .collect();
-        let wc = WeightedChoice::new(&mut confs_weighted);
-        // construct new configurations
-        let mut new_confs = vec![];
-        for _ in 0..num_confs {
-            new_confs.push((new_weight, wc.sample(&mut rng).clone()))
-        }
-
-        confs = new_confs;
-
-        // update DMC energy after equilibrating
-        if j > EQ_ITERS {
-            let dmc_energy_prev = dmc_energy;
-            dmc_energy += (trial_energy - dmc_energy) / ((j - EQ_ITERS) + 1) as f64;
-            dmc_energy_variance += ((trial_energy - dmc_energy_prev)*(trial_energy - dmc_energy) - dmc_energy_variance)
-                /(j - EQ_ITERS + 1) as f64;
-        }
-
-        println!("Reference Energy:   {:.8}    DMC Energy:   {:.8} +/- {:.8}", trial_energy, dmc_energy, dmc_energy_variance.sqrt());
-    }
-
-    println!("DMC Energy:   {:.8} +/- {:.8}", dmc_energy, dmc_energy_variance.sqrt());
+    fig.show();
 }
