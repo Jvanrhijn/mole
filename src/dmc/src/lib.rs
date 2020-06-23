@@ -7,11 +7,13 @@ use rand::{StdRng, SeedableRng, FromEntropy, RngCore};
 use rand::distributions::{Weighted, WeightedChoice, Distribution};
 use metropolis::{MetropolisDiffuse, Metropolis};
 
-// TODO: custom logging, 
+// TODO: custom logging, parallelization, allow different
+// branch-split algorithms, allow release-node scheme, allow
+// arbitrary sampling of observables
 
 
 pub struct DmcRunner<T, O, R> 
-    where T: Function<f64, D=Ix2> + Differentiate + Clone, O: LocalOperator<T>, R: SeedableRng
+    where T: Function<f64, D=Ix2> + Differentiate + WaveFunction + Clone, O: LocalOperator<T>, R: SeedableRng
 {
     guiding_wave_function: T,
     walkers: Vec<(f64, Array2<f64>)>,
@@ -22,7 +24,7 @@ pub struct DmcRunner<T, O, R>
 
 impl<T, O, R> DmcRunner<T, O, R> 
     where 
-        T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + Clone, 
+        T: Function<f64, D=Ix2> + Differentiate<D=Ix2> + WaveFunction + Clone, 
         O: LocalOperator<T>, 
         R: SeedableRng + RngCore + Clone,
         <R as SeedableRng>::Seed: From<[u8; 32]>,
@@ -30,7 +32,7 @@ impl<T, O, R> DmcRunner<T, O, R>
     pub fn with_rng(guiding_wave_function: T, num_walkers: usize, reference_energy: f64, hamiltonian: O, mut rng: R) -> Self {
         let mut confs = vec![];
         for _ in 0..num_walkers {
-            confs.push((1.0, Array2::random_using((1, 3), Normal::new(0.0, 1.0), &mut rng)));
+            confs.push((1.0, Array2::random_using((guiding_wave_function.num_electrons(), 3), Normal::new(0.0, 1.0), &mut rng)));
         }
         Self {
             guiding_wave_function, 
@@ -43,8 +45,6 @@ impl<T, O, R> DmcRunner<T, O, R>
 
     pub fn diffuse(&mut self, time_step: f64, num_iterations: usize, equilibration: usize) -> (Vec<f64>, Vec<f64>) {
         let mut metrop = MetropolisDiffuse::from_rng(time_step, self.rng.clone());
-        let mut dmc_energy = self.reference_energy;
-        let mut dmc_variance = 0.0;
         let mut energies = vec![self.reference_energy];
         let mut vars = vec![0.0];
 
@@ -53,24 +53,26 @@ impl<T, O, R> DmcRunner<T, O, R>
             let mut ensemble_energy = 0.0;
 
             for (weight, conf) in self.walkers.iter_mut() {
-                let mut new_conf = if let Some(x) = metrop.move_state(&mut self.guiding_wave_function, conf, 0).unwrap() {
-                    x
-                } else {
-                    conf.clone()
-                };
+                for e in 0..self.guiding_wave_function.num_electrons() { 
+                    let mut new_conf = if let Some(x) = metrop.move_state(&mut self.guiding_wave_function, conf, e).unwrap() {
+                        x
+                    } else {
+                        conf.clone()
+                    };
 
-                // apply FN approximation
-                if self.guiding_wave_function.value(conf).unwrap().signum() != self.guiding_wave_function.value(&new_conf).unwrap().signum() {
-                    new_conf = conf.clone();
-                }
+                    // apply FN approximation
+                    if self.guiding_wave_function.value(conf).unwrap().signum() != self.guiding_wave_function.value(&new_conf).unwrap().signum() {
+                        new_conf = conf.clone();
+                    }
 
-                // compute weight
-                let local_e = self.hamiltonian.act_on(&self.guiding_wave_function, &conf).unwrap().get_scalar().unwrap()/self.guiding_wave_function.value(&conf).unwrap();
-                let local_e_new = self.hamiltonian.act_on(&self.guiding_wave_function, &new_conf).unwrap().get_scalar().unwrap()/self.guiding_wave_function.value(&new_conf).unwrap();
+                    // compute weight
+                    let local_e = self.hamiltonian.act_on(&self.guiding_wave_function, &conf).unwrap().get_scalar().unwrap()/self.guiding_wave_function.value(&conf).unwrap();
+                    let local_e_new = self.hamiltonian.act_on(&self.guiding_wave_function, &new_conf).unwrap().get_scalar().unwrap()/self.guiding_wave_function.value(&new_conf).unwrap();
 
-                *weight *= f64::exp(-time_step* (0.5*(local_e + local_e_new) - self.reference_energy));
-                *conf = new_conf;
-                ensemble_energy += *weight*local_e_new
+                    *weight *= f64::exp(-time_step* (0.5*(local_e + local_e_new) - self.reference_energy));
+                    *conf = new_conf;
+                    ensemble_energy += *weight*local_e_new
+            }
             }
 
             let global_weight = self.walkers.iter().fold(0.0, |acc, (w, _)| acc + w);

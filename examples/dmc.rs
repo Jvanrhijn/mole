@@ -133,7 +133,7 @@ fn main() {
     // from the wave function
     let num_confs = 1600;
     const TAU: f64 = 1e-3;
-    const DMC_ITERS: usize = 100_000;
+    const DMC_ITERS: usize = 500_000;
     const EQ_ITERS: usize = DMC_ITERS / 10;
 
     // initialize trial energy
@@ -171,7 +171,7 @@ fn plot_results(
     axes.lines(
         &iters,
         &exact,
-        &[Caption("Best ground state energy, Helium"), Color("black")],
+        &[Caption("Exact ground state energy, Hydrogen"), Color("black")],
     )
     .set_x_label("Iteration", &[])
     .set_y_label("Exact energy (Hartree)", &[])
