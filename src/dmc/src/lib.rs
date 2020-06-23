@@ -72,11 +72,11 @@ impl<T, O, R> DmcRunner<T, O, R>
                     *weight *= f64::exp(-time_step* (0.5*(local_e + local_e_new) - self.reference_energy));
                     *conf = new_conf;
                     ensemble_energy += *weight*local_e_new
-            }
+                }
             }
 
             let global_weight = self.walkers.iter().fold(0.0, |acc, (w, _)| acc + w);
-            ensemble_energy /= global_weight;
+            ensemble_energy /= global_weight * self.guiding_wave_function.num_electrons() as f64;
 
             // update ref energy
             self.reference_energy = (ensemble_energy + self.reference_energy)/2.0;

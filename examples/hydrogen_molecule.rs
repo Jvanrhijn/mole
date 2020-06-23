@@ -186,18 +186,28 @@ fn main() {
 
     // run optimization for two different optimizers
     println!("STOCHASTIC RECONFIGURATION");
-    let (energies_sr, errors_sr) = optimize_wave_function(
+    let (sd_wf, energies_sr, errors_sr) = optimize_wave_function(
         &ion_pos,
         wave_function.clone(),
         StochasticReconfiguration::new(50_000.0),
     );
     println!("\nSTEEPEST DESCENT");
-    let (energies_sd, errors_sd) =
+    let (_, energies_sd, errors_sd) =
         optimize_wave_function(
             &ion_pos, 
             wave_function.clone(), 
             SteepestDescent::new(1e-5),
         );
+
+    const NUM_WALKERS: usize = 16_000;
+    const TAU: f64 = 1e-3;        
+    const NUM_ITERS: usize = 1000;
+    const EQ_ITERS: usize = NUM_ITERS / 10;
+
+    let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
+    let mut dmc = DmcRunner::with_rng(sd_wf, NUM_WALKERS, *energies_sr.to_vec().last().unwrap(), hamiltonian, StdRng::from_seed([0_u8; 32]));
+
+    let (energies, vars) = dmc.diffuse(TAU, NUM_WALKERS, EQ_ITERS);
 
     // Plot the results
     plot_results(
@@ -206,13 +216,15 @@ fn main() {
         &["blue", "red"],
         &["Stochastic Refonfiguration", "Steepest Descent"],
     );
+
+
 }
 
 fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
     ion_pos: &Array2<f64>,
     wave_function: HydrogenMoleculeWaveFunction,
     opt: O,
-) -> (Array1<f64>, Array1<f64>) {
+) -> (HydrogenMoleculeWaveFunction, Array1<f64>, Array1<f64>) {
     //  hamiltonian operator
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
 
@@ -222,7 +234,7 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
         "Wavefunction value" => WavefunctionValue
     };
 
-    let (_wave_function, energies, errors) = {
+    let (wave_function, energies, errors) = {
         let sampler = Sampler::new(
             wave_function,
             metropolis::MetropolisDiffuse::from_rng(0.25, StdRng::from_seed([0_u8; 32])),
@@ -245,7 +257,7 @@ fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
     }
     .expect("VMC optimization failed");
 
-    (energies, errors)
+    (wave_function, energies, errors)
 }
 
 fn plot_results(
@@ -256,7 +268,7 @@ fn plot_results(
 ) {
     let niters = energies[0].len();
     let iters: Vec<_> = (0..niters).collect();
-    let exact = vec![-1.175; niters];
+    let exact = vec![-1.1645; niters];
 
     let mut fig = Figure::new();
     let axes = fig.axes2d();
