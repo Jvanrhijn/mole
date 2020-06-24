@@ -3,7 +3,7 @@ use std::collections::HashMap;
 #[macro_use]
 extern crate itertools;
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-use ndarray::{array, s, Array1, Array2, ArrayView, Ix1, Ix2};
+use ndarray::{array, s, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use rand::{SeedableRng, StdRng};
 
@@ -16,7 +16,7 @@ struct Logger {
 }
 impl Log for Logger {
     fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
-        let energy = data
+        let _energy = data
             .get("Energy")
             .unwrap()
             .chunks(self.block_size)
@@ -200,8 +200,8 @@ fn main() {
 
     const NUM_WALKERS: usize = 1000;
     const TAU: f64 = 1e-3;
-    const NUM_ITERS: usize = 200_000;
-    const EQ_ITERS: usize = NUM_ITERS / 10;
+    const NUM_ITERS: usize = 1000;
+    const BLOCK_SIZE: usize = 50;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
     let mut dmc = DmcRunner::with_rng(
@@ -212,7 +212,7 @@ fn main() {
         StdRng::from_seed([0_u8; 32]),
     );
 
-    let (energies, vars) = dmc.diffuse(TAU, NUM_ITERS, EQ_ITERS);
+    let (energies, errs) = dmc.diffuse(TAU, NUM_ITERS, BLOCK_SIZE);
 
     // Plot the results
     plot_results(
@@ -224,10 +224,7 @@ fn main() {
 
     plot_results_dmc(
         &energies.into(),
-        &vars
-            .iter()
-            .map(|x| x.sqrt() / ((NUM_ITERS - EQ_ITERS) as f64).sqrt())
-            .collect::<Array1<f64>>(),
+        &errs.into(),
         "blue",
     );
 }

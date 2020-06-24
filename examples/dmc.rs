@@ -5,10 +5,10 @@ use rand::{SeedableRng, StdRng};
 use std::collections::HashMap;
 
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-use itertools::izip;
-use ndarray_rand::RandomExt;
-use rand::distributions::{Distribution, Normal, Uniform, Weighted, WeightedChoice};
-use rand::{FromEntropy, Rng, RngCore};
+
+
+
+
 
 // DMC test for hydrogen atom,
 // testing ground for library integration of
@@ -134,8 +134,8 @@ fn main() {
     // from the wave function
     let num_confs = 1000;
     const TAU: f64 = 1e-2;
-    const DMC_ITERS: usize = 1000;
-    const EQ_ITERS: usize = DMC_ITERS / 10;
+    const DMC_ITERS: usize = 40_000;
+    const BLOCK_SIZE: usize = 100;
 
     // initialize trial energy
     let trial_energy = *vmc_energy;
@@ -143,20 +143,17 @@ fn main() {
     let rng = StdRng::from_seed([1_u8; 32]);
     let mut dmc = DmcRunner::with_rng(guiding_wf, num_confs, trial_energy, hamiltonian, rng);
 
-    let (dmc_energy, dmc_vars) = dmc.diffuse(TAU, DMC_ITERS, EQ_ITERS);
+    let (dmc_energy, dmc_errs) = dmc.diffuse(TAU, DMC_ITERS, BLOCK_SIZE);
 
     println!(
         "\nDMC Energy:   {:.8} +/- {:.8}",
         dmc_energy.last().unwrap(),
-        dmc_vars.last().unwrap().sqrt()
+        dmc_errs.last().unwrap()
     );
 
     plot_results(
         &dmc_energy.into(),
-        &dmc_vars
-            .iter()
-            .map(|x| x.sqrt() / ((DMC_ITERS - EQ_ITERS) as f64).sqrt())
-            .collect::<Array1<f64>>(),
+        &dmc_errs.into(),
         "blue",
     );
 }

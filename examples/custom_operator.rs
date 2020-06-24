@@ -1,7 +1,7 @@
-use ndarray::array;
+
 use std::collections::HashMap;
 
-use errors::Error;
+
 use metropolis::MetropolisBox;
 use mole::prelude::*;
 use ndarray::{Array1, Array2, Axis, Ix2};

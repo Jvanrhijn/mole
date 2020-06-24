@@ -62,117 +62,121 @@ where
         &mut self,
         time_step: f64,
         num_iterations: usize,
-        equilibration: usize,
+        block_size: usize,
     ) -> (Vec<f64>, Vec<f64>) {
         let mut metrop = MetropolisDiffuse::from_rng(time_step, self.rng.clone());
         let mut energies = vec![self.reference_energy];
         let mut vars = vec![0.0];
 
-        for j in 0..num_iterations {
-            let mut ensemble_energy = 0.0;
+        let blocks = num_iterations / block_size;
 
-            for (weight, conf) in self.walkers.iter_mut() {
-                for e in 0..self.guiding_wave_function.num_electrons() {
-                    let mut new_conf = if let Some(x) = metrop
-                        .move_state(&mut self.guiding_wave_function, conf, e)
-                        .unwrap()
-                    {
-                        x
-                    } else {
-                        conf.clone()
-                    };
+        for block_nr in 0..blocks {
+            let mut energies_block = vec![];
+            for j in 0..block_size {
+                let mut ensemble_energy = 0.0;
 
-                    // apply FN approximation
-                    if self.guiding_wave_function.value(conf).unwrap().signum()
-                        != self
-                            .guiding_wave_function
-                            .value(&new_conf)
+                for (weight, conf) in self.walkers.iter_mut() {
+                    for e in 0..self.guiding_wave_function.num_electrons() {
+                        let mut new_conf = if let Some(x) = metrop
+                            .move_state(&mut self.guiding_wave_function, conf, e)
                             .unwrap()
-                            .signum()
-                    {
-                        new_conf = conf.clone();
-                    }
+                        {
+                            x
+                        } else {
+                            conf.clone()
+                        };
 
-                    // compute weight
-                    let local_e = self
-                        .hamiltonian
-                        .act_on(&self.guiding_wave_function, &conf)
-                        .unwrap()
-                        .get_scalar()
-                        .unwrap()
-                        / self.guiding_wave_function.value(&conf).unwrap();
+                        // apply FN approximation
+                        if self.guiding_wave_function.value(conf).unwrap().signum()
+                            != self
+                                .guiding_wave_function
+                                .value(&new_conf)
+                                .unwrap()
+                                .signum()
+                        {
+                            new_conf = conf.clone();
+                        }
+
+                        // compute weight
+                        let local_e = self
+                            .hamiltonian
+                            .act_on(&self.guiding_wave_function, &conf)
+                            .unwrap()
+                            .get_scalar()
+                            .unwrap()
+                            / self.guiding_wave_function.value(&conf).unwrap();
+                        let local_e_new = self
+                            .hamiltonian
+                            .act_on(&self.guiding_wave_function, &new_conf)
+                            .unwrap()
+                            .get_scalar()
+                            .unwrap()
+                            / self.guiding_wave_function.value(&new_conf).unwrap();
+
+                        *weight *= f64::exp(
+                            -time_step * (0.5 * (local_e + local_e_new) - self.reference_energy),
+                        );
+                        *conf = new_conf;
+                    }
                     let local_e_new = self
                         .hamiltonian
-                        .act_on(&self.guiding_wave_function, &new_conf)
+                        .act_on(&self.guiding_wave_function, conf)
                         .unwrap()
                         .get_scalar()
                         .unwrap()
-                        / self.guiding_wave_function.value(&new_conf).unwrap();
-
-                    *weight *= f64::exp(
-                        -time_step * (0.5 * (local_e + local_e_new) - self.reference_energy),
-                    );
-                    *conf = new_conf;
-                    //ensemble_energy += *weight*local_e_new
+                        / self.guiding_wave_function.value(conf).unwrap();
+                    ensemble_energy += *weight * local_e_new
                 }
-                let local_e_new = self
-                    .hamiltonian
-                    .act_on(&self.guiding_wave_function, conf)
-                    .unwrap()
-                    .get_scalar()
-                    .unwrap()
-                    / self.guiding_wave_function.value(conf).unwrap();
-                ensemble_energy += *weight * local_e_new
+
+                let global_weight = self.walkers.iter().fold(0.0, |acc, (w, _)| acc + w);
+                ensemble_energy /= global_weight;
+
+                // update ref energy
+                self.reference_energy = (ensemble_energy + self.reference_energy) / 2.0;
+                energies_block.push(ensemble_energy);
+
+                // perform stochastic reconfiguration
+                let new_weight = global_weight / self.walkers.len() as f64;
+                let mut confs_weighted: Vec<_> = self
+                    .walkers
+                    .iter()
+                    .map(|(w, c)| Weighted {
+                        weight: (w * 100.0) as u32,
+                        item: c,
+                    })
+                    .collect();
+                let wc = WeightedChoice::new(&mut confs_weighted);
+                // construct new walkers
+                let mut new_walkers = vec![];
+                for _ in 0..self.walkers.len() {
+                    new_walkers.push((new_weight, wc.sample(&mut self.rng).clone()));
+                }
+                self.walkers = new_walkers;
             }
-
-            let global_weight = self.walkers.iter().fold(0.0, |acc, (w, _)| acc + w);
-            ensemble_energy /= global_weight;
-
-            // update ref energy
-            self.reference_energy = (ensemble_energy + self.reference_energy) / 2.0;
-
-            // perform stochastic reconfiguration
-            let new_weight = global_weight / self.walkers.len() as f64;
-            let mut confs_weighted: Vec<_> = self
-                .walkers
-                .iter()
-                .map(|(w, c)| Weighted {
-                    weight: (w * 100.0) as u32,
-                    item: c,
-                })
-                .collect();
-            let wc = WeightedChoice::new(&mut confs_weighted);
-            // construct new walkers
-            let mut new_walkers = vec![];
-            for _ in 0..self.walkers.len() {
-                new_walkers.push((new_weight, wc.sample(&mut self.rng).clone()));
-            }
-            self.walkers = new_walkers;
-
-            // update DMC energy
-            if j > equilibration {
+            if block_nr > 0 {
+                let energy = energies_block.iter().sum::<f64>() / energies_block.len() as f64;
                 let dmc_energy_prev = *energies.last().unwrap();
                 energies.push(
                     dmc_energy_prev
                         + (self.reference_energy - dmc_energy_prev)
-                            / (j - equilibration + 2) as f64,
+                            / (block_nr + 1) as f64,
                 );
                 vars.push(
                     vars.last().unwrap()
                         + ((self.reference_energy - dmc_energy_prev)
                             * (self.reference_energy - energies.last().unwrap())
                             - *vars.last().unwrap())
-                            / (j - equilibration + 1) as f64,
+                            / (block_nr + 1) as f64,
                 );
                 println!(
-                    "Reference Energy:   {:.8}    DMC Energy:   {:.8} +/- {:.8}",
-                    self.reference_energy,
-                    *energies.last().unwrap(),
-                    vars.last().unwrap().sqrt() / ((j - equilibration) as f64).sqrt()
-                );
+                        "Block Energy:   {:.8}    DMC Energy:   {:.8} +/- {:.8}",
+                        energy,
+                        *energies.last().unwrap(),
+                        vars.last().unwrap().sqrt()/(block_nr as f64).sqrt(),
+                    );
             }
         }
-        (energies, vars)
+        (energies, vars.iter().enumerate().map(|(i, x)| (x / ((i + 1) as f64)).sqrt()).collect())
     }
 }
 

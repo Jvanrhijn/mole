@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap};
 
 #[macro_use]
 extern crate itertools;
@@ -16,7 +16,7 @@ struct EmptyLogger {
 }
 impl Log for EmptyLogger {
     fn log(&mut self, data: &HashMap<String, Vec<OperatorValue>>) -> String {
-        let energy = data
+        let _energy = data
             .get("Energy")
             .unwrap()
             .chunks(self.block_size)
