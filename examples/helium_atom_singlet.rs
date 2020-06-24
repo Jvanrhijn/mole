@@ -3,12 +3,12 @@ use std::collections::{HashMap, VecDeque};
 #[macro_use]
 extern crate itertools;
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-use ndarray::{array, Array1, Array2, Array, Ix2, s};
+use ndarray::{array, s, Array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 use rand::{SeedableRng, StdRng};
 
-use mole::prelude::*;
 use mole::optimize::Optimize;
+use mole::prelude::*;
 
 #[derive(Clone)]
 struct EmptyLogger {
@@ -44,7 +44,10 @@ impl HeliumAtomWaveFunction {
     }
 
     fn extract_config(cfg: &Array2<f64>) -> (Array1<f64>, Array1<f64>) {
-        (cfg.slice(s![0, ..]).to_owned(), cfg.slice(s![1, ..]).to_owned())
+        (
+            cfg.slice(s![0, ..]).to_owned(),
+            cfg.slice(s![1, ..]).to_owned(),
+        )
     }
 }
 
@@ -63,7 +66,7 @@ impl Function<f64> for HeliumAtomWaveFunction {
         // $\psi(x_1, x_1) = \exp(-\alpha |x_1| - \beta |x_2|)$
         let alpha = self.params[0];
         let (x1, x2) = Self::extract_config(cfg);
-        Ok(f64::exp(-alpha*(x1.norm_l2() + x2.norm_l2())))
+        Ok(f64::exp(-alpha * (x1.norm_l2() + x2.norm_l2())))
     }
 }
 
@@ -74,8 +77,8 @@ impl Differentiate for HeliumAtomWaveFunction {
         let alpha = self.params[0];
         let (x1, x2) = Self::extract_config(cfg);
         let value = self.value(cfg)?;
-        let grad_x1 = -alpha/x1.norm_l2() * value * &x1;
-        let grad_x2 = -alpha/x2.norm_l2()* value * &x2;
+        let grad_x1 = -alpha / x1.norm_l2() * value * &x1;
+        let grad_x2 = -alpha / x2.norm_l2() * value * &x2;
         let mut out = Array2::<f64>::zeros(cfg.dim());
         let mut first_comp = out.slice_mut(s![0, ..]);
         first_comp += &grad_x1;
@@ -84,25 +87,21 @@ impl Differentiate for HeliumAtomWaveFunction {
         Ok(out)
     }
 
-    fn laplacian(&self, cfg:&Array<f64, Self::D>) -> Result<f64> {
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let alpha = self.params[0];
         let (x1, x2) = Self::extract_config(cfg);
         let val = self.value(cfg)?;
         let x1norm = x1.norm_l2();
         let x2norm = x2.norm_l2();
-        Ok(
-            alpha/x1norm * val * (alpha*x1norm - 2.0)
-            + alpha/x2norm * val * (alpha*x2norm - 2.0)
-        )
+        Ok(alpha / x1norm * val * (alpha * x1norm - 2.0)
+            + alpha / x2norm * val * (alpha * x2norm - 2.0))
     }
 }
 
 impl Optimize for HeliumAtomWaveFunction {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
         let (x1, x2) = Self::extract_config(cfg);
-        Ok(-self.value(cfg)? * Array1::from_vec(vec![
-            x1.norm_l2() + x2.norm_l2()
-        ]))
+        Ok(-self.value(cfg)? * Array1::from_vec(vec![x1.norm_l2() + x2.norm_l2()]))
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -116,15 +115,12 @@ impl Optimize for HeliumAtomWaveFunction {
     fn num_parameters(&self) -> usize {
         self.params.len()
     }
-
 }
-
 
 static NITERS: usize = 10;
 static NWORKERS: usize = 8;
 static TOTAL_SAMPLES: usize = 10_000;
 static BLOCK_SIZE: usize = 10;
-
 
 fn main() {
     let ion_pos = array![[0.0, 0.0, 0.0]];
@@ -140,11 +136,7 @@ fn main() {
     );
     println!("\nSTEEPEST DESCENT");
     let (energies_sd, errors_sd) =
-        optimize_wave_function(
-            &ion_pos, 
-            wave_function.clone(), 
-            SteepestDescent::new(1e-5),
-    );
+        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
 
     // Plot the results
     plot_results(

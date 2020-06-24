@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use ndarray_linalg::Norm;
 use metropolis::MetropolisBox;
-use ndarray::{Array1, Axis, Array2, Ix2, array};
+use mole::prelude::*;
+use ndarray::{array, Array1, Array2, Axis, Ix2};
+use ndarray_linalg::Norm;
 use operator::{
     ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
 };
-use mole::prelude::*;
+use std::collections::HashMap;
 extern crate util;
 
 use rand::{SeedableRng, StdRng};
@@ -19,7 +19,7 @@ impl Log for MockLogger {
 
 #[derive(Clone)]
 struct STO {
-    alpha: f64
+    alpha: f64,
 }
 
 impl STO {
@@ -28,19 +28,19 @@ impl STO {
     }
 
     pub fn value(&self, x: &Array2<f64>) -> f64 {
-        f64::exp(-self.alpha*x.norm_l2())
+        f64::exp(-self.alpha * x.norm_l2())
     }
 
     pub fn gradient(&self, x: &Array2<f64>) -> Array2<f64> {
-        -self.alpha*self.value(x)/x.norm_l2() * x
+        -self.alpha * self.value(x) / x.norm_l2() * x
     }
 
     pub fn laplacian(&self, x: &Array2<f64>) -> f64 {
-        self.alpha*self.value(x)/x.norm_l2() * (self.alpha*x.norm_l2() - 2.0)
+        self.alpha * self.value(x) / x.norm_l2() * (self.alpha * x.norm_l2() - 2.0)
     }
 
     pub fn parameter_gradient(&self, x: &Array2<f64>) -> f64 {
-        -x.norm_l2()*self.value(x)
+        -x.norm_l2() * self.value(x)
     }
 
     pub fn update_parameters(&mut self, deltap: f64) {
@@ -56,7 +56,10 @@ struct H2WF {
 
 impl H2WF {
     pub fn new(r: f64, alpha: f64) -> Self {
-        Self { r: array![[r, 0.0, 0.0]], phi: STO::new(alpha) }
+        Self {
+            r: array![[r, 0.0, 0.0]],
+            phi: STO::new(alpha),
+        }
     }
 }
 
@@ -64,11 +67,9 @@ impl Function<f64> for H2WF {
     type D = Ix2;
 
     fn value(&self, x: &Array2<f64>) -> Result<f64> {
-        let r1 = &(x - &(0.5*&self.r));
-        let r2 = &(x + &(0.5*&self.r));
-        Ok(
-            self.phi.value(&r1)*self.phi.value(&r2)
-        )
+        let r1 = &(x - &(0.5 * &self.r));
+        let r2 = &(x + &(0.5 * &self.r));
+        Ok(self.phi.value(&r1) * self.phi.value(&r2))
     }
 }
 
@@ -76,20 +77,17 @@ impl Differentiate for H2WF {
     type D = Ix2;
 
     fn gradient(&self, x: &Array2<f64>) -> Result<Array2<f64>> {
-        let r1 = &(x - &(0.5*&self.r));
-        let r2 = &(x + &(0.5*&self.r));
-        Ok(
-            self.phi.value(r1)*self.phi.gradient(r2) + self.phi.value(r2)*self.phi.gradient(r1)
-        )
+        let r1 = &(x - &(0.5 * &self.r));
+        let r2 = &(x + &(0.5 * &self.r));
+        Ok(self.phi.value(r1) * self.phi.gradient(r2) + self.phi.value(r2) * self.phi.gradient(r1))
     }
 
     fn laplacian(&self, x: &Array2<f64>) -> Result<f64> {
-        let r1 = &(x - &(0.5*&self.r));
-        let r2 = &(x + &(0.5*&self.r));
-        Ok(
-            self.phi.value(r1)*self.phi.laplacian(r2) + self.phi.value(r2)*self.phi.laplacian(r1)
-            + 2.0*(&self.phi.gradient(r1) * &self.phi.gradient(r2)).sum()
-        )
+        let r1 = &(x - &(0.5 * &self.r));
+        let r2 = &(x + &(0.5 * &self.r));
+        Ok(self.phi.value(r1) * self.phi.laplacian(r2)
+            + self.phi.value(r2) * self.phi.laplacian(r1)
+            + 2.0 * (&self.phi.gradient(r1) * &self.phi.gradient(r2)).sum())
     }
 }
 

@@ -27,12 +27,7 @@ pub struct VmcRunner<S, L, O> {
 impl<S, T, L, O> VmcRunner<S, L, O>
 where
     O: Optimizer + Send + Sync + Clone,
-    T: WaveFunction
-        + Function<f64, D = Ix2>
-        + Optimize
-        + Clone
-        + Send
-        + Sync,
+    T: WaveFunction + Function<f64, D = Ix2> + Optimize + Clone + Send + Sync,
     L: Log + Clone + Send + Sync,
     S: MonteCarloSampler<WaveFunc = T> + Clone + Send + Sync,
 {

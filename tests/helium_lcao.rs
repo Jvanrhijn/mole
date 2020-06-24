@@ -2,13 +2,13 @@ use std::collections::HashMap;
 #[macro_use]
 extern crate ndarray;
 use metropolis::MetropolisDiffuse;
-use ndarray::{Array, Array1, Axis, Array2, Ix2};
+use mole::prelude::*;
+use ndarray::{Array, Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 use operator::{
     ElectronicHamiltonian, ElectronicPotential, IonicPotential, KineticEnergy, OperatorValue,
 };
 use rand::{SeedableRng, StdRng};
-use mole::prelude::*;
 #[macro_use]
 extern crate util;
 
@@ -32,7 +32,10 @@ impl HeliumAtomWaveFunction {
     }
 
     fn extract_config(cfg: &Array2<f64>) -> (Array1<f64>, Array1<f64>) {
-        (cfg.slice(s![0, ..]).to_owned(), cfg.slice(s![1, ..]).to_owned())
+        (
+            cfg.slice(s![0, ..]).to_owned(),
+            cfg.slice(s![1, ..]).to_owned(),
+        )
     }
 }
 
@@ -51,7 +54,7 @@ impl Function<f64> for HeliumAtomWaveFunction {
         // $\psi(x_1, x_1) = \exp(-\alpha |x_1| - \beta |x_2|)$
         let alpha = self.params[0];
         let (x1, x2) = Self::extract_config(cfg);
-        Ok(f64::exp(-alpha*(x1.norm_l2() + x2.norm_l2())))
+        Ok(f64::exp(-alpha * (x1.norm_l2() + x2.norm_l2())))
     }
 }
 
@@ -62,8 +65,8 @@ impl Differentiate for HeliumAtomWaveFunction {
         let alpha = self.params[0];
         let (x1, x2) = Self::extract_config(cfg);
         let value = self.value(cfg)?;
-        let grad_x1 = -alpha/x1.norm_l2() * value * &x1;
-        let grad_x2 = -alpha/x2.norm_l2()* value * &x2;
+        let grad_x1 = -alpha / x1.norm_l2() * value * &x1;
+        let grad_x2 = -alpha / x2.norm_l2() * value * &x2;
         let mut out = Array2::<f64>::zeros(cfg.dim());
         let mut first_comp = out.slice_mut(s![0, ..]);
         first_comp += &grad_x1;
@@ -72,16 +75,14 @@ impl Differentiate for HeliumAtomWaveFunction {
         Ok(out)
     }
 
-    fn laplacian(&self, cfg:&Array<f64, Self::D>) -> Result<f64> {
+    fn laplacian(&self, cfg: &Array<f64, Self::D>) -> Result<f64> {
         let alpha = self.params[0];
         let (x1, x2) = Self::extract_config(cfg);
         let val = self.value(cfg)?;
         let x1norm = x1.norm_l2();
         let x2norm = x2.norm_l2();
-        Ok(
-            alpha/x1norm * val * (alpha*x1norm - 2.0)
-            + alpha/x2norm * val * (alpha*x2norm - 2.0)
-        )
+        Ok(alpha / x1norm * val * (alpha * x1norm - 2.0)
+            + alpha / x2norm * val * (alpha * x2norm - 2.0))
     }
 }
 
@@ -98,7 +99,7 @@ fn helium_lcao() {
     //];
 
     //let wave_function = SpinDeterminantProduct::new(orbitals, 1).unwrap();
-    let wave_function = HeliumAtomWaveFunction::new(1.0/optimal_width);
+    let wave_function = HeliumAtomWaveFunction::new(1.0 / optimal_width);
 
     let kinetic = KineticEnergy::new();
     let potential_ions = IonicPotential::new(ion_pos, array![2]);

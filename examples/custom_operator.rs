@@ -3,13 +3,13 @@ use std::collections::HashMap;
 
 use errors::Error;
 use metropolis::MetropolisBox;
+use mole::prelude::*;
 use ndarray::{Array1, Array2, Axis, Ix2};
 use ndarray_linalg::Norm;
 use operator::{KineticEnergy, LocalOperator, OperatorValue};
 use rand::{SeedableRng, StdRng};
 use util::operators;
-use wavefunction_traits::{Function, Differentiate};
-use mole::prelude::*;
+use wavefunction_traits::{Differentiate, Function};
 
 // Create a very basic logger
 struct Logger;
@@ -49,7 +49,7 @@ impl HarmonicHamiltonian {
 // T is the type parameter of the wave function.
 impl<T> LocalOperator<T> for HarmonicHamiltonian
 where
-    T: Function<f64, D=Ix2> + Differentiate<D = Ix2>,
+    T: Function<f64, D = Ix2> + Differentiate<D = Ix2>,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue> {
         // Kinetic energy
@@ -69,7 +69,7 @@ struct GaussianWaveFunction {
 
 impl GaussianWaveFunction {
     pub fn new(a: f64) -> Self {
-        Self {a}
+        Self { a }
     }
 }
 
@@ -77,7 +77,7 @@ impl Function<f64> for GaussianWaveFunction {
     type D = Ix2;
 
     fn value(&self, x: &Array2<f64>) -> Result<f64> {
-        Ok(f64::exp(-(x.norm_l2()/self.a).powi(2)))
+        Ok(f64::exp(-(x.norm_l2() / self.a).powi(2)))
     }
 }
 
@@ -85,13 +85,11 @@ impl Differentiate for GaussianWaveFunction {
     type D = Ix2;
 
     fn gradient(&self, x: &Array2<f64>) -> Result<Array2<f64>> {
-        Ok(-2.0*self.value(x)?/self.a.powi(2)*x)
+        Ok(-2.0 * self.value(x)? / self.a.powi(2) * x)
     }
 
     fn laplacian(&self, x: &Array2<f64>) -> Result<f64> {
-        Ok(
-            self.value(x)?*(4.0*x.norm_l2().powi(2) - 6.0*self.a.powi(2))/self.a.powi(4)
-        )
+        Ok(self.value(x)? * (4.0 * x.norm_l2().powi(2) - 6.0 * self.a.powi(2)) / self.a.powi(4))
     }
 }
 
@@ -105,7 +103,7 @@ fn main() {
     let omega = 1.0;
 
     // Build wave function
-    let ansatz = GaussianWaveFunction::new(f64::sqrt(2.0/omega));
+    let ansatz = GaussianWaveFunction::new(f64::sqrt(2.0 / omega));
 
     let metrop = MetropolisBox::from_rng(1.0, StdRng::from_seed([0; 32]));
 

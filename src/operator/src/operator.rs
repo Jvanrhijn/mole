@@ -55,7 +55,7 @@ impl IonicPotential {
     }
 }
 
-impl<T: Function<f64, D=Ix2>> LocalOperator<T> for IonicPotential {
+impl<T: Function<f64, D = Ix2>> LocalOperator<T> for IonicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(Scalar(self.value(cfg)? * wf.value(cfg)?))
     }
@@ -90,7 +90,7 @@ impl Function<f64> for ElectronicPotential {
     }
 }
 
-impl<T: Function<f64, D=Ix2>> LocalOperator<T> for ElectronicPotential {
+impl<T: Function<f64, D = Ix2>> LocalOperator<T> for ElectronicPotential {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(Scalar(self.value(cfg)? * wf.value(cfg)?))
     }
@@ -117,7 +117,7 @@ impl KineticEnergy {
 
 impl<T> LocalOperator<T> for KineticEnergy
 where
-    T: Differentiate<D = Ix2>
+    T: Differentiate<D = Ix2>,
 {
     fn act_on(&self, wf: &T, cfg: &Array<f64, Ix2>) -> Result<OperatorValue, Error> {
         Ok(Scalar(-0.5 * wf.laplacian(cfg)?))
@@ -141,7 +141,7 @@ impl IonicHamiltonian {
 
 impl<T> LocalOperator<T> for IonicHamiltonian
 where
-    T: Differentiate<D = Ix2> + Function<f64, D=Ix2>
+    T: Differentiate<D = Ix2> + Function<f64, D = Ix2>,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.v.act_on(wf, cfg)?)
@@ -176,7 +176,7 @@ impl ElectronicHamiltonian {
 
 impl<T> LocalOperator<T> for ElectronicHamiltonian
 where
-    T: Differentiate<D = Ix2> + Function<f64, D=Ix2>
+    T: Differentiate<D = Ix2> + Function<f64, D = Ix2>,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue, Error> {
         Ok(self.t.act_on(wf, cfg)? + self.vion.act_on(wf, cfg)? + self.velec.act_on(wf, cfg)?)

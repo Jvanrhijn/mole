@@ -1,14 +1,14 @@
 use mole::prelude::*;
-use ndarray::{Array1, Array2, Array, Ix1, Ix2, Axis, array, s};
+use ndarray::{array, s, Array, Array1, Array2, Axis, Ix1, Ix2};
 use ndarray_linalg::Norm;
-use std::collections::HashMap;
 use rand::{SeedableRng, StdRng};
+use std::collections::HashMap;
 
-use rand::distributions::{Normal, Uniform, WeightedChoice, Weighted, Distribution};
-use rand::{FromEntropy, Rng, RngCore};
-use ndarray_rand::RandomExt;
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 use itertools::izip;
+use ndarray_rand::RandomExt;
+use rand::distributions::{Distribution, Normal, Uniform, Weighted, WeightedChoice};
+use rand::{FromEntropy, Rng, RngCore};
 
 // DMC test for hydrogen atom,
 // testing ground for library integration of
@@ -50,7 +50,7 @@ impl Function<f64> for GaussianWaveFunction {
 
     fn value(&self, x: &Array2<f64>) -> Result<f64> {
         let a = self.params[0];
-        Ok(f64::exp(-(x.norm_l2()/a).powi(2)))
+        Ok(f64::exp(-(x.norm_l2() / a).powi(2)))
     }
 }
 
@@ -59,14 +59,12 @@ impl Differentiate for GaussianWaveFunction {
 
     fn gradient(&self, x: &Array2<f64>) -> Result<Array2<f64>> {
         let a = self.params[0];
-        Ok(-2.0*self.value(x)?/a.powi(2)*x)
+        Ok(-2.0 * self.value(x)? / a.powi(2) * x)
     }
 
     fn laplacian(&self, x: &Array2<f64>) -> Result<f64> {
         let a = self.params[0];
-        Ok(
-            self.value(x)?*(4.0*x.norm_l2().powi(2) - 6.0*a.powi(2))/a.powi(4)
-        )
+        Ok(self.value(x)? * (4.0 * x.norm_l2().powi(2) - 6.0 * a.powi(2)) / a.powi(4))
     }
 }
 
@@ -79,7 +77,9 @@ impl WaveFunction for GaussianWaveFunction {
 impl Optimize for GaussianWaveFunction {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
         let a = self.params[0];
-        Ok(array![self.value(cfg)?*2.0*cfg.norm_l2().powi(2)/a.powi(3)])
+        Ok(array![
+            self.value(cfg)? * 2.0 * cfg.norm_l2().powi(2) / a.powi(3)
+        ])
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -119,8 +119,9 @@ fn main() {
     // first do a VMC run to obtain a variationally optimized wave function
     let vmc = VmcRunner::new(sampler, SteepestDescent::new(1e-5), Logger);
 
-    let (guiding_wf, energies, errors) = vmc.run_optimization(ITERS, TOTAL_SAMPLES, BLOCK_SIZE, 4)
-                                            .expect("VMC run failed");
+    let (guiding_wf, energies, errors) = vmc
+        .run_optimization(ITERS, TOTAL_SAMPLES, BLOCK_SIZE, 4)
+        .expect("VMC run failed");
 
     let vmc_energy = energies.iter().last().unwrap();
     let error = errors.iter().last().unwrap();
@@ -143,18 +144,24 @@ fn main() {
     let mut dmc = DmcRunner::with_rng(guiding_wf, num_confs, trial_energy, hamiltonian, rng);
 
     let (dmc_energy, dmc_vars) = dmc.diffuse(TAU, DMC_ITERS, EQ_ITERS);
-  
 
-    println!("\nDMC Energy:   {:.8} +/- {:.8}", dmc_energy.last().unwrap(), dmc_vars.last().unwrap().sqrt()); 
+    println!(
+        "\nDMC Energy:   {:.8} +/- {:.8}",
+        dmc_energy.last().unwrap(),
+        dmc_vars.last().unwrap().sqrt()
+    );
 
-    plot_results(&dmc_energy.into(), &dmc_vars.iter().map(|x| x.sqrt()/((DMC_ITERS - EQ_ITERS) as f64).sqrt()).collect::<Array1<f64>>(), "blue");
+    plot_results(
+        &dmc_energy.into(),
+        &dmc_vars
+            .iter()
+            .map(|x| x.sqrt() / ((DMC_ITERS - EQ_ITERS) as f64).sqrt())
+            .collect::<Array1<f64>>(),
+        "blue",
+    );
 }
 
-fn plot_results(
-    energies: &Array1<f64>,
-    errors: &Array1<f64>,
-    color: &str,
-) {
+fn plot_results(energies: &Array1<f64>, errors: &Array1<f64>, color: &str) {
     let niters = energies.len();
     let iters: Vec<_> = (0..niters).collect();
     let exact = vec![-0.5; niters];
@@ -171,7 +178,10 @@ fn plot_results(
     axes.lines(
         &iters,
         &exact,
-        &[Caption("Exact ground state energy, Hydrogen"), Color("black")],
+        &[
+            Caption("Exact ground state energy, Hydrogen"),
+            Color("black"),
+        ],
     )
     .set_x_label("Iteration", &[])
     .set_y_label("Exact energy (Hartree)", &[])

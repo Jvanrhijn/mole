@@ -171,8 +171,7 @@ where
                 + self.time_step.powi(2)
                     * (drift_velocity.norm_l2() - drift_velocity_old.norm_l2()));
 
-        let acceptance =
-            (exponent.exp() * wf_value.powi(2) / wf_value_old.powi(2)).min(1.0);
+        let acceptance = (exponent.exp() * wf_value.powi(2) / wf_value_old.powi(2)).min(1.0);
 
         Ok(acceptance > self.rng.gen::<f64>())
     }

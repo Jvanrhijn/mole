@@ -1,11 +1,11 @@
 // This tests the optimization of a simple
 // quantum harmonic oscillator wave function
 use mole::prelude::*;
-use ndarray::{Array1, Array2, Ix2, array};
+use ndarray::{array, Array1, Array2, Ix2};
 use ndarray_linalg::Norm;
 
-use std::collections::HashMap;
 use rand::{SeedableRng, StdRng};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 struct EmptyLogger;
@@ -36,7 +36,7 @@ impl HarmonicHamiltonian {
 // T is the type parameter of the wave function.
 impl<T> LocalOperator<T> for HarmonicHamiltonian
 where
-    T: Function<f64, D=Ix2> + Differentiate<D = Ix2>,
+    T: Function<f64, D = Ix2> + Differentiate<D = Ix2>,
 {
     fn act_on(&self, wf: &T, cfg: &Array2<f64>) -> Result<OperatorValue> {
         // Kinetic energy
@@ -65,7 +65,7 @@ impl Function<f64> for GaussianWaveFunction {
 
     fn value(&self, x: &Array2<f64>) -> Result<f64> {
         let a = self.params[0];
-        Ok(f64::exp(-(x.norm_l2()/a).powi(2)))
+        Ok(f64::exp(-(x.norm_l2() / a).powi(2)))
     }
 }
 
@@ -74,14 +74,12 @@ impl Differentiate for GaussianWaveFunction {
 
     fn gradient(&self, x: &Array2<f64>) -> Result<Array2<f64>> {
         let a = self.params[0];
-        Ok(-2.0*self.value(x)?/a.powi(2)*x)
+        Ok(-2.0 * self.value(x)? / a.powi(2) * x)
     }
 
     fn laplacian(&self, x: &Array2<f64>) -> Result<f64> {
         let a = self.params[0];
-        Ok(
-            self.value(x)?*(4.0*x.norm_l2().powi(2) - 6.0*a.powi(2))/a.powi(4)
-        )
+        Ok(self.value(x)? * (4.0 * x.norm_l2().powi(2) - 6.0 * a.powi(2)) / a.powi(4))
     }
 }
 
@@ -94,7 +92,9 @@ impl WaveFunction for GaussianWaveFunction {
 impl Optimize for GaussianWaveFunction {
     fn parameter_gradient(&self, cfg: &Array2<f64>) -> Result<Array1<f64>> {
         let a = self.params[0];
-        Ok(array![self.value(cfg)?*2.0*cfg.norm_l2().powi(2)/a.powi(3)])
+        Ok(array![
+            self.value(cfg)? * 2.0 * cfg.norm_l2().powi(2) / a.powi(3)
+        ])
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -110,7 +110,6 @@ impl Optimize for GaussianWaveFunction {
     }
 }
 
-
 static ITERS: usize = 20;
 static SAMPLES: usize = 1000;
 static BLOCK_SIZE: usize = 10;
@@ -123,7 +122,7 @@ fn sho_optimize() {
 
     let metrop = MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0_u8; 32]));
 
-    let obs = operators!{
+    let obs = operators! {
         "Energy" => h,
         "Parameter gradient" => ParameterGradient,
         "Wavefunction value" => WavefunctionValue
@@ -138,5 +137,4 @@ fn sho_optimize() {
     let energy = energies.iter().last().unwrap();
 
     assert!((energy - 1.5).abs() < EPS);
-
 }

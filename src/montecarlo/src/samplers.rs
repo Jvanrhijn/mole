@@ -73,7 +73,7 @@ where
 
 impl<'a, T, V> MonteCarloSampler for Sampler<'a, T, V>
 where
-    T: Function<f64, D = Ix2> +  WaveFunction + Clone,
+    T: Function<f64, D = Ix2> + WaveFunction + Clone,
     V: Metropolis<T>,
 {
     type WaveFunc = T;
@@ -111,7 +111,7 @@ where
             {
                 self.config = config;
                 self.acceptance += 1.0 / self.wave_function.num_electrons() as f64;
-            } 
+            }
         }
         Ok(())
     }

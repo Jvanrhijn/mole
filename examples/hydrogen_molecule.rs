@@ -3,7 +3,7 @@ use std::collections::HashMap;
 #[macro_use]
 extern crate itertools;
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
-use ndarray::{array, Array1, Array2, Ix2, s, Ix1, ArrayView};
+use ndarray::{array, s, Array1, Array2, ArrayView, Ix1, Ix2};
 use ndarray_linalg::Norm;
 use rand::{SeedableRng, StdRng};
 
@@ -32,7 +32,7 @@ impl Log for Logger {
 
 #[derive(Clone)]
 struct STO {
-    alpha: f64
+    alpha: f64,
 }
 
 impl STO {
@@ -41,19 +41,19 @@ impl STO {
     }
 
     pub fn value(&self, x: &Array1<f64>) -> f64 {
-        f64::exp(-self.alpha*x.norm_l2())
+        f64::exp(-self.alpha * x.norm_l2())
     }
 
     pub fn gradient(&self, x: &Array1<f64>) -> Array1<f64> {
-        -self.alpha*self.value(x)/x.norm_l2() * x
+        -self.alpha * self.value(x) / x.norm_l2() * x
     }
 
     pub fn laplacian(&self, x: &Array1<f64>) -> f64 {
-        self.alpha*self.value(x)/x.norm_l2() * (self.alpha*x.norm_l2() - 2.0)
+        self.alpha * self.value(x) / x.norm_l2() * (self.alpha * x.norm_l2() - 2.0)
     }
 
     pub fn parameter_gradient(&self, x: &Array1<f64>) -> f64 {
-        -x.norm_l2()*self.value(x)
+        -x.norm_l2() * self.value(x)
     }
 
     pub fn update_parameters(&mut self, deltap: f64) {
@@ -93,8 +93,10 @@ impl Function<f64> for HydrogenMoleculeWaveFunction {
         let x2 = cfg.slice(s![1, ..]);
         // parameters
         let r = Array1::<f64>::from_vec(vec![self.nuclear_separation, 0.0, 0.0]);
-        Ok(self.phi.value(&(&x1 - &(0.5*&r)))*self.phi.value(&(&x2 + &(0.5*&r)))
-            + self.phi.value(&(&x1 + &(0.5*&r)))*self.phi.value(&(&x2 - &(0.5*&r))))
+        Ok(
+            self.phi.value(&(&x1 - &(0.5 * &r))) * self.phi.value(&(&x2 + &(0.5 * &r)))
+                + self.phi.value(&(&x1 + &(0.5 * &r))) * self.phi.value(&(&x2 - &(0.5 * &r))),
+        )
     }
 }
 
@@ -109,12 +111,12 @@ impl Differentiate for HydrogenMoleculeWaveFunction {
         //
         let mut grad = Array2::<f64>::zeros((2, 3));
         let mut gradx1 = grad.slice_mut(s![0, ..]);
-        gradx1 += &(self.phi.value(&(&x2 + &(0.5*&r))) * self.phi.gradient(&(&x1 - &(0.5*&r)))
-                + self.phi.value(&(&x2 - &(0.5*&r))) * self.phi.gradient(&(&x1 + &(0.5*&r))));
+        gradx1 += &(self.phi.value(&(&x2 + &(0.5 * &r))) * self.phi.gradient(&(&x1 - &(0.5 * &r)))
+            + self.phi.value(&(&x2 - &(0.5 * &r))) * self.phi.gradient(&(&x1 + &(0.5 * &r))));
 
         let mut gradx2 = grad.slice_mut(s![1, ..]);
-        gradx2 += &(self.phi.value(&(&x1 + &(0.5*&r))) * self.phi.gradient(&(&x2 - &(0.5*&r)))
-                + self.phi.value(&(&x1 - &(0.5*&r))) * self.phi.gradient(&(&x2 + &(0.5*&r))));
+        gradx2 += &(self.phi.value(&(&x1 + &(0.5 * &r))) * self.phi.gradient(&(&x2 - &(0.5 * &r)))
+            + self.phi.value(&(&x1 - &(0.5 * &r))) * self.phi.gradient(&(&x2 + &(0.5 * &r))));
 
         Ok(grad)
     }
@@ -124,13 +126,12 @@ impl Differentiate for HydrogenMoleculeWaveFunction {
         let x2 = cfg.slice(s![1, ..]);
         // parameters
         let r = Array1::<f64>::from_vec(vec![self.nuclear_separation, 0.0, 0.0]);
-        let laplpsi = &(self.phi.value(&(&x2 + &(0.5*&r))) * self.phi.laplacian(&(&x1 - &(0.5*&r)))
-                + self.phi.value(&(&x2 - &(0.5*&r))) * self.phi.laplacian(&(&x1 + &(0.5*&r))))
-                + &(self.phi.value(&(&x1 + &(0.5*&r))) * self.phi.laplacian(&(&x2 - &(0.5*&r)))
-                + self.phi.value(&(&x1 - &(0.5*&r))) * self.phi.laplacian(&(&x2 + &(0.5*&r))));
-        Ok(
-            laplpsi
-        )
+        let laplpsi = &(self.phi.value(&(&x2 + &(0.5 * &r)))
+            * self.phi.laplacian(&(&x1 - &(0.5 * &r)))
+            + self.phi.value(&(&x2 - &(0.5 * &r))) * self.phi.laplacian(&(&x1 + &(0.5 * &r))))
+            + &(self.phi.value(&(&x1 + &(0.5 * &r))) * self.phi.laplacian(&(&x2 - &(0.5 * &r)))
+                + self.phi.value(&(&x1 - &(0.5 * &r))) * self.phi.laplacian(&(&x2 + &(0.5 * &r))));
+        Ok(laplpsi)
     }
 }
 
@@ -141,12 +142,15 @@ impl Optimize for HydrogenMoleculeWaveFunction {
         // parameters
         let r = Array1::<f64>::from_vec(vec![self.nuclear_separation, 0.0, 0.0]);
         Ok(array![
-            self.phi.value(&(&x1 - &(0.5*&r)))*self.phi.parameter_gradient(&(&x2 + &(0.5*&r)))
-            + self.phi.parameter_gradient(&(&x1 - &(0.5*&r)))*self.phi.value(&(&x2 + &(0.5*&r)))
-            + self.phi.value(&(&x1 + &(0.5*&r)))*self.phi.parameter_gradient(&(&x2 - &(0.5*&r)))
-            + self.phi.parameter_gradient(&(&x1 + &(0.5*&r)))*self.phi.value(&(&x2 - &(0.5*&r)))
-        ]
-        )
+            self.phi.value(&(&x1 - &(0.5 * &r)))
+                * self.phi.parameter_gradient(&(&x2 + &(0.5 * &r)))
+                + self.phi.parameter_gradient(&(&x1 - &(0.5 * &r)))
+                    * self.phi.value(&(&x2 + &(0.5 * &r)))
+                + self.phi.value(&(&x1 + &(0.5 * &r)))
+                    * self.phi.parameter_gradient(&(&x2 - &(0.5 * &r)))
+                + self.phi.parameter_gradient(&(&x1 + &(0.5 * &r)))
+                    * self.phi.value(&(&x2 - &(0.5 * &r)))
+        ])
     }
 
     fn update_parameters(&mut self, deltap: &Array1<f64>) {
@@ -175,7 +179,6 @@ static TOTAL_SAMPLES: usize = 20_000;
 // TOTAL_SAMPLES - BLOCK_SIZE * NWORKERS
 static BLOCK_SIZE: usize = 10;
 
-
 fn main() {
     // H2 equilibrium geometry
     let ion_pos = array![[-0.7, 0.0, 0.0], [0.7, 0.0, 0.0]];
@@ -193,19 +196,21 @@ fn main() {
     );
     println!("\nSTEEPEST DESCENT");
     let (_, energies_sd, errors_sd) =
-        optimize_wave_function(
-            &ion_pos, 
-            wave_function.clone(), 
-            SteepestDescent::new(1e-5),
-        );
+        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
 
     const NUM_WALKERS: usize = 1000;
-    const TAU: f64 = 1e-3;        
+    const TAU: f64 = 1e-3;
     const NUM_ITERS: usize = 200_000;
     const EQ_ITERS: usize = NUM_ITERS / 10;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
-    let mut dmc = DmcRunner::with_rng(sd_wf, NUM_WALKERS, *energies_sr.to_vec().last().unwrap(), hamiltonian, StdRng::from_seed([0_u8; 32]));
+    let mut dmc = DmcRunner::with_rng(
+        sd_wf,
+        NUM_WALKERS,
+        *energies_sr.to_vec().last().unwrap(),
+        hamiltonian,
+        StdRng::from_seed([0_u8; 32]),
+    );
 
     let (energies, vars) = dmc.diffuse(TAU, NUM_ITERS, EQ_ITERS);
 
@@ -217,8 +222,14 @@ fn main() {
         &["Stochastic Refonfiguration", "Steepest Descent"],
     );
 
-    plot_results_dmc(&energies.into(), &vars.iter().map(|x| x.sqrt()/((NUM_ITERS - EQ_ITERS) as f64).sqrt()).collect::<Array1<f64>>(), "blue");
-
+    plot_results_dmc(
+        &energies.into(),
+        &vars
+            .iter()
+            .map(|x| x.sqrt() / ((NUM_ITERS - EQ_ITERS) as f64).sqrt())
+            .collect::<Array1<f64>>(),
+        "blue",
+    );
 }
 
 fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
@@ -295,11 +306,7 @@ fn plot_results(
     fig.show();
 }
 
-fn plot_results_dmc(
-    energies: &Array1<f64>,
-    errors: &Array1<f64>,
-    color: &str,
-) {
+fn plot_results_dmc(energies: &Array1<f64>, errors: &Array1<f64>, color: &str) {
     let niters = energies.len();
     let iters: Vec<_> = (0..niters).collect();
     let exact = vec![-1.1645; niters];
