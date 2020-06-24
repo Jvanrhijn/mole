@@ -199,15 +199,15 @@ fn main() {
             SteepestDescent::new(1e-5),
         );
 
-    const NUM_WALKERS: usize = 16_000;
+    const NUM_WALKERS: usize = 1000;
     const TAU: f64 = 1e-3;        
-    const NUM_ITERS: usize = 1000;
+    const NUM_ITERS: usize = 200_000;
     const EQ_ITERS: usize = NUM_ITERS / 10;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
     let mut dmc = DmcRunner::with_rng(sd_wf, NUM_WALKERS, *energies_sr.to_vec().last().unwrap(), hamiltonian, StdRng::from_seed([0_u8; 32]));
 
-    let (energies, vars) = dmc.diffuse(TAU, NUM_WALKERS, EQ_ITERS);
+    let (energies, vars) = dmc.diffuse(TAU, NUM_ITERS, EQ_ITERS);
 
     // Plot the results
     plot_results(
@@ -217,6 +217,7 @@ fn main() {
         &["Stochastic Refonfiguration", "Steepest Descent"],
     );
 
+    plot_results_dmc(&energies.into(), &vars.iter().map(|x| x.sqrt()/((NUM_ITERS - EQ_ITERS) as f64).sqrt()).collect::<Array1<f64>>(), "blue");
 
 }
 
@@ -288,6 +289,37 @@ fn plot_results(
     )
     .set_x_label("Iteration", &[])
     .set_y_label("VMC Energy (Hartree)", &[])
+    .set_x_grid(true)
+    .set_y_grid(true);
+
+    fig.show();
+}
+
+fn plot_results_dmc(
+    energies: &Array1<f64>,
+    errors: &Array1<f64>,
+    color: &str,
+) {
+    let niters = energies.len();
+    let iters: Vec<_> = (0..niters).collect();
+    let exact = vec![-1.1645; niters];
+
+    let mut fig = Figure::new();
+    let axes = fig.axes2d();
+    axes.fill_between(
+        &iters,
+        &(energies - errors),
+        &(energies + errors),
+        &[Color(color), FillAlpha(0.1)],
+    )
+    .lines(&iters, energies, &[Caption("DMC energy"), Color(color)]);
+    axes.lines(
+        &iters,
+        &exact,
+        &[Caption("Best ground state energy, H2"), Color("black")],
+    )
+    .set_x_label("Iteration", &[])
+    .set_y_label("Exact energy (Hartree)", &[])
     .set_x_grid(true)
     .set_y_grid(true);
 
