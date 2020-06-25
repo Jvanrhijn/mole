@@ -65,8 +65,8 @@ where
         block_size: usize,
     ) -> (Vec<f64>, Vec<f64>) {
         let mut metrop = MetropolisDiffuse::from_rng(time_step, self.rng.clone());
-        let mut energies = vec![self.reference_energy];
-        let mut vars = vec![0.0];
+        let mut energies = vec![];
+        let mut vars = vec![];
 
         let blocks = num_iterations / block_size;
 
@@ -153,18 +153,29 @@ where
                 }
                 self.walkers = new_walkers;
             }
-            if block_nr > 0 {
+            if block_nr == 1 {
+                let energy = energies_block.iter().sum::<f64>() / energies_block.len() as f64;
+                energies.push(energy);
+                vars.push(0.0);
+                println!(
+                        "Block Energy:   {:.8}    DMC Energy:   {:.8} +/- {:.8}",
+                        energy,
+                        *energies.last().unwrap(),
+                        0.0
+                    );
+            }
+            if block_nr > 1 {
                 let energy = energies_block.iter().sum::<f64>() / energies_block.len() as f64;
                 let dmc_energy_prev = *energies.last().unwrap();
                 energies.push(
                     dmc_energy_prev
-                        + (self.reference_energy - dmc_energy_prev)
+                        + (energy - dmc_energy_prev)
                             / (block_nr + 1) as f64,
                 );
                 vars.push(
                     vars.last().unwrap()
-                        + ((self.reference_energy - dmc_energy_prev)
-                            * (self.reference_energy - energies.last().unwrap())
+                        + ((energy - dmc_energy_prev)
+                            * (energy - energies.last().unwrap())
                             - *vars.last().unwrap())
                             / (block_nr + 1) as f64,
                 );

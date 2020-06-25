@@ -189,30 +189,30 @@ fn main() {
 
     // run optimization for two different optimizers
     println!("STOCHASTIC RECONFIGURATION");
-    let (sd_wf, energies_sr, errors_sr) = optimize_wave_function(
+    let (sr_wf, energies_sr, errors_sr) = optimize_wave_function(
         &ion_pos,
         wave_function.clone(),
         StochasticReconfiguration::new(50_000.0),
     );
     println!("\nSTEEPEST DESCENT");
-    let (_, energies_sd, errors_sd) =
+    let (sd_wf, energies_sd, errors_sd) =
         optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
 
     const NUM_WALKERS: usize = 1000;
     const TAU: f64 = 1e-3;
-    const NUM_ITERS: usize = 1000;
-    const BLOCK_SIZE: usize = 50;
+    const NUM_ITERS: usize = 10000;
+    const DMC_BLOCK_SIZE: usize = 100;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
     let mut dmc = DmcRunner::with_rng(
-        sd_wf,
+        sr_wf,
         NUM_WALKERS,
         *energies_sr.to_vec().last().unwrap(),
         hamiltonian,
         StdRng::from_seed([0_u8; 32]),
     );
 
-    let (energies, errs) = dmc.diffuse(TAU, NUM_ITERS, BLOCK_SIZE);
+    let (energies, errs) = dmc.diffuse(TAU, NUM_ITERS, DMC_BLOCK_SIZE);
 
     // Plot the results
     plot_results(
