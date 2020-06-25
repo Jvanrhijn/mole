@@ -132,9 +132,9 @@ fn main() {
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 16000;
+    let num_confs = 16_000;
     const TAU: f64 = 1e-2;
-    const DMC_ITERS: usize = 20000;
+    const DMC_ITERS: usize = 10000;
     const DMC_BLOCK_SIZE: usize = 100;
 
     // initialize trial energy

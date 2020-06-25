@@ -132,7 +132,7 @@ where
                 ensemble_energy /= global_weight;
 
                 // update ref energy
-                self.reference_energy = (ensemble_energy + self.reference_energy) / 2.0;
+                //self.reference_energy = (ensemble_energy + self.reference_energy) / 2.0;
                 energies_block.push(ensemble_energy);
 
                 // perform stochastic reconfiguration
@@ -155,6 +155,7 @@ where
             }
             if block_nr == 1 {
                 let energy = energies_block.iter().sum::<f64>() / energies_block.len() as f64;
+                self.reference_energy = (self.reference_energy + energy) / 2.0;
                 energies.push(energy);
                 vars.push(0.0);
                 println!(

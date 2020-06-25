@@ -164,14 +164,16 @@ where
         let wf_grad_old = wf.gradient(cfg)?;
         let drift_velocity_old = &wf_grad_old / wf_value_old;
 
-        let exponent = -1.0 / (2.0 * self.time_step)
-            * (2.0
-                * ((&drift_velocity + &drift_velocity_old) * (cfg_prop - cfg)).scalar_sum()
-                * self.time_step
-                + self.time_step.powi(2)
-                    * (drift_velocity.norm_l2() - drift_velocity_old.norm_l2()));
+        //let exponent = -1.0 / (2.0 * self.time_step)
+        //    * (2.0
+        //        * ((&drift_velocity + &drift_velocity_old) * (cfg_prop - cfg)).scalar_sum()
+        //        * self.time_step
+        //        + self.time_step.powi(2)
+        //            * (drift_velocity.norm_l2() - drift_velocity_old.norm_l2()));
+        let t_high = f64::exp(-(&(cfg - cfg_prop) - &(&drift_velocity*self.time_step)).norm_l2().powi(2)/(2.0*self.time_step));
+        let t_low = f64::exp(-(&(cfg_prop - cfg) - &(&drift_velocity_old*self.time_step)).norm_l2().powi(2)/(2.0*self.time_step));
 
-        let acceptance = (exponent.exp() * wf_value.powi(2) / wf_value_old.powi(2)).min(1.0);
+        let acceptance = (t_high * wf_value.powi(2) / (t_low * wf_value_old.powi(2))).min(1.0);
 
         Ok(acceptance > self.rng.gen::<f64>())
     }
