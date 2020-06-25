@@ -197,10 +197,11 @@ fn main() {
     println!("\nSTEEPEST DESCENT");
     let (sd_wf, energies_sd, errors_sd) =
         optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
+    println!();
 
-    const NUM_WALKERS: usize = 1000;
+    const NUM_WALKERS: usize = 500;
     const TAU: f64 = 1e-3;
-    const NUM_ITERS: usize = 10000;
+    const NUM_ITERS: usize = 10_000;
     const DMC_BLOCK_SIZE: usize = 100;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);

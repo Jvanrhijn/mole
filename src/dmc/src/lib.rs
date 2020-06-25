@@ -96,28 +96,16 @@ where
                         {
                             new_conf = conf.clone();
                         }
-
-                        // compute weight
-                        let local_e = self
-                            .hamiltonian
-                            .act_on(&self.guiding_wave_function, &conf)
-                            .unwrap()
-                            .get_scalar()
-                            .unwrap()
-                            / self.guiding_wave_function.value(&conf).unwrap();
-                        let local_e_new = self
-                            .hamiltonian
-                            .act_on(&self.guiding_wave_function, &new_conf)
-                            .unwrap()
-                            .get_scalar()
-                            .unwrap()
-                            / self.guiding_wave_function.value(&new_conf).unwrap();
-
-                        *weight *= f64::exp(
-                            -time_step * (0.5 * (local_e + local_e_new) - self.reference_energy),
-                        );
                         *conf = new_conf;
                     }
+                    // compute weight
+                    let local_e = self
+                        .hamiltonian
+                        .act_on(&self.guiding_wave_function, &conf)
+                        .unwrap()
+                        .get_scalar()
+                        .unwrap()
+                        / self.guiding_wave_function.value(&conf).unwrap();
                     let local_e_new = self
                         .hamiltonian
                         .act_on(&self.guiding_wave_function, conf)
@@ -125,6 +113,9 @@ where
                         .get_scalar()
                         .unwrap()
                         / self.guiding_wave_function.value(conf).unwrap();
+                    *weight *= f64::exp(
+                        -time_step * (0.5 * (local_e + local_e_new) - self.reference_energy),
+                    );
                     ensemble_energy += *weight * local_e_new
                 }
 
@@ -137,11 +128,14 @@ where
 
                 // perform stochastic reconfiguration
                 let new_weight = global_weight / self.walkers.len() as f64;
+                let max_weight = self.walkers.iter().fold(0.0, |acc, (w, _)| f64::max(acc, *w));
+                // normalize weights by the maximum weight
+                let norm_factor = self.walkers.len() as f64 / max_weight;
                 let mut confs_weighted: Vec<_> = self
                     .walkers
                     .iter()
                     .map(|(w, c)| Weighted {
-                        weight: (w * 100.0) as u32,
+                        weight: (w*norm_factor) as u32,
                         item: c,
                     })
                     .collect();
@@ -155,7 +149,8 @@ where
             }
             if block_nr == 1 {
                 let energy = energies_block.iter().sum::<f64>() / energies_block.len() as f64;
-                self.reference_energy = (self.reference_energy + energy) / 2.0;
+                //self.reference_energy = (self.reference_energy + energy) / 2.0;
+                self.reference_energy = energy;
                 energies.push(energy);
                 vars.push(0.0);
                 println!(
