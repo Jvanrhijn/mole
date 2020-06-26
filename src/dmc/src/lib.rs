@@ -13,15 +13,16 @@ use wavefunction_traits::*;
 
 pub struct DmcRunner<T, O, R>
 where
-    T: Function<f64, D = Ix2> + Differentiate + WaveFunction + Clone,
+    T: Function<f64, D = Ix2> + Differentiate<D = Ix2> + WaveFunction + Clone,
     O: LocalOperator<T>,
-    R: SeedableRng,
+    R: SeedableRng + RngCore + Clone,
+    <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
     guiding_wave_function: T,
     walkers: Vec<(f64, Array2<f64>)>,
     reference_energy: f64,
     hamiltonian: O,
-    rng: R,
+    metrop: MetropolisDiffuse<R>,
 }
 
 impl<T, O, R> DmcRunner<T, O, R>
@@ -31,21 +32,22 @@ where
     R: SeedableRng + RngCore + Clone,
     <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
-    pub fn with_rng(
+    pub fn new(
         guiding_wave_function: T,
         num_walkers: usize,
         reference_energy: f64,
         hamiltonian: O,
-        mut rng: R,
+        mut metropolis: MetropolisDiffuse<R>,
     ) -> Self {
         let mut confs = vec![];
+        let mut rng = <MetropolisDiffuse<R> as Metropolis<T>>::rng_mut(&mut metropolis);
         for _ in 0..num_walkers {
             confs.push((
                 1.0,
                 Array2::random_using(
                     (guiding_wave_function.num_electrons(), 3),
                     Normal::new(0.0, 1.0),
-                    &mut rng,
+                    &mut rng
                 ),
             ));
         }
@@ -54,7 +56,7 @@ where
             walkers: confs,
             reference_energy,
             hamiltonian,
-            rng,
+            metrop: metropolis,
         }
     }
 
@@ -64,7 +66,6 @@ where
         num_iterations: usize,
         block_size: usize,
     ) -> (Vec<f64>, Vec<f64>) {
-        let mut metrop = MetropolisDiffuse::from_rng(time_step, self.rng.clone());
         let mut energies = vec![];
         let mut vars = vec![];
 
@@ -76,8 +77,18 @@ where
                 let mut ensemble_energy = 0.0;
 
                 for (weight, conf) in self.walkers.iter_mut() {
+                    // compute old local energy
+                    let local_e = self
+                        .hamiltonian
+                        .act_on(&self.guiding_wave_function, &conf)
+                        .unwrap()
+                        .get_scalar()
+                        .unwrap()
+                        / self.guiding_wave_function.value(&conf).unwrap();
+                    // move all electrons according to Langevin dynamics
+                    // with accept/reject
                     for e in 0..self.guiding_wave_function.num_electrons() {
-                        let mut new_conf = if let Some(x) = metrop
+                        let mut new_conf = if let Some(x) = self.metrop
                             .move_state(&mut self.guiding_wave_function, conf, e)
                             .unwrap()
                         {
@@ -98,14 +109,8 @@ where
                         }
                         *conf = new_conf;
                     }
-                    // compute weight
-                    let local_e = self
-                        .hamiltonian
-                        .act_on(&self.guiding_wave_function, &conf)
-                        .unwrap()
-                        .get_scalar()
-                        .unwrap()
-                        / self.guiding_wave_function.value(&conf).unwrap();
+  
+                    // compute local energy after move
                     let local_e_new = self
                         .hamiltonian
                         .act_on(&self.guiding_wave_function, conf)
@@ -113,6 +118,7 @@ where
                         .get_scalar()
                         .unwrap()
                         / self.guiding_wave_function.value(conf).unwrap();
+                    // compute weight of this walker
                     *weight *= f64::exp(
                         -time_step * (0.5 * (local_e + local_e_new) - self.reference_energy),
                     );
@@ -122,8 +128,6 @@ where
                 let global_weight = self.walkers.iter().fold(0.0, |acc, (w, _)| acc + w);
                 ensemble_energy /= global_weight;
 
-                // update ref energy
-                //self.reference_energy = (ensemble_energy + self.reference_energy) / 2.0;
                 energies_block.push(ensemble_energy);
 
                 // perform stochastic reconfiguration
@@ -142,17 +146,19 @@ where
                 let wc = WeightedChoice::new(&mut confs_weighted);
                 // construct new walkers
                 let mut new_walkers = vec![];
+                let mut rng = <MetropolisDiffuse<R> as Metropolis<T>>::rng_mut(&mut self.metrop);
                 for _ in 0..self.walkers.len() {
-                    new_walkers.push((new_weight, wc.sample(&mut self.rng).clone()));
+                    new_walkers.push((new_weight, wc.sample(&mut rng).clone()));
                 }
                 self.walkers = new_walkers;
             }
             if block_nr == 1 {
                 let energy = energies_block.iter().sum::<f64>() / energies_block.len() as f64;
-                //self.reference_energy = (self.reference_energy + energy) / 2.0;
-                self.reference_energy = energy;
+                self.reference_energy = (self.reference_energy + energy) / 2.0;
+                //self.reference_energy = energy;
                 energies.push(energy);
                 vars.push(0.0);
+                // pretty print uncertainty
                 println!(
                         "Block Energy:   {:.8}    DMC Energy:   {:.8} +/- {:.8}",
                         energy,
@@ -166,20 +172,22 @@ where
                 energies.push(
                     dmc_energy_prev
                         + (energy - dmc_energy_prev)
-                            / (block_nr + 1) as f64,
+                            / block_nr as f64,
                 );
+                self.reference_energy = (self.reference_energy + *energies.last().unwrap()) / 2.0;
                 vars.push(
                     vars.last().unwrap()
                         + ((energy - dmc_energy_prev)
                             * (energy - energies.last().unwrap())
                             - *vars.last().unwrap())
-                            / (block_nr + 1) as f64,
+                            / block_nr as f64,
                 );
+                let err = vars.last().unwrap().sqrt() / (block_nr as f64).sqrt();
                 println!(
                         "Block Energy:   {:.8}    DMC Energy:   {:.8} +/- {:.8}",
                         energy,
                         *energies.last().unwrap(),
-                        vars.last().unwrap().sqrt()/(block_nr as f64).sqrt(),
+                        err,
                     );
             }
         }

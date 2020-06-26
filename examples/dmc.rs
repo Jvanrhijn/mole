@@ -132,16 +132,17 @@ fn main() {
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 500;
-    const TAU: f64 = 1e-3;
-    const DMC_ITERS: usize = 50_000;
-    const DMC_BLOCK_SIZE: usize = 500;
+    let num_confs = 400;
+    const TAU: f64 = 1e-2;
+    const DMC_ITERS: usize = 32000;
+    const DMC_BLOCK_SIZE: usize = 400;
 
     // initialize trial energy
     let trial_energy = *vmc_energy;
 
     let rng = StdRng::from_seed([1_u8; 32]);
-    let mut dmc = DmcRunner::with_rng(guiding_wf, num_confs, trial_energy, hamiltonian, rng);
+    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([0_u8; 32]));
+    let mut dmc = DmcRunner::new(guiding_wf, num_confs, trial_energy, hamiltonian, metrop);
 
     let (dmc_energy, dmc_errs) = dmc.diffuse(TAU, DMC_ITERS, DMC_BLOCK_SIZE);
 

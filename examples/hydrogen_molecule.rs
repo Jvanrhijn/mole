@@ -200,17 +200,19 @@ fn main() {
     println!();
 
     const NUM_WALKERS: usize = 500;
-    const TAU: f64 = 1e-3;
-    const NUM_ITERS: usize = 10_000;
+    const TAU: f64 = 1e-2;
+    const NUM_ITERS: usize = 20_000;
     const DMC_BLOCK_SIZE: usize = 100;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
-    let mut dmc = DmcRunner::with_rng(
+    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([0_u8; 32]));
+
+    let mut dmc = DmcRunner::new(
         sr_wf,
         NUM_WALKERS,
         *energies_sr.to_vec().last().unwrap(),
         hamiltonian,
-        StdRng::from_seed([0_u8; 32]),
+        metrop,
     );
 
     let (energies, errs) = dmc.diffuse(TAU, NUM_ITERS, DMC_BLOCK_SIZE);
@@ -278,7 +280,7 @@ fn plot_results(
 ) {
     let niters = energies[0].len();
     let iters: Vec<_> = (0..niters).collect();
-    let exact = vec![-1.1645; niters];
+    let exact = vec![-1.17447; niters];
 
     let mut fig = Figure::new();
     let axes = fig.axes2d();
@@ -307,7 +309,7 @@ fn plot_results(
 fn plot_results_dmc(energies: &Array1<f64>, errors: &Array1<f64>, color: &str) {
     let niters = energies.len();
     let iters: Vec<_> = (0..niters).collect();
-    let exact = vec![-1.1645; niters];
+    let exact = vec![-1.17447; niters];
 
     let mut fig = Figure::new();
     let axes = fig.axes2d();
