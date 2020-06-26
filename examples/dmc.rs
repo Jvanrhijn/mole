@@ -95,6 +95,61 @@ impl Optimize for GaussianWaveFunction {
     }
 }
 
+#[derive(Clone)]
+struct STO {
+    pars: Array1<f64>
+}
+
+impl STO {
+    pub fn new(alpha: f64) -> Self {
+        Self { pars: array![alpha] }
+    }
+}
+impl Function<f64> for STO {
+    type D = Ix2;
+    fn value(&self, x: &Array2<f64>) -> Result<f64> {
+        let alpha = self.pars[0];
+        Ok(f64::exp(-alpha * x.norm_l2()))
+    }
+}
+
+impl Differentiate for STO {
+    type D = Ix2;
+    fn gradient(&self, x: &Array2<f64>) -> Result<Array2<f64>> {
+        let alpha = self.pars[0];
+        Ok(-alpha * self.value(x)? / x.norm_l2() * x)
+    }
+
+    fn laplacian(&self, x: &Array2<f64>) -> Result<f64> {
+        let alpha = self.pars[0];
+        Ok(alpha * self.value(x)? / x.norm_l2() * (alpha * x.norm_l2() - 2.0))
+    }
+}
+
+impl Optimize for STO {
+    fn parameter_gradient(&self, x: &Array2<f64>) -> Result<Array1<f64>> {
+        Ok(array![-x.norm_l2() * self.value(x)?])
+    }
+
+    fn update_parameters(&mut self, deltap: &Array1<f64>) {
+        self.pars += deltap[0];
+    }
+
+    fn num_parameters(&self) -> usize {
+        1
+    }
+
+    fn parameters(&self) -> &Array1<f64> {
+        &self.pars
+    }
+}
+
+impl WaveFunction for STO {
+    fn num_electrons(&self) -> usize {
+        1
+    }
+}
+
 static ITERS: usize = 100;
 static TOTAL_SAMPLES: usize = 5000;
 static BLOCK_SIZE: usize = 10;
@@ -102,6 +157,7 @@ static BLOCK_SIZE: usize = 10;
 fn main() {
     // Build wave function
     let ansatz = GaussianWaveFunction::new(1.0);
+    //let ansatz = STO::new(0.8);
 
     let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0; 32]));
 
@@ -132,16 +188,15 @@ fn main() {
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 400;
+    let num_confs = 500;
     const TAU: f64 = 1e-2;
-    const DMC_ITERS: usize = 32000;
+    const DMC_ITERS: usize = 100_000;
     const DMC_BLOCK_SIZE: usize = 400;
 
     // initialize trial energy
     let trial_energy = *vmc_energy;
 
-    let rng = StdRng::from_seed([1_u8; 32]);
-    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([0_u8; 32]));
+    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([1_u8; 32]));
     let mut dmc = DmcRunner::new(guiding_wf, num_confs, trial_energy, hamiltonian, metrop);
 
     let (dmc_energy, dmc_errs) = dmc.diffuse(TAU, DMC_ITERS, DMC_BLOCK_SIZE);
