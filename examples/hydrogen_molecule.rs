@@ -200,7 +200,7 @@ fn main() {
     println!();
 
     const NUM_WALKERS: usize = 500;
-    const TAU: f64 = 1e-2;
+    const TAU: f64 = 1e-3;
     const NUM_ITERS: usize = 20_000;
     const DMC_BLOCK_SIZE: usize = 100;
 

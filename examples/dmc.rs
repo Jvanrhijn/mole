@@ -188,8 +188,8 @@ fn main() {
     // from the wave function
     let num_confs = 500;
     const TAU: f64 = 1e-3;
-    const DMC_ITERS: usize = 100_000;
-    const DMC_BLOCK_SIZE: usize = 400;
+    const DMC_ITERS: usize = 10_000;
+    const DMC_BLOCK_SIZE: usize = 100;
 
     // initialize trial energy
     let trial_energy = *vmc_energy;
