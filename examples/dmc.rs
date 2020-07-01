@@ -196,7 +196,7 @@ fn main() {
     // initialize trial energy
     let trial_energy = *vmc_energy;
 
-    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([1_u8; 32]));
+    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([1_u8; 32])).fix_nodes();
     let mut dmc = DmcRunner::new(guiding_wf, num_confs, trial_energy, hamiltonian, metrop, SRBrancher::new());
 
     let (dmc_energy, dmc_errs) = dmc.diffuse(TAU, DMC_ITERS, DMC_BLOCK_SIZE);

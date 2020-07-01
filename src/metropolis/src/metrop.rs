@@ -106,12 +106,18 @@ where
     R: Rng,
 {
     time_step: f64,
+    fixed_node: bool,
     rng: R,
 }
 
 impl<R: Rng> MetropolisDiffuse<R> {
     pub fn from_rng(time_step: f64, rng: R) -> Self {
-        Self { time_step, rng }
+        Self { time_step, fixed_node: false, rng }
+    }
+
+    pub fn fix_nodes(mut self) -> Self {
+        self.fixed_node = true;
+        self
     }
 }
 
@@ -119,6 +125,7 @@ impl MetropolisDiffuse<StdRng> {
     pub fn new(time_step: f64) -> Self {
         Self {
             time_step,
+            fixed_node: false, 
             rng: StdRng::from_entropy(),
         }
     }
@@ -164,12 +171,10 @@ where
         let wf_grad_old = wf.gradient(cfg)?;
         let drift_velocity_old = &wf_grad_old / wf_value_old;
 
-        //let exponent = -1.0 / (2.0 * self.time_step)
-        //    * (2.0
-        //        * ((&drift_velocity + &drift_velocity_old) * (cfg_prop - cfg)).scalar_sum()
-        //        * self.time_step
-        //        + self.time_step.powi(2)
-        //            * (drift_velocity.norm_l2() - drift_velocity_old.norm_l2()));
+        if wf_value.signum() != wf_value_old.signum() {
+            return Ok(false);
+        }
+
         let t_high = f64::exp(-(&(cfg - cfg_prop) - &(&drift_velocity*self.time_step)).norm_l2().powi(2)/(2.0*self.time_step));
         let t_low = f64::exp(-(&(cfg_prop - cfg) - &(&drift_velocity_old*self.time_step)).norm_l2().powi(2)/(2.0*self.time_step));
 

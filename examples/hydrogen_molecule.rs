@@ -205,7 +205,7 @@ fn main() {
     const DMC_BLOCK_SIZE: usize = 100;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
-    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([0_u8; 32]));
+    let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([0_u8; 32])).fix_nodes();
 
     let mut dmc = DmcRunner::new(
         sr_wf,
