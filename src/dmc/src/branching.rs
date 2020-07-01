@@ -8,7 +8,6 @@ pub struct SRBrancher;
 
 impl SRBrancher {
     pub fn new() -> Self {
-        unimplemented!();
         Self {}
     }
 }
@@ -44,6 +43,7 @@ pub struct OptimalSRBrancher;
 
 impl OptimalSRBrancher {
     pub fn new() -> Self {
+        unimplemented!();
         Self {}
     }
 }
