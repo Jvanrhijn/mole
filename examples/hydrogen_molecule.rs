@@ -213,6 +213,7 @@ fn main() {
         *energies_sr.to_vec().last().unwrap(),
         hamiltonian,
         metrop,
+        SRBrancher::new(),
     );
 
     let (energies, errs) = dmc.diffuse(TAU, NUM_ITERS, DMC_BLOCK_SIZE);
