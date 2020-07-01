@@ -1,6 +1,4 @@
-
 use std::collections::HashMap;
-
 
 use metropolis::MetropolisBox;
 use mole::prelude::*;

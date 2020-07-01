@@ -112,7 +112,11 @@ where
 
 impl<R: Rng> MetropolisDiffuse<R> {
     pub fn from_rng(time_step: f64, rng: R) -> Self {
-        Self { time_step, fixed_node: false, rng }
+        Self {
+            time_step,
+            fixed_node: false,
+            rng,
+        }
     }
 
     pub fn fix_nodes(mut self) -> Self {
@@ -125,7 +129,7 @@ impl MetropolisDiffuse<StdRng> {
     pub fn new(time_step: f64) -> Self {
         Self {
             time_step,
-            fixed_node: false, 
+            fixed_node: false,
             rng: StdRng::from_entropy(),
         }
     }
@@ -175,8 +179,18 @@ where
             return Ok(false);
         }
 
-        let t_high = f64::exp(-(&(cfg - cfg_prop) - &(&drift_velocity*self.time_step)).norm_l2().powi(2)/(2.0*self.time_step));
-        let t_low = f64::exp(-(&(cfg_prop - cfg) - &(&drift_velocity_old*self.time_step)).norm_l2().powi(2)/(2.0*self.time_step));
+        let t_high = f64::exp(
+            -(&(cfg - cfg_prop) - &(&drift_velocity * self.time_step))
+                .norm_l2()
+                .powi(2)
+                / (2.0 * self.time_step),
+        );
+        let t_low = f64::exp(
+            -(&(cfg_prop - cfg) - &(&drift_velocity_old * self.time_step))
+                .norm_l2()
+                .powi(2)
+                / (2.0 * self.time_step),
+        );
 
         let acceptance = (t_high * wf_value.powi(2) / (t_low * wf_value_old.powi(2))).min(1.0);
 

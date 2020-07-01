@@ -1,5 +1,5 @@
-use ndarray::Array2;
 use crate::traits::BranchingAlgorithm;
+use ndarray::Array2;
 use rand::RngCore;
 
 use rand::distributions::{Distribution, Weighted, WeightedChoice};
@@ -13,7 +13,11 @@ impl SRBrancher {
 }
 
 impl<R: RngCore> BranchingAlgorithm<R> for SRBrancher {
-    fn branch(&mut self, walkers: &Vec<(f64, Array2<f64>)>, rng: &mut R) -> Vec<(f64, Array2<f64>)> {
+    fn branch(
+        &mut self,
+        walkers: &Vec<(f64, Array2<f64>)>,
+        rng: &mut R,
+    ) -> Vec<(f64, Array2<f64>)> {
         let global_weight = walkers.iter().fold(0.0, |acc, (w, _)| acc + w);
         let new_weight = global_weight / walkers.len() as f64;
         let max_weight = walkers.iter().fold(0.0, |acc, (w, _)| f64::max(acc, *w));
@@ -22,7 +26,7 @@ impl<R: RngCore> BranchingAlgorithm<R> for SRBrancher {
         let mut confs_weighted: Vec<_> = walkers
             .iter()
             .map(|(w, c)| Weighted {
-                weight: (w*norm_factor) as u32,
+                weight: (w * norm_factor) as u32,
                 item: c,
             })
             .collect();

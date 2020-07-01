@@ -6,10 +6,6 @@ use std::collections::HashMap;
 
 use gnuplot::{AxesCommon, Caption, Color, Figure, FillAlpha};
 
-
-
-
-
 // DMC test for hydrogen atom,
 // testing ground for library integration of
 // DMC algorithm
@@ -97,12 +93,14 @@ impl Optimize for GaussianWaveFunction {
 
 #[derive(Clone)]
 struct STO {
-    pars: Array1<f64>
+    pars: Array1<f64>,
 }
 
 impl STO {
     pub fn new(alpha: f64) -> Self {
-        Self { pars: array![alpha] }
+        Self {
+            pars: array![alpha],
+        }
     }
 }
 impl Function<f64> for STO {
@@ -197,7 +195,14 @@ fn main() {
     let trial_energy = *vmc_energy;
 
     let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([1_u8; 32])).fix_nodes();
-    let mut dmc = DmcRunner::new(guiding_wf, num_confs, trial_energy, hamiltonian, metrop, SRBrancher::new());
+    let mut dmc = DmcRunner::new(
+        guiding_wf,
+        num_confs,
+        trial_energy,
+        hamiltonian,
+        metrop,
+        SRBrancher::new(),
+    );
 
     let (dmc_energy, dmc_errs) = dmc.diffuse(TAU, DMC_ITERS, DMC_BLOCK_SIZE);
 
@@ -207,11 +212,7 @@ fn main() {
         dmc_errs.last().unwrap()
     );
 
-    plot_results(
-        &dmc_energy.into(),
-        &dmc_errs.into(),
-        "blue",
-    );
+    plot_results(&dmc_energy.into(), &dmc_errs.into(), "blue");
 }
 
 fn plot_results(energies: &Array1<f64>, errors: &Array1<f64>, color: &str) {

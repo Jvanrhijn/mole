@@ -226,11 +226,7 @@ fn main() {
         &["Stochastic Refonfiguration", "Steepest Descent"],
     );
 
-    plot_results_dmc(
-        &energies.into(),
-        &errs.into(),
-        "blue",
-    );
+    plot_results_dmc(&energies.into(), &errs.into(), "blue");
 }
 
 fn optimize_wave_function<O: Optimizer + Send + Sync + Clone>(
