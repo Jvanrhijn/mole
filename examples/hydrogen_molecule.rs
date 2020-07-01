@@ -195,7 +195,7 @@ fn main() {
         StochasticReconfiguration::new(50_000.0),
     );
     println!("\nSTEEPEST DESCENT");
-    let (sd_wf, energies_sd, errors_sd) =
+    let (_sd_wf, energies_sd, errors_sd) =
         optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
     println!();
 
