@@ -200,9 +200,9 @@ fn main() {
     println!();
 
     const NUM_WALKERS: usize = 100;
-    const TAU: f64 = 1e-1;
-    const NUM_ITERS: usize = 1000;
-    const DMC_BLOCK_SIZE: usize = 10;
+    const TAU: f64 = 1e-2;
+    const NUM_ITERS: usize = 40_000;
+    const DMC_BLOCK_SIZE: usize = 100;
     const NUM_EQ_BLOCKS: usize = 10;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);

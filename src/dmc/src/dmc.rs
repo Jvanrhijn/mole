@@ -45,7 +45,6 @@ where
         mut metropolis: MetropolisDiffuse<R>,
         branching: B,
     ) -> Self {
-        //let mut confs = vec![];
         let mut rng = <MetropolisDiffuse<R> as Metropolis<T>>::rng_mut(&mut metropolis);
         let confs = vec![
             (

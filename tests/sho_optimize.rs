@@ -113,14 +113,14 @@ impl Optimize for GaussianWaveFunction {
 static ITERS: usize = 20;
 static SAMPLES: usize = 1000;
 static BLOCK_SIZE: usize = 10;
-static EPS: f64 = 5e-2;
 
 #[test]
 fn sho_optimize() {
     let wf = GaussianWaveFunction::new(1.0);
     let h = HarmonicHamiltonian::new(1.0);
 
-    let metrop = MetropolisDiffuse::from_rng(0.5, StdRng::from_seed([0_u8; 32]));
+    let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32]));
+    //let metrop = MetropolisBox::from_rng(0.5, StdRng::from_seed([0_u8; 32]));
 
     let obs = operators! {
         "Energy" => h,
@@ -130,11 +130,12 @@ fn sho_optimize() {
 
     let sampler = Sampler::new(wf, metrop, &obs).unwrap();
 
-    let vmc = VmcRunner::new(sampler, SteepestDescent::new(1e-5), EmptyLogger);
+    let vmc = VmcRunner::new(sampler, SteepestDescent::new(1e-3), EmptyLogger);
 
-    let (_, energies, _) = vmc.run_optimization(ITERS, SAMPLES, BLOCK_SIZE, 4).unwrap();
+    let (_, energies, errors) = vmc.run_optimization(ITERS, SAMPLES, BLOCK_SIZE, 4).unwrap();
 
     let energy = energies.iter().last().unwrap();
+    let error = *errors.iter().last().unwrap();
 
-    assert!((energy - 1.5).abs() < EPS);
+    assert!((energy - 1.5).abs() < error);
 }
