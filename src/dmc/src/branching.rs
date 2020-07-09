@@ -60,8 +60,9 @@ impl<R: RngCore> BranchingAlgorithm<R> for OptimalSRBrancher {
         // obtain the positive and negative walkers
         let positive_walkers = walkers.iter().filter(|(w, _)| *w >= 1.0);
         let negative_walkers = walkers.iter().filter(|(w, _)| *w < 1.0);
-        let num_reconf = positive_walkers.map(|(w, _)| (w/walkers.len() as f64 - 1.0).abs()).sum::<f64>();
-        let num_reconf_minus = negative_walkers.map(|(w, _)| (w/walkers.len() as f64 - 1.0).abs()).sum::<f64>();
+
+        // number of reconfigurations to be done
+        let num_reconf = (positive_walkers.clone().map(|(w, _)| (w/walkers.len() as f64).abs()).sum::<f64>() + rng.gen::<f64>()) as usize;
 
 
         // normalize weights by the maximum weight
@@ -103,7 +104,7 @@ impl<R: RngCore + Rng> BranchingAlgorithm<R> for SimpleBranching {
         let mut to_birth = vec![];
         let mut new_walkers = walkers.clone();
         for (i, (w, conf)) in walkers.iter().enumerate() {
-            let num_copies = (w + rng.gen::<f64>()) as usize;
+            let num_copies = ((w + rng.gen::<f64>()) as usize).min(3);
             if num_copies == 0 {
                 to_kill.push(i);
             } else {

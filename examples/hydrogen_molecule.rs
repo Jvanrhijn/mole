@@ -199,10 +199,11 @@ fn main() {
         optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
     println!();
 
-    const NUM_WALKERS: usize = 500;
-    const TAU: f64 = 1e-3;
-    const NUM_ITERS: usize = 20_000;
-    const DMC_BLOCK_SIZE: usize = 100;
+    const NUM_WALKERS: usize = 100;
+    const TAU: f64 = 1e-1;
+    const NUM_ITERS: usize = 1000;
+    const DMC_BLOCK_SIZE: usize = 10;
+    const NUM_EQ_BLOCKS: usize = 10;
 
     let hamiltonian = ElectronicHamiltonian::from_ions(ion_pos.clone(), array![1, 1]);
     let metrop = MetropolisDiffuse::from_rng(TAU, StdRng::from_seed([0_u8; 32])).fix_nodes();
@@ -214,9 +215,11 @@ fn main() {
         hamiltonian,
         metrop,
         SRBrancher::new(),
+        //SimpleBranching::new(),
+        //OptimalSRBrancher::new(),
     );
 
-    let (energies, errs) = dmc.diffuse(TAU, NUM_ITERS, DMC_BLOCK_SIZE);
+    let (energies, errs) = dmc.diffuse(TAU, NUM_ITERS, DMC_BLOCK_SIZE, NUM_EQ_BLOCKS);
 
     // Plot the results
     plot_results(

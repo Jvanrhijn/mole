@@ -171,7 +171,7 @@ fn main() {
     let sampler = Sampler::new(ansatz, metrop, &obs).expect("Bad initial configuration");
 
     // first do a VMC run to obtain a variationally optimized wave function
-    let vmc = VmcRunner::new(sampler, SteepestDescent::new(1e-5), Logger);
+    let vmc = VmcRunner::new(sampler, StochasticReconfiguration::new(1.0), Logger);
 
     let (guiding_wf, energies, errors) = vmc
         .run_optimization(ITERS, TOTAL_SAMPLES, BLOCK_SIZE, 4)
@@ -186,10 +186,11 @@ fn main() {
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 500;
-    const TAU: f64 = 1e-3;
-    const DMC_ITERS: usize = 10_000;
+    let num_confs = 100;
+    const TAU: f64 = 0.5e-1;
+    const DMC_ITERS: usize = 40_000;
     const DMC_BLOCK_SIZE: usize = 100;
+    const NUM_EQ_BLOCKS: usize = 10;
 
     // initialize trial energy
     let trial_energy = *vmc_energy;
@@ -202,9 +203,10 @@ fn main() {
         hamiltonian,
         metrop,
         SRBrancher::new(),
+        //SimpleBranching::new(),
     );
 
-    let (dmc_energy, dmc_errs) = dmc.diffuse(TAU, DMC_ITERS, DMC_BLOCK_SIZE);
+    let (dmc_energy, dmc_errs) = dmc.diffuse(TAU, DMC_ITERS, DMC_BLOCK_SIZE, NUM_EQ_BLOCKS);
 
     println!(
         "\nDMC Energy:   {:.8} +/- {:.8}",
