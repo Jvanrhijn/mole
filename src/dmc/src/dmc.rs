@@ -45,18 +45,18 @@ where
         mut metropolis: MetropolisDiffuse<R>,
         branching: B,
     ) -> Self {
-        let mut confs = vec![];
+        //let mut confs = vec![];
         let mut rng = <MetropolisDiffuse<R> as Metropolis<T>>::rng_mut(&mut metropolis);
-        for _ in 0..num_walkers {
-            confs.push((
-                1.0,
+        let confs = vec![
+            (
+                1.0, 
                 Array2::random_using(
                     (guiding_wave_function.num_electrons(), 3),
                     Normal::new(0.0, 1.0),
                     &mut rng,
-                ),
-            ));
-        }
+                )
+            ); num_walkers
+        ];
         Self {
             guiding_wave_function,
             walkers: confs,
@@ -125,7 +125,7 @@ where
                         / wave_function_value_new;
                     // update weight of this walker
                     *weight *= f64::exp(
-                        -time_step * (0.5 * (local_e + local_e_new) - self.reference_energy),
+                        -time_step * ((local_e + local_e_new)/2.0 - self.reference_energy),
                     );
                     //ensemble_energy += *weight * local_e_new;
                 }
