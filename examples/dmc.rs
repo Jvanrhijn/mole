@@ -186,8 +186,8 @@ fn main() {
 
     // sample a set of starting configurations
     // from the wave function
-    let num_confs = 100;
-    const TAU: f64 = 0.025;
+    let num_confs = 400;
+    const TAU: f64 = 0.01;
     const DMC_ITERS: usize = 100_000;
     const DMC_BLOCK_SIZE: usize = 400;
     const NUM_EQ_BLOCKS: usize = 10;
@@ -203,7 +203,6 @@ fn main() {
         hamiltonian,
         metrop,
         SRBrancher::new(),
-        //AlternateSRBrancher::new(),
         //SimpleBranching::new(),
     );
 

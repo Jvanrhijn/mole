@@ -3,5 +3,5 @@ mod dmc;
 mod traits;
 
 pub use branching::*;
-pub use dmc::*;
+pub use self::dmc::*;
 pub use traits::*;
