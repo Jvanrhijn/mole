@@ -7,7 +7,7 @@ use rand::{FromEntropy, Rng, SeedableRng};
 
 use crate::traits::Metropolis;
 use errors::Error;
-use wavefunction_traits::{Differentiate, Function};
+use wavefunction_traits::{Differentiate, Function, WaveFunction};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -47,7 +47,7 @@ impl MetropolisBox<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisBox<R>
 where
-    T: Function<f64, D = Ix2> + Clone,
+    T: Function<f64, D = Ix2> + Clone + WaveFunction,
     R: Rng + SeedableRng,
     <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
@@ -62,7 +62,7 @@ where
         {
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
             mov_slice += &Array1::random_using(
-                3,
+                wf.dimension(),
                 Range::new(-0.5 * self.box_side, 0.5 * self.box_side),
                 &mut self.rng,
             );
@@ -137,7 +137,7 @@ impl MetropolisDiffuse<StdRng> {
 
 impl<T, R> Metropolis<T> for MetropolisDiffuse<R>
 where
-    T: Differentiate<D = Ix2> + Function<f64, D = Ix2> + Clone,
+    T: Differentiate<D = Ix2> + Function<f64, D = Ix2> + WaveFunction + Clone,
     R: Rng + SeedableRng,
     <R as SeedableRng>::Seed: From<[u8; 32]>,
 {
@@ -157,7 +157,7 @@ where
             let mut mov_slice = config_proposed.slice_mut(s![idx, ..]);
             mov_slice += &(drift_velocity * self.time_step);
             mov_slice +=
-                &Array1::random_using(3, Normal::new(0.0, self.time_step.sqrt()), &mut self.rng);
+                &Array1::random_using(wf.dimension(), Normal::new(0.0, self.time_step.sqrt()), &mut self.rng);
         }
         Ok(config_proposed)
     }
@@ -252,6 +252,12 @@ mod tests {
         fn laplacian(&self, _cfg: &Array2<f64>) -> Result<f64> {
             Ok(1.0)
         }
+    
+    }
+
+    impl WaveFunction for WaveFunctionMock {
+        fn num_electrons(&self) -> usize { 1 }
+        fn dimension (&self) -> usize { 3 }
     }
 
     type Ovgl = (Option<f64>, Option<Array2<f64>>, Option<f64>);

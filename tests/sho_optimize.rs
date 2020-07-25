@@ -79,12 +79,16 @@ impl Differentiate for GaussianWaveFunction {
 
     fn laplacian(&self, x: &Array2<f64>) -> Result<f64> {
         let a = self.params[0];
-        Ok(self.value(x)? * (4.0 * x.norm_l2().powi(2) - 6.0 * a.powi(2)) / a.powi(4))
+        Ok(-2.0*self.value(x)?*(a.powi(2) - 2.0*x.norm_l2().powi(2))/a.powi(4))
     }
 }
 
 impl WaveFunction for GaussianWaveFunction {
     fn num_electrons(&self) -> usize {
+        1
+    }
+    
+    fn dimension(&self) -> usize {
         1
     }
 }
@@ -111,16 +115,16 @@ impl Optimize for GaussianWaveFunction {
 }
 
 static ITERS: usize = 20;
-static SAMPLES: usize = 1000;
+static SAMPLES: usize = 8000;
 static BLOCK_SIZE: usize = 10;
 
 #[test]
 fn sho_optimize() {
-    let wf = GaussianWaveFunction::new(1.0);
+    let wf = GaussianWaveFunction::new(1.0_f64.sqrt());
     let h = HarmonicHamiltonian::new(1.0);
 
     let metrop = MetropolisDiffuse::from_rng(0.1, StdRng::from_seed([0_u8; 32]));
-    //let metrop = MetropolisBox::from_rng(0.5, StdRng::from_seed([0_u8; 32]));
+    //let metrop = MetropolisBox::from_rng(0.25, StdRng::from_seed([0_u8; 32]));
 
     let obs = operators! {
         "Energy" => h,
@@ -128,14 +132,14 @@ fn sho_optimize() {
         "Wavefunction value" => WavefunctionValue
     };
 
-    let sampler = Sampler::new(wf, metrop, &obs).unwrap();
+    let sampler = Sampler::with_initial_configuration(wf, metrop, &obs, array![[0.0]]).unwrap();
 
-    let vmc = VmcRunner::new(sampler, SteepestDescent::new(1e-3), EmptyLogger);
+    let vmc = VmcRunner::new(sampler, StochasticReconfiguration::new(-1e7), EmptyLogger);
 
     let (_, energies, errors) = vmc.run_optimization(ITERS, SAMPLES, BLOCK_SIZE, 4).unwrap();
 
     let energy = energies.iter().last().unwrap();
     let error = *errors.iter().last().unwrap();
 
-    assert!((energy - 1.5).abs() < error);
+    assert!((energy - 0.5).abs() < error);
 }

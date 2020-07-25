@@ -95,6 +95,10 @@ impl WaveFunction for GaussianWaveFunction {
     fn num_electrons(&self) -> usize {
         1
     }
+
+    fn dimension(&self) -> usize {
+        3
+    }
 }
 
 fn main() {

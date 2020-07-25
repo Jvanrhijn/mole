@@ -43,7 +43,7 @@ where
         observables: &'a HashMap<String, Box<dyn LocalOperator<T>>>,
     ) -> Result<Self, Error> {
         let nelec = wave_function.num_electrons();
-        let cfg = Array2::<f64>::random_using((nelec, 3), Range::new(-1., 1.), metrop.rng_mut());
+        let cfg = Array2::<f64>::random_using((nelec, wave_function.dimension()), Range::new(-1., 1.), metrop.rng_mut());
         Ok(Self {
             wave_function,
             config: cfg,

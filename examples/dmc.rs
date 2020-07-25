@@ -68,6 +68,10 @@ impl WaveFunction for GaussianWaveFunction {
     fn num_electrons(&self) -> usize {
         1
     }
+
+    fn dimension(&self) -> usize {
+        3
+    }
 }
 
 impl Optimize for GaussianWaveFunction {
@@ -145,6 +149,10 @@ impl Optimize for STO {
 impl WaveFunction for STO {
     fn num_electrons(&self) -> usize {
         1
+    }
+
+    fn dimension(&self) -> usize {
+        3
     }
 }
 

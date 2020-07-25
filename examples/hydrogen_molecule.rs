@@ -83,6 +83,10 @@ impl WaveFunction for HydrogenMoleculeWaveFunction {
     fn num_electrons(&self) -> usize {
         2
     }
+
+    fn dimension(&self) -> usize {
+        3
+    }
 }
 
 impl Function<f64> for HydrogenMoleculeWaveFunction {

@@ -95,6 +95,10 @@ impl WaveFunction for H2WF {
     fn num_electrons(&self) -> usize {
         1
     }
+
+    fn dimension(&self) -> usize {
+        3
+    }
 }
 
 #[test]

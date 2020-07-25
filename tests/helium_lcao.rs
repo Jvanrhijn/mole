@@ -43,6 +43,10 @@ impl WaveFunction for HeliumAtomWaveFunction {
     fn num_electrons(&self) -> usize {
         2
     }
+
+    fn dimension(&self) -> usize {
+        3
+    }
 }
 
 impl Function<f64> for HeliumAtomWaveFunction {
@@ -91,14 +95,7 @@ fn helium_lcao() {
     let optimal_width = 1.0 / 1.69;
 
     let ion_pos = array![[0.0, 0.0, 0.0]];
-    //let basis = Hydrogen1sBasis::new(ion_pos.clone(), vec![optimal_width]);
 
-    //let orbitals = vec![
-    //    Orbital::new(array![[1.0]], basis.clone()),
-    //    Orbital::new(array![[1.0]], basis.clone()),
-    //];
-
-    //let wave_function = SpinDeterminantProduct::new(orbitals, 1).unwrap();
     let wave_function = HeliumAtomWaveFunction::new(1.0 / optimal_width);
 
     let kinetic = KineticEnergy::new();

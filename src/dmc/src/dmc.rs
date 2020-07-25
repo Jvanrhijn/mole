@@ -50,7 +50,7 @@ where
             (
                 1.0, 
                 Array2::random_using(
-                    (guiding_wave_function.num_electrons(), 3),
+                    (guiding_wave_function.num_electrons(), guiding_wave_function.dimension()),
                     Normal::new(0.0, 1.0),
                     &mut rng,
                 )

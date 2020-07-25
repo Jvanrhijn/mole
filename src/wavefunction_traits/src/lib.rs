@@ -21,4 +21,6 @@ pub trait Differentiate {
 
 pub trait WaveFunction {
     fn num_electrons(&self) -> usize;
+
+    fn dimension(&self) -> usize;
 }
