@@ -87,7 +87,6 @@ where
                 Ok((
                     name.clone(),
                     operator.act_on(&self.wave_function, &self.config)?
-                        / Scalar(self.wave_function().value(&self.config)?),
                 ))
             })
             .collect();

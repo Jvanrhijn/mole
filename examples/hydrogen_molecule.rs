@@ -196,11 +196,11 @@ fn main() {
     let (sr_wf, energies_sr, errors_sr) = optimize_wave_function(
         &ion_pos,
         wave_function.clone(),
-        StochasticReconfiguration::new(50_000.0),
+        StochasticReconfiguration::new(1.0),
     );
     println!("\nSTEEPEST DESCENT");
     let (_sd_wf, energies_sd, errors_sd) =
-        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
+        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-1));
     println!();
 
     const NUM_WALKERS: usize = 100;

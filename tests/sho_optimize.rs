@@ -43,7 +43,7 @@ where
         let ke = self.t.act_on(wf, cfg)?;
         // Potential energy: V = 0.5*m*omega^2*|x|^2
         let pe = OperatorValue::Scalar(
-            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2) * wf.value(cfg)?,
+            0.5 * self.frequency.powi(2) * cfg.norm_l2().powi(2),
         );
         Ok(&ke + &pe)
     }
@@ -115,7 +115,7 @@ impl Optimize for GaussianWaveFunction {
 }
 
 static ITERS: usize = 20;
-static SAMPLES: usize = 8000;
+static SAMPLES: usize = 1000;
 static BLOCK_SIZE: usize = 10;
 
 #[test]
@@ -134,7 +134,7 @@ fn sho_optimize() {
 
     let sampler = Sampler::with_initial_configuration(wf, metrop, &obs, array![[0.0]]).unwrap();
 
-    let vmc = VmcRunner::new(sampler, StochasticReconfiguration::new(-1e7), EmptyLogger);
+    let vmc = VmcRunner::new(sampler, StochasticReconfiguration::new(0.1), EmptyLogger);
 
     let (_, energies, errors) = vmc.run_optimization(ITERS, SAMPLES, BLOCK_SIZE, 4).unwrap();
 

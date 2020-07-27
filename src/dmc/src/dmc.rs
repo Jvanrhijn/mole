@@ -86,14 +86,12 @@ where
 
                 for (weight, conf) in self.walkers.iter_mut() {
                     // compute old local energy
-                    let wave_function_value_old = self.guiding_wave_function.value(&conf).unwrap();
-                    let local_e = self
+                    let local_e = *self
                         .hamiltonian
                         .act_on(&self.guiding_wave_function, &conf)
                         .unwrap()
                         .get_scalar()
-                        .unwrap()
-                        / wave_function_value_old;
+                        .unwrap();
                     // move all electrons according to Langevin dynamics
                     // with accept/reject
                     for e in 0..self.guiding_wave_function.num_electrons() {
@@ -112,16 +110,13 @@ where
                     ensemble_energy += *weight * local_e;
                     total_weight += *weight;
 
-                    let wave_function_value_new = self.guiding_wave_function.value(&conf).unwrap();
-
                     // compute local energy after move
-                    let local_e_new = self
+                    let local_e_new = *self
                         .hamiltonian
                         .act_on(&self.guiding_wave_function, conf)
                         .unwrap()
                         .get_scalar()
-                        .unwrap()
-                        / wave_function_value_new;
+                        .unwrap();
                     // update weight of this walker
                     *weight *= f64::exp(
                         -time_step * ((local_e + local_e_new)/2.0 - self.reference_energy),

@@ -27,6 +27,8 @@ vmc = { path = "src/vmc" }
 errors = { path = "src/errors" }
 util = { path = "src/util" }
 dmc = { path = "src/dmc" }
+GSL = { path = "examples/rust-GSL" }
+num = "*"
 
 [dev-dependencies]
 ndarray-linalg = { version = "0.10.0", features = ["intel-mkl"] }
@@ -36,3 +38,6 @@ itertools = "0.7"
 gnuplot = "0.0.31"
 rayon = "1.1.0"
 ndarray-rand = "0.8.0"
+
+[features]
+default = ["GSL/v2"]

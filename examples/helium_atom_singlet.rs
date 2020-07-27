@@ -136,11 +136,11 @@ fn main() {
     let (energies_sr, errors_sr) = optimize_wave_function(
         &ion_pos,
         wave_function.clone(),
-        StochasticReconfiguration::new(100_000.0),
+        StochasticReconfiguration::new(1.0),
     );
     println!("\nSTEEPEST DESCENT");
     let (energies_sd, errors_sd) =
-        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-5));
+        optimize_wave_function(&ion_pos, wave_function.clone(), SteepestDescent::new(1e-1));
 
     // Plot the results
     plot_results(
